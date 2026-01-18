@@ -4,6 +4,7 @@
 - Vanilla JS (no frameworks)
 - SQLite database (better-sqlite3)
 - Express.js server
+- Docker & Docker Compose
 - Google Antigravity + Claude Sonnet
 
 ## Development Log
@@ -104,8 +105,45 @@ Error handling + update .gitignore for DB file"
 **Time:** 2 minutes  
 **Manual work:** 0 lines of code
 
+### Commit 6: Docker Configuration for Synology NAS (Day 3)
+**Prompt:** "Ahoj, chcem túto aplikáciu (carnaby.sk) dockerizovať, aby som ju mohol spustiť na Synology NAS cez Container Manager.
+
+Požiadavky:
+- Vytvor optimalizovaný multi-stage Dockerfile (použi node:18-alpine alebo novší).
+- Vytvor docker-compose.yml, kde bude aplikácia namapovaná na port 3000.
+- Zabezpeč, aby sa pri builde správne spracovali environment premenné (ak nejaké sú v .env).
+- Pridaj .dockerignore, aby sa nekopíroval balast ako node_modules alebo .next z lokálneho buildu.
+- Napíš mi krátky návod, ako to na Synology cez terminál zostaviť a spustiť (build & up)."
+
+(Translation: "Hi, I want to dockerize this application (carnaby.sk) so I can run it on Synology NAS via Container Manager. Requirements: Create optimized multi-stage Dockerfile (use node:18-alpine or newer), create docker-compose.yml with app mapped to port 3000, ensure environment variables are processed correctly during build, add .dockerignore to exclude unnecessary files, write a short guide on how to build and run it on Synology via terminal.")
+
+**Result:** ✅ Complete Docker deployment solution
+- **Dockerfile**: Multi-stage build with node:20-alpine
+  - Stage 1: Dependencies installation
+  - Stage 2: Database initialization
+  - Stage 3: Production runner with non-root user
+  - Health check included
+  - Security best practices (non-root user, minimal image)
+- **docker-compose.yml**: 
+  - Port 3000 mapping
+  - Volume persistence for database
+  - Auto-restart policy
+  - Health checks
+  - Network configuration
+- **.dockerignore**: Optimized build context (excludes node_modules, logs, IDE files)
+- **DEPLOYMENT.md**: Comprehensive guide
+  - Step-by-step Synology NAS deployment
+  - SSH commands for build & run
+  - Monitoring via Container Manager
+  - Reverse proxy setup
+  - Troubleshooting section
+  - Update scripts
+
+**Time:** 8 minutes  
+**Manual work:** 0 lines of code
+
 ---
 
-**Total development time:** ~20 minutes  
+**Total development time:** ~30 minutes  
 **Total manual code written:** ~5 lines (port change)  
 **AI-generated code:** ~100% of functionality

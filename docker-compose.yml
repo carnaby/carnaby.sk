@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  carnaby-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carnaby-sk
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Persist database outside container
+      - ./data:/app/data
+    networks:
+      - carnaby-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  carnaby-network:
+    driver: bridge
+
+volumes:
+  carnaby-data:
