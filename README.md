@@ -90,8 +90,22 @@ Error handling + update .gitignore for DB file"
 **Time:** 10 minutes  
 **Manual work:** 0 lines of code
 
+### Commit 5: README Documentation Update (Day 3)
+**Prompt:** "ano prosim este si precitaj README.md a pochopis o co mi ide ... prosim vzdy ked ti dam nejaku ulohu tak to dam zapis ako novy zaznam ... chcem aby to bolo dokumentacia nasej cesty :) teraz ten subor mozes upravit tak aby zodpovedal realite ... moje prompty ale tam pis po anglicky."
+(Translation: "yes please read README.md and understand what I'm going for ... please whenever I give you a task, record it as a new entry ... I want this to be documentation of our journey :) now you can edit the file to match reality ... but write my prompts in English there.")
+
+**Result:** ✅ README updated to reflect reality
+- Added original Slovak prompts with English translations
+- Accurate time estimates and manual work tracking
+- Detailed results for each commit
+- Proper documentation structure for future entries
+- This meta-entry documenting the documentation process itself
+
+**Time:** 2 minutes  
+**Manual work:** 0 lines of code
+
 ---
 
-**Total development time:** ~18 minutes  
+**Total development time:** ~20 minutes  
 **Total manual code written:** ~5 lines (port change)  
 **AI-generated code:** ~100% of functionality
