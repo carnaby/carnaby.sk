@@ -271,6 +271,20 @@ body {
     height: 100%;
 }
 
+.loading-message,
+.error-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+.error-message {
+    color: var(--accent-orange);
+}
+
+
 .cta {
     text-align: center;
     margin-top: 40px;

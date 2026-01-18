@@ -36,7 +36,12 @@ const translations = {
         footerCopyright: "© 2025 Dodo – Songs for the Journey",
         aiExperiment: "🤖 This website is an AI experiment created using",
         aiAnd: "&",
-        themeToggle: "Toggle theme"
+        themeToggle: "Toggle theme",
+
+        // Loading
+        loadingVideos: "Loading videos...",
+        errorLoadingVideos: "Failed to load videos",
+        noVideosFound: "No videos found"
     },
     sk: {
         // Navigation
@@ -74,7 +79,12 @@ const translations = {
         footerCopyright: "© 2025 Dodo – Songs for the Journey",
         aiExperiment: "🤖 Tento web je AI experiment vytvorený pomocou",
         aiAnd: "&",
-        themeToggle: "Prepnúť tému"
+        themeToggle: "Prepnúť tému",
+
+        // Loading
+        loadingVideos: "Načítavam videá...",
+        errorLoadingVideos: "Nepodarilo sa načítať videá",
+        noVideosFound: "Žiadne videá neboli nájdené"
     }
 };
 
@@ -138,9 +148,77 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Load videos from API
+    loadVideos();
+
     // Initialize theme
     initTheme();
 });
+
+// Load videos from API
+async function loadVideos() {
+    const songsGrid = document.getElementById('songsGrid');
+    const currentLang = localStorage.getItem('preferredLanguage') || detectLanguage();
+    const t = translations[currentLang];
+
+    try {
+        const response = await fetch('/api/videos');
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load videos');
+        }
+
+        // Clear loading message
+        songsGrid.innerHTML = '';
+
+        // Render videos from all categories
+        const allVideos = [];
+        for (const category in result.data) {
+            allVideos.push(...result.data[category]);
+        }
+
+        if (allVideos.length === 0) {
+            songsGrid.innerHTML = `<div class="error-message"><p>⚠️ ${t.noVideosFound}</p></div>`;
+            return;
+        }
+
+        // Create video cards
+        allVideos.forEach(video => {
+            const videoCard = createVideoCard(video.url);
+            songsGrid.appendChild(videoCard);
+        });
+
+    } catch (error) {
+        console.error('Error loading videos:', error);
+        songsGrid.innerHTML = `
+            <div class="error-message">
+                <p>⚠️ ${t.errorLoadingVideos}</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Create video card element
+function createVideoCard(videoUrl) {
+    const card = document.createElement('div');
+    card.className = 'song-card';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-wrapper';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${videoUrl}`;
+    iframe.frameBorder = '0';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+
+    wrapper.appendChild(iframe);
+    card.appendChild(wrapper);
+
+    return card;
+}
 
 // Theme management
 function detectTheme() {
