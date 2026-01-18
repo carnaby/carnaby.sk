@@ -16,6 +16,18 @@
     --border-color: #333;
 }
 
+/* Light theme */
+[data-theme="light"] {
+    --bg-dark: #f5f1e8;
+    --bg-secondary: #ebe4d6;
+    --bg-card: #ffffff;
+    --text-primary: #2c2c2c;
+    --text-secondary: #5a5a5a;
+    --accent-gold: #c4955f;
+    --accent-orange: #d66e1a;
+    --border-color: #d4c4b0;
+}
+
 html {
     scroll-behavior: smooth;
 }
@@ -322,6 +334,39 @@ body {
     color: var(--accent-orange);
     text-decoration: underline;
 }
+
+/* Theme Toggle */
+.theme-toggle {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.theme-toggle-btn {
+    background-color: var(--bg-card);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--accent-gold);
+    transform: scale(1.05);
+}
+
+.theme-toggle-btn .icon {
+    font-size: 1.2rem;
+}
+
 
 
 /* Responsive Design */

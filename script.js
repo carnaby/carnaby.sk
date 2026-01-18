@@ -35,7 +35,8 @@ const translations = {
         // Footer
         footerCopyright: "© 2025 Dodo – Songs for the Journey",
         aiExperiment: "🤖 This website is an AI experiment created using",
-        aiAnd: "&"
+        aiAnd: "&",
+        themeToggle: "Toggle theme"
     },
     sk: {
         // Navigation
@@ -72,7 +73,8 @@ const translations = {
         // Footer
         footerCopyright: "© 2025 Dodo – Songs for the Journey",
         aiExperiment: "🤖 Tento web je AI experiment vytvorený pomocou",
-        aiAnd: "&"
+        aiAnd: "&",
+        themeToggle: "Prepnúť tému"
     }
 };
 
@@ -135,4 +137,68 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTranslations(lang);
         });
     });
+
+    // Initialize theme
+    initTheme();
 });
+
+// Theme management
+function detectTheme() {
+    // Check if theme is already saved in localStorage
+    const savedTheme = localStorage.getItem('preferredTheme');
+    if (savedTheme) {
+        return savedTheme;
+    }
+
+    // Detect system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+    }
+
+    // Default to dark
+    return 'dark';
+}
+
+function applyTheme(theme) {
+    const html = document.documentElement;
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeIcon = themeToggleBtn?.querySelector('.icon');
+
+    if (theme === 'light') {
+        html.setAttribute('data-theme', 'light');
+        if (themeIcon) themeIcon.textContent = '☀️';
+    } else {
+        html.removeAttribute('data-theme');
+        if (themeIcon) themeIcon.textContent = '🌙';
+    }
+
+    // Save preference
+    localStorage.setItem('preferredTheme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(newTheme);
+}
+
+function initTheme() {
+    const theme = detectTheme();
+    applyTheme(theme);
+
+    // Add click handler to theme toggle button
+    const themeToggleBtn = document.getElementById('themeToggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // Listen for system theme changes
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+            // Only auto-switch if user hasn't manually set a preference
+            if (!localStorage.getItem('preferredTheme')) {
+                applyTheme(e.matches ? 'light' : 'dark');
+            }
+        });
+    }
+}
