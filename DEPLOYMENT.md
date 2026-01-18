@@ -188,6 +188,31 @@ ports:
 sudo docker-compose exec carnaby-web node init-db.js
 ```
 
+### npm ci zlyhalo (chýba package-lock.json)
+**Problém:** Build zlyhá s chybou `npm ci can only install with an existing package-lock.json`
+
+**Riešenie:** Dockerfile už používa `npm install` namiesto `npm ci`. Ak stále vidíte túto chybu:
+
+1. Uistite sa, že máte najnovšiu verziu Dockerfile:
+```bash
+git pull origin main
+```
+
+2. Vyčistite Docker cache a rebuild:
+```bash
+sudo docker-compose down
+sudo docker system prune -a
+sudo docker-compose build --no-cache
+sudo docker-compose up -d
+```
+
+**Odporúčanie pre produkciu:** Pre deterministické buildy vygenerujte package-lock.json:
+```bash
+npm install  # Vygeneruje package-lock.json
+git add package-lock.json
+git commit -m "Add package-lock.json for reproducible builds"
+```
+
 ### Nedostatok pamäte
 Upravte `docker-compose.yml` a pridajte:
 ```yaml
@@ -205,6 +230,7 @@ deploy:
 - Dáta sú perzistentné vďaka volume mapping
 - Kontajner sa automaticky reštartuje po reštarte NAS (`restart: unless-stopped`)
 - Health check monitoruje stav aplikácie každých 30 sekúnd
+- **npm install vs npm ci**: Dockerfile používa `npm install` pretože projekt momentálne neobsahuje `package-lock.json`. Pre produkčné nasadenie sa odporúča vygenerovať lockfile pre reprodukovateľné buildy.
 
 ---
 

@@ -142,8 +142,58 @@ Požiadavky:
 **Time:** 8 minutes  
 **Manual work:** 0 lines of code
 
+### Commit 7: Docker Build Fix - npm ci Error (Day 3)
+**Context:** During Synology NAS deployment, Docker build failed with error: `npm ci can only install with an existing package-lock.json`
+
+**Prompt:** "Pri deploymente na Synology NAS cez Docker nastala chyba počas buildu. Príkaz npm ci zlyhal, pretože v projekte chýba package-lock.json.
+
+Úlohy pre teba:
+- Oprava Dockerfile: Uprav Dockerfile tak, aby používal npm install namiesto npm ci (a --omit=dev namiesto --only=production), pretože momentálne lockfile nepoužívame.
+- Aktualizácia dokumentácie: Do DEPLOYMENT.md alebo README.md doplň poznámku o tom, že ak používateľ nemá lockfile, musí použiť klasický install, alebo odporuč vygenerovanie lockfilu pred buildom.
+- Optimalizácia: Skontroluj, či sú všetky potrebné súbory pre npm install správne skopírované v rámci Docker layers.
+- Zápis: Zapíš tento incident a jeho riešenie do logu v README.md ako súčasť tvojho experimentálneho učenia."
+
+(Translation: "During Synology NAS deployment via Docker, a build error occurred. The npm ci command failed because package-lock.json is missing from the project. Tasks: Fix Dockerfile to use npm install instead of npm ci (and --omit=dev instead of --only=production), update documentation with notes about lockfile, verify all necessary files are copied correctly in Docker layers, log this incident and solution in README.md as part of experimental learning.")
+
+**Problem Analysis:**
+- `npm ci` requires `package-lock.json` for reproducible builds
+- Project currently doesn't track lockfile in git (.gitignore excludes it)
+- Docker build failed on Synology NAS during first deployment attempt
+
+**Solution Implemented:**
+- **Dockerfile fixes:**
+  - Stage 1 (deps): `npm ci --only=production` → `npm install --omit=dev`
+  - Stage 2 (builder): `npm ci` → `npm install`
+  - Added explanatory comments about why npm install is used
+- **DEPLOYMENT.md updates:**
+  - Added troubleshooting section for npm ci error
+  - Included step-by-step resolution guide
+  - Added recommendation to generate lockfile for production
+  - Added note in "Poznámky" section explaining npm install vs npm ci
+- **Verification:**
+  - All necessary files (package.json) are correctly copied
+  - Docker layer caching still works efficiently
+  - Build process remains optimized
+
+**Lessons Learned:**
+- `npm ci` is stricter and requires lockfile, `npm install` is more flexible
+- For production: lockfile ensures reproducible builds across environments
+- For development: npm install allows faster iteration without lockfile
+- Docker multi-stage builds need consistent npm commands across stages
+- Always test Docker builds in target environment (Synology NAS)
+
+**Best Practice Recommendation:**
+For future projects, decide early whether to use lockfile:
+- **With lockfile**: Use `npm ci` for faster, deterministic builds
+- **Without lockfile**: Use `npm install` but accept potential version drift
+
+**Time:** 5 minutes  
+**Manual work:** 0 lines of code  
+**Real-world testing:** ✅ Incident discovered and fixed during actual deployment
+
 ---
 
-**Total development time:** ~30 minutes  
+**Total development time:** ~35 minutes  
 **Total manual code written:** ~5 lines (port change)  
-**AI-generated code:** ~100% of functionality
+**AI-generated code:** ~100% of functionality  
+**Real-world incidents handled:** 1 (npm ci error)

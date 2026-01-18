@@ -8,8 +8,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install production dependencies only
+# Using npm install instead of npm ci because package-lock.json is not in repository
+RUN npm install --omit=dev && npm cache clean --force
 
 # Stage 2: Builder (initialize database)
 FROM node:20-alpine AS builder
@@ -17,7 +18,7 @@ WORKDIR /app
 
 # Copy package files and install all dependencies (including dev)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy application files
 COPY . .
