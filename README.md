@@ -1,5 +1,45 @@
 # Carnaby.sk - AI Web Development Journey
 
+## Project Background
+
+Personal music website built entirely through AI collaboration, documenting the journey from concept to production deployment.
+
+**Context:**
+- Developer: Senior programmer (10+ years experience)
+- Music: AI-generated songs via Suno
+- Goal: Showcase YouTube videos on personal website
+- Constraint: Zero manual code writing (AI does 100% of implementation)
+
+**Development Phases:**
+
+**Phase 1 - Initial Build (Claude Chat):**
+- Uploaded design assets (banner, photo)
+- Provided content and requirements in Slovak
+- Claude generated complete vanilla JS website in ~20 minutes
+- Features: Responsive layout, dark theme, multilanguage (SK/EN), YouTube embeds
+- Initial deployment to Synology NAS (carnaby.sk)
+
+**Phase 2 - Advanced Features (Google Antigravity):**
+- Migrated to Antigravity IDE for iterative development
+- Added SQLite database for video management
+- Implemented theme toggle (dark/light with system detection)
+- Created Docker deployment configuration
+- Real-world debugging and production deployment
+- All changes documented below with original prompts and results
+
+**Why Vanilla JS?**
+Deliberately avoided frameworks (React/Next.js/Vue) for:
+- Zero build complexity
+- Instant loading speed
+- Easy maintenance
+- Simple NAS deployment
+- No dependency hell
+
+**Important Note:**
+Prompts used here reflect senior-level technical knowledge (databases, APIs, Docker, deployment). Success rate depends heavily on developer's understanding of web architecture and ability to formulate precise requirements, not just AI capability.
+
+---
+
 ## Tech Stack
 - Vanilla JS (no frameworks)
 - SQLite database (better-sqlite3)
