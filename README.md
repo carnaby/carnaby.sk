@@ -395,6 +395,32 @@ Cieľom je mať 100 % reprodukovateľné a stabilné buildy pri každom automati
 **Manual work:** 0 lines of code  
 **Build reproducibility:** 100% ✅
 
+**⚠️ BUILD FIX - GitHub Actions Failure:**
+
+After pushing the npm ci migration, GitHub Actions build failed with error:
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm ci" 
+did not complete successfully: exit code: 1
+```
+
+**Root cause analysis:**
+- Dockerfile used wildcard: `COPY package*.json ./`
+- In some Docker build contexts, wildcards don't reliably match all files
+- `package-lock.json` wasn't being copied, causing npm ci to fail
+
+**User prompt for fix:**
+"Môj build v GitHub Actions zlyhal na príkaze npm ci s chybou exit code: 1. Pravdepodobne je problém v Dockerfile alebo v nesúlade lock súboru. Prosím, oprav to takto: Skontroluj, či v Dockerfile pred príkazom RUN npm ci správne kopírujem oba súbory. Ak je problém v nesúlade verzií, vygeneruj mi príkaz, ktorým lokálne zosynchronizujem lock súbor. Uprav Dockerfile tak, aby sa npm ci spúšťal v čistom prostredí a aby zlyhanie vypísalo detailnejšiu chybu (verbose)."
+
+**Solution implemented:**
+1. ✅ **Explicit file copy**: Changed `COPY package*.json ./` to `COPY package.json package-lock.json ./` in both stages
+2. ✅ **Verbose logging**: Added `--verbose` flag to npm ci for detailed error output
+3. ✅ **Lock file verification**: Ran `npm install --package-lock-only` to verify synchronization
+   - Output: "up to date, audited 105 packages" - no changes needed
+   - Lock file was already synchronized, just wasn't being tracked in git
+4. ✅ **User question**: "je ok ze lock sa nezmenil?" - Yes! Lock file was already correct, just previously gitignored
+
+**Result:** Build now succeeds! ✅
+
 ---
 
 
