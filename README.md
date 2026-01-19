@@ -403,23 +403,35 @@ ERROR: failed to build: failed to solve: process "/bin/sh -c npm ci"
 did not complete successfully: exit code: 1
 ```
 
-**Root cause analysis:**
-- Dockerfile used wildcard: `COPY package*.json ./`
-- In some Docker build contexts, wildcards don't reliably match all files
-- `package-lock.json` wasn't being copied, causing npm ci to fail
+**First attempt - Root cause analysis:**
+- Initially thought: Dockerfile used wildcard `COPY package*.json ./`
+- Hypothesis: Wildcards don't reliably match all files in Docker build context
+- Solution tried: Changed to explicit `COPY package.json package-lock.json ./`
 
-**User prompt for fix:**
-"Môj build v GitHub Actions zlyhal na príkaze npm ci s chybou exit code: 1. Pravdepodobne je problém v Dockerfile alebo v nesúlade lock súboru. Prosím, oprav to takto: Skontroluj, či v Dockerfile pred príkazom RUN npm ci správne kopírujem oba súbory. Ak je problém v nesúlade verzií, vygeneruj mi príkaz, ktorým lokálne zosynchronizujem lock súbor. Uprav Dockerfile tak, aby sa npm ci spúšťal v čistom prostredí a aby zlyhanie vypísalo detailnejšiu chybu (verbose)."
+**Second failure:**
+```
+ERROR: failed to compute cache key: "/package-lock.json": not found
+```
 
-**Solution implemented:**
-1. ✅ **Explicit file copy**: Changed `COPY package*.json ./` to `COPY package.json package-lock.json ./` in both stages
-2. ✅ **Verbose logging**: Added `--verbose` flag to npm ci for detailed error output
-3. ✅ **Lock file verification**: Ran `npm install --package-lock-only` to verify synchronization
-   - Output: "up to date, audited 105 packages" - no changes needed
-   - Lock file was already synchronized, just wasn't being tracked in git
-4. ✅ **User question**: "je ok ze lock sa nezmenil?" - Yes! Lock file was already correct, just previously gitignored
+**ACTUAL root cause discovered:**
+- 🔴 `package-lock.json` was in `.dockerignore` (line 6)!
+- Docker was **ignoring** the file during COPY, even though it was in git
+- File existed in repository but Docker build context excluded it
 
-**Result:** Build now succeeds! ✅
+**User prompts:**
+1. "Môj build v GitHub Actions zlyhal na príkaze npm ci s chybou exit code: 1..."
+2. "mame opet havariu: buildx failed... '/package-lock.json': not found"
+
+**Final solution:**
+1. ✅ Removed `package-lock.json` from `.dockerignore`
+2. ✅ Added comment explaining it's needed for npm ci
+3. ✅ Kept explicit COPY commands for clarity
+4. ✅ Kept `--verbose` flag for debugging
+5. ✅ Verified `package-lock.json` was already in git (commit ca184e8)
+
+**Lesson learned:** When migrating to npm ci, check **both** `.gitignore` AND `.dockerignore`!
+
+**Result:** Build should now succeed! ✅
 
 ---
 
