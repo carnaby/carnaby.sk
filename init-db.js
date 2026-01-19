@@ -29,40 +29,41 @@ const dodoCategory = db.prepare('SELECT id FROM categories WHERE name = ?').get(
 
 // Existing YouTube video URLs from index.html
 const existingVideos = [
-    'QBLRyxhDCS4',
-    'vTHAbkEvymM',
-    'qeUB6Yj1PYo',
-    'AMajbzPky6g',
-    'AVzGSWEkyeQ',
-    'Hnabg1NAyKA',
-    '0l4kWpAK9p8',
-    'HcxvUN3IvVg',
-    'p1_pl_fIBiQ',
-    '2I_El8MJYXQ',
-    'CqujYRiQo84',
-    'YJDaKFMqKfc',
-    'sj4UZDRy2W0',
-    'rde5giz3TGc',
-    'zQeCIiAf0fY'
+  'vFd6XrV4vRE',
+  'QBLRyxhDCS4',
+  'vTHAbkEvymM',
+  'qeUB6Yj1PYo',
+  'AMajbzPky6g',
+  'AVzGSWEkyeQ',
+  'Hnabg1NAyKA',
+  '0l4kWpAK9p8',
+  'HcxvUN3IvVg',
+  'p1_pl_fIBiQ',
+  '2I_El8MJYXQ',
+  'CqujYRiQo84',
+  'YJDaKFMqKfc',
+  'sj4UZDRy2W0',
+  'rde5giz3TGc',
+  'zQeCIiAf0fY'
 ];
 
 // Check if videos already exist
 const videoCount = db.prepare('SELECT COUNT(*) as count FROM videos').get();
 
 if (videoCount.count === 0) {
-    // Insert videos into Dodo category
-    const insertVideo = db.prepare('INSERT INTO videos (url, category_id) VALUES (?, ?)');
+  // Insert videos into Dodo category
+  const insertVideo = db.prepare('INSERT INTO videos (url, category_id) VALUES (?, ?)');
 
-    const insertMany = db.transaction((videos) => {
-        for (const videoUrl of videos) {
-            insertVideo.run(videoUrl, dodoCategory.id);
-        }
-    });
+  const insertMany = db.transaction((videos) => {
+    for (const videoUrl of videos) {
+      insertVideo.run(videoUrl, dodoCategory.id);
+    }
+  });
 
-    insertMany(existingVideos);
-    console.log(`✅ Database initialized with ${existingVideos.length} videos in Dodo category`);
+  insertMany(existingVideos);
+  console.log(`✅ Database initialized with ${existingVideos.length} videos in Dodo category`);
 } else {
-    console.log('✅ Database already contains videos');
+  console.log('✅ Database already contains videos');
 }
 
 db.close();
