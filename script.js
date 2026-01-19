@@ -33,9 +33,11 @@ const translations = {
         ctaButton: "See more on YouTube",
 
         // Footer
-        footerCopyright: "© 2025 Dodo – Songs for the Journey",
+        footerCopyright: "©",
+        footerCopyrightText: "Dodo – Songs for the Journey",
         aiExperiment: "🤖 This website is an AI experiment created using",
         aiAnd: "&",
+        aiJourney: "Documentation of our journey together is on",
         themeToggle: "Toggle theme",
 
         // Loading
@@ -76,9 +78,11 @@ const translations = {
         ctaButton: "Pozri viac na YouTube",
 
         // Footer
-        footerCopyright: "© 2025 Dodo – Songs for the Journey",
+        footerCopyright: "©",
+        footerCopyrightText: "Dodo – Songs for the Journey",
         aiExperiment: "🤖 Tento web je AI experiment vytvorený pomocou",
         aiAnd: "&",
+        aiJourney: "Dokumentácia našej spoločnej cesty je na",
         themeToggle: "Prepnúť tému",
 
         // Loading
@@ -147,6 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTranslations(lang);
         });
     });
+
+    // Set dynamic copyright year
+    const copyrightYear = document.getElementById('copyrightYear');
+    if (copyrightYear) {
+        copyrightYear.textContent = new Date().getFullYear() + ' ';
+    }
 
     // Load videos from API
     loadVideos();
