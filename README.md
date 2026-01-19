@@ -1,4 +1,4 @@
-# Carnaby.sk - AI Web Development Journey
+# [Carnaby.sk](https://carnaby.sk/) - AI Web Development Journey
 
 ## Project Background
 
@@ -17,7 +17,7 @@ Personal music website built entirely through AI collaboration, documenting the 
 - Provided content and requirements in Slovak
 - Claude generated complete vanilla JS website in ~20 minutes
 - Features: Responsive layout, dark theme, multilanguage (SK/EN), YouTube embeds
-- Initial deployment to Synology NAS (carnaby.sk)
+- Initial deployment to Synology NAS ([carnaby.sk](https://carnaby.sk/))
 
 **Phase 2 - Advanced Features (Google Antigravity):**
 - Migrated to Antigravity IDE for iterative development
@@ -294,16 +294,58 @@ Zapíš túto zmenu do logu v README.md ako 'Prechod na automatizovaný CI/CD pi
 **Manual work:** 0 lines of code  
 **Deployment complexity:** Reduced from 5 manual steps to 1 (git push)
 
+### Commit 9: CI/CD Pipeline Test - First Automated Deployment (Day 4)
+**Prompt:** "Všetko som nastavil, dokonca aj notifikácie na Telegram. Tak poďme to skúsiť — urobíme len drobné zmeny:
+
+Pridaj odkaz medzi YouTube a Facebook na môj SoundCloud: https://soundcloud.com/jozef-sokol
+Do petičky, kde sa píše o AI experimente, zapracuj odkaz na GitHub s týmto projektom: https://github.com/carnaby/carnaby.sk. Môžeš tam tiež pridať krátky text, že ide o dokumentáciu našej spoločnej cesty — to už nechávam na teba.
+V petičke nastav (c) rok tak, aby sa automaticky aktualizoval.
+V README.md pridaj zmienky o carnaby.sk ako hyperlinky: https://carnaby.sk/"
+
+(Translation: "I've set everything up, even Telegram notifications. So let's test it — we'll make just small changes: Add a link between YouTube and Facebook to my SoundCloud. In the footer where it talks about the AI experiment, add a link to GitHub with this project. You can also add a short text that it's documentation of our journey together — I'll leave that to you. In the footer, set the copyright year to update automatically. In README.md, add mentions of carnaby.sk as hyperlinks.")
+
+**Result:** ✅ First real test of automated CI/CD pipeline
+- **Navigation updates** (`index.html`):
+  - Added SoundCloud link between YouTube and Facebook
+  - URL: https://soundcloud.com/jozef-sokol
+- **Footer enhancements** (`index.html` + `script.js`):
+  - Dynamic copyright year using JavaScript `new Date().getFullYear()`
+  - Automatically updates every year without manual intervention
+  - Added SoundCloud to footer social links
+  - Added GitHub project link with bilingual documentation text:
+    - Slovak: "Dokumentácia našej spoločnej cesty je na GitHub"
+    - English: "Documentation of our journey together is on GitHub"
+  - URL: https://github.com/carnaby/carnaby.sk
+- **README.md updates**:
+  - Added hyperlinks to [carnaby.sk](https://carnaby.sk/) throughout document
+  - Links in main title, deployment mentions, and commit prompts
+- **Translation updates**:
+  - Split `footerCopyright` into separate translatable components
+  - Added `aiJourney` translation key for GitHub documentation text
+  - Maintained full i18n support (SK/EN)
+
+**CI/CD Pipeline Test:**
+- Push to GitHub → GitHub Actions builds image → Watchtower detects update → Container auto-restarts
+- Telegram notifications configured for deployment updates
+- Zero manual intervention required! 🎉
+
+**Time:** 5 minutes  
+**Manual work:** 0 lines of code  
+**First automated deployment:** SUCCESS ✅
+
+---
+
 
 
 ## 📊 Project Statistics
 
-**Total development time:** ~47 minutes  
+**Total development time:** ~52 minutes  
 **Total manual code written:** ~5 lines (port change)  
 **AI-generated code:** ~100% of functionality  
 **Real-world incidents handled:** 1 (npm ci error - RESOLVED ✅)  
 **Production deployments:** 1 (Synology NAS - SUCCESS 🚀)  
-**CI/CD pipelines:** 1 (GitHub Actions + Watchtower - AUTOMATED ⚡)
+**CI/CD pipelines:** 1 (GitHub Actions + Watchtower - AUTOMATED ⚡)  
+**Automated deployments:** 1 (First CI/CD test - SUCCESS ✅)
 
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
