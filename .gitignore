@@ -10,7 +10,7 @@ yarn-error.log*
 *.db-wal
 
 # Package manager lock files
-package-lock.json
+# package-lock.json is now tracked for reproducible builds with npm ci
 yarn.lock
 
 # Environment variables
