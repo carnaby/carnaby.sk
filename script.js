@@ -32,6 +32,9 @@ const translations = {
         // CTA
         ctaButton: "See more on YouTube",
 
+        // Category tabs
+        tabAll: "All",
+
         // Footer
         footerCopyright: "©",
         footerCopyrightText: "Dodo – Songs for the Journey",
@@ -76,6 +79,9 @@ const translations = {
 
         // CTA
         ctaButton: "Pozri viac na YouTube",
+
+        // Category tabs
+        tabAll: "Všetky",
 
         // Footer
         footerCopyright: "©",
@@ -165,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
 });
 
+// Global variable to store videos by category
+let videosByCategory = {};
+
 // Load videos from API
 async function loadVideos() {
     const songsGrid = document.getElementById('songsGrid');
@@ -179,24 +188,24 @@ async function loadVideos() {
             throw new Error(result.error || 'Failed to load videos');
         }
 
-        // Clear loading message
-        songsGrid.innerHTML = '';
+        // Store videos by category
+        videosByCategory = result.data;
 
-        // Render videos from all categories
-        const allVideos = [];
-        for (const category in result.data) {
-            allVideos.push(...result.data[category]);
-        }
+        // Render all videos by default
+        renderVideos('all');
 
-        if (allVideos.length === 0) {
-            songsGrid.innerHTML = `<div class="error-message"><p>⚠️ ${t.noVideosFound}</p></div>`;
-            return;
-        }
+        // Add tab click handlers
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const category = btn.getAttribute('data-category');
 
-        // Create video cards
-        allVideos.forEach(video => {
-            const videoCard = createVideoCard(video.url);
-            songsGrid.appendChild(videoCard);
+                // Update active state
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Render filtered videos
+                renderVideos(category);
+            });
         });
 
     } catch (error) {
@@ -208,6 +217,39 @@ async function loadVideos() {
             </div>
         `;
     }
+}
+
+// Render videos based on selected category
+function renderVideos(category) {
+    const songsGrid = document.getElementById('songsGrid');
+    const currentLang = localStorage.getItem('preferredLanguage') || detectLanguage();
+    const t = translations[currentLang];
+
+    // Clear grid
+    songsGrid.innerHTML = '';
+
+    // Collect videos to display
+    let videosToShow = [];
+    if (category === 'all') {
+        // Show all videos from all categories
+        for (const cat in videosByCategory) {
+            videosToShow.push(...videosByCategory[cat]);
+        }
+    } else {
+        // Show videos from selected category
+        videosToShow = videosByCategory[category] || [];
+    }
+
+    if (videosToShow.length === 0) {
+        songsGrid.innerHTML = `<div class="error-message"><p>⚠️ ${t.noVideosFound}</p></div>`;
+        return;
+    }
+
+    // Create video cards
+    videosToShow.forEach(video => {
+        const videoCard = createVideoCard(video.url);
+        songsGrid.appendChild(videoCard);
+    });
 }
 
 // Create video card element

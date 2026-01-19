@@ -231,9 +231,47 @@ body {
 .section-subtitle {
     text-align: center;
     color: var(--text-secondary);
-    margin-bottom: 50px;
+    margin-bottom: 30px;
     font-size: 1.1rem;
     font-style: italic;
+}
+
+/* Category Tabs */
+.category-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background-color: var(--bg-card);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 12px 30px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    background-color: var(--accent-gold);
+    color: var(--bg-dark);
+    border-color: var(--accent-gold);
+}
+
+.tab-btn.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(212, 165, 116, 0.3);
 }
 
 .songs-grid {
