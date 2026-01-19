@@ -2,9 +2,9 @@ version: '3.8'
 
 services:
   carnaby-web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Pull pre-built image from GitHub Container Registry
+    # Built automatically via GitHub Actions on every push to main
+    image: ghcr.io/${GITHUB_REPOSITORY:-dodus/carnaby.sk}:latest
     container_name: carnaby-sk
     restart: unless-stopped
     ports:
@@ -22,6 +22,32 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # Watchtower - Automatic container updates
+  # Checks for new images every 5 minutes and updates containers
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: carnaby-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.docker/config.json:/config.json:ro
+    environment:
+      # Check for updates every 5 minutes (300 seconds)
+      - WATCHTOWER_POLL_INTERVAL=300
+      # Only update containers with the watchtower.enable label
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Clean up old images after updating
+      - WATCHTOWER_CLEANUP=true
+      # Include stopped containers
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      # Enable notifications (optional - can be configured later)
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
+    networks:
+      - carnaby-network
 
 networks:
   carnaby-network:
