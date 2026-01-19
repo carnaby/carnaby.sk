@@ -5,20 +5,21 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files (explicit copy for both files)
+COPY package.json package-lock.json ./
 
 # Install production dependencies only
 # Using npm ci for reproducible builds with exact versions from package-lock.json
-RUN npm ci --omit=dev && npm cache clean --force
+# Verbose output for debugging if build fails
+RUN npm ci --omit=dev --verbose && npm cache clean --force
 
 # Stage 2: Builder (initialize database)
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files and install all dependencies (including dev)
-COPY package*.json ./
-RUN npm ci
+COPY package.json package-lock.json ./
+RUN npm ci --verbose
 
 # Copy application files
 COPY . .
