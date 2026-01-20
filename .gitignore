@@ -8,6 +8,10 @@ yarn-error.log*
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+data/
 
 # Package manager lock files
 # package-lock.json is now tracked for reproducible builds with npm ci

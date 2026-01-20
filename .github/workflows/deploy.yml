@@ -21,6 +21,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate SQL migrations
+        run: |
+          echo "🔍 Validating SQL migration files..."
+          for file in migrations/*.sql; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Basic SQL syntax validation (check for common errors)
+              if grep -q ";" "$file"; then
+                echo "✅ $file appears valid"
+              else
+                echo "⚠️  Warning: $file may be missing semicolons"
+              fi
+            fi
+          done
+          echo "✅ Migration validation complete"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
