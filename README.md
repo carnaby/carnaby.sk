@@ -719,21 +719,178 @@ $ docker run --rm --user 1026:100 -v /volume1/docker/carnaby/data:/test-data alp
 
 ---
 
+### 🐛 Deployment Debugging - SQLITE_READONLY_DIRECTORY Issue
+
+**Problem encountered during production deployment:**
+
+After pushing the migration system to production, the container entered a restart loop with error:
+```
+❌ Migration failed, cannot start server: SqliteError: unable to open database file
+code: 'SQLITE_CANTOPEN'
+```
+
+Later evolved to:
+```
+❌ Migration failed: SqliteError: attempt to write a readonly database
+code: 'SQLITE_READONLY_DIRECTORY'
+```
+
+**Root cause analysis:**
+
+1. **Initial suspicion**: Database file permissions
+   - Created empty `database.sqlite` with `chmod 666` (rw-rw-rw-)
+   - Error persisted → not a file permission issue
+
+2. **Actual problem**: Directory permissions
+   - Directory had `chmod 775` (rwxrwxr-x)
+   - SQLite needs to create WAL files: `database.sqlite-wal`, `database.sqlite-shm`
+   - Container running as UID 1026 couldn't write to directory
+   - Error message was misleading: "readonly database" actually meant "readonly directory"
+
+**Debugging steps taken:**
+
+```bash
+# 1. Verified directory structure
+ls -la /volume1/docker/carnaby-sk/data/
+# Output: drwxrwxr-x (775) - insufficient for WAL file creation
+
+# 2. Verified UID/GID
+id carnaby
+# Output: uid=1026(carnaby) gid=100(users)
+
+# 3. Verified volume mount
+docker inspect carnaby-sk | grep -A 10 Mounts
+# Output: Correct mount, but directory not writable
+
+# 4. Created test file from container (failed)
+docker exec carnaby-sk touch /app/data/test.txt
+# Error: Container restarting (couldn't execute)
+
+# 5. Created database file manually (partial success)
+sudo touch /volume1/docker/carnaby-sk/data/database.sqlite
+sudo chown 1026:100 /volume1/docker/carnaby-sk/data/database.sqlite
+sudo chmod 666 /volume1/docker/carnaby-sk/data/database.sqlite
+# Database opened, but WAL mode failed (directory still readonly)
+```
+
+**Solution:**
+
+```bash
+# Change directory permissions to allow WAL file creation
+sudo chmod 777 /volume1/docker/carnaby-sk/data
+
+# Restart container
+sudo docker restart carnaby-sk
+
+# Success! Migrations ran:
+# ✅ WAL mode enabled
+# ✅ Applied 001_initial_schema.sql
+# ✅ Database stats: 2 categories, 16 videos
+# ✅ Server is running on http://localhost:3000
+```
+
+**Why 777 was needed:**
+
+SQLite with WAL mode requires:
+- Read permission on database file ✅
+- Write permission on database file ✅
+- **Write permission on directory** ❌ (was missing)
+- **Execute permission on directory** ✅
+
+The directory needs write permission because SQLite creates:
+- `database.sqlite-wal` (Write-Ahead Log)
+- `database.sqlite-shm` (Shared Memory)
+
+These files are created/deleted dynamically during database operations.
+
+**Verification:**
+
+```bash
+# After successful startup, WAL files appeared:
+ls -la /volume1/docker/carnaby-sk/data/
+# database.sqlite
+# database.sqlite-wal  ← Created by SQLite
+# database.sqlite-shm  ← Created by SQLite
+```
+
+**Backup system deployment:**
+
+After database was running, backup script was deployed:
+
+```bash
+# Created backup script on Synology (not in Docker image yet)
+mkdir -p /volume1/docker/carnaby-sk/scripts
+cat > /volume1/docker/carnaby-sk/scripts/backup-db.sh << 'EOF'
+[backup script content]
+EOF
+chmod +x /volume1/docker/carnaby-sk/scripts/backup-db.sh
+
+# Tested backup manually
+/volume1/docker/carnaby-sk/scripts/backup-db.sh
+# ✅ Backup created: database_2026-01-20_11-50-50.sqlite (36K)
+# ✅ Saved to Google Drive sync folder
+# ✅ Verified on Google Cloud
+
+# Scheduled via Synology Task Scheduler
+# Daily at 3:00 AM
+```
+
+**Lessons learned:**
+
+1. **SQLite WAL mode requires directory write permissions**
+   - Not just file permissions
+   - Error message "readonly database" can mean "readonly directory"
+   - Always check directory permissions when using WAL mode
+
+2. **Docker volume mounts inherit host permissions**
+   - Container UID/GID must match host permissions
+   - `user: "1026:100"` in docker-compose.yml is critical
+   - Test write access before deploying: `docker exec container touch /path/test.txt`
+
+3. **Debugging containerized databases:**
+   - Check file permissions: `ls -la /path/to/file`
+   - Check directory permissions: `ls -la /path/to/`
+   - Check volume mounts: `docker inspect container | grep Mounts`
+   - Check container user: `docker exec container id`
+   - Test write access: `docker exec container touch /path/test.txt`
+
+4. **SQLite error messages can be misleading:**
+   - `SQLITE_CANTOPEN` → Check if directory exists
+   - `SQLITE_READONLY_DIRECTORY` → Check directory write permissions
+   - `SQLITE_READONLY` → Check file write permissions
+
+5. **Deployment checklist for SQLite + Docker:**
+   - [ ] Create data directory on host
+   - [ ] Set directory permissions (chmod 777 or 775 with correct owner)
+   - [ ] Set directory owner (chown UID:GID)
+   - [ ] Verify volume mount in docker-compose.yml
+   - [ ] Set container user in docker-compose.yml
+   - [ ] Test write access before deploying
+   - [ ] Monitor logs during first deployment
+
+**Time to debug:** 30 minutes  
+**Iterations:** 5 (permissions, file creation, directory permissions, chmod 777, success)  
+**Final solution:** Single command (`chmod 777`)  
+**Key insight:** Directory permissions, not file permissions  
+
+---
+
 
 
 ## 📊 Project Statistics
 
-**Total development time:** ~140 minutes  
+**Total development time:** ~170 minutes (including debugging)  
 **Total manual code written:** ~5 lines (port change)  
 **AI-generated code:** ~100% of functionality  
-**Real-world incidents handled:** 1 (npm ci error - RESOLVED ✅)  
+**Real-world incidents handled:** 2 (npm ci error, SQLite permissions - BOTH RESOLVED ✅)  
 **Production deployments:** 1 (Synology NAS - SUCCESS 🚀)  
 **CI/CD pipelines:** 1 (GitHub Actions + Watchtower - AUTOMATED ⚡)  
 **Automated deployments:** 2 (CI/CD test + npm ci migration - SUCCESS ✅)  
 **Build reproducibility:** 100% (npm ci with package-lock.json) ✅  
-**Debugging iterations:** 5 (npm ci: 3, category tabs: 2) 🔧  
+**Debugging iterations:** 10 (npm ci: 3, category tabs: 2, SQLite permissions: 5) 🔧  
 **Features implemented:** 9 (server, gitignore, theme toggle, database, Docker, CI/CD, npm ci, category tabs, persistence architecture) 🎨  
-**Database migrations:** Production-ready system with WAL mode ✅
+**Database migrations:** Production-ready system with WAL mode ✅  
+**Automated backups:** Daily backups to Google Drive ✅
 
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
@@ -741,9 +898,11 @@ $ docker run --rm --user 1026:100 -v /volume1/docker/carnaby/data:/test-data alp
 - ✅ Dark/Light theme with system detection
 - ✅ Dockerized for production deployment
 - ✅ Successfully deployed to Synology NAS
-- ✅ Real-world error debugging and resolution
+- ✅ Real-world error debugging and resolution (2 production incidents)
 - ✅ Comprehensive documentation maintained throughout
 - ✅ Automated CI/CD pipeline with zero-downtime deployments
 - ✅ Production-grade database persistence architecture
 - ✅ Automated migration system with WAL mode
 - ✅ Automated backup system to Google Drive
+- ✅ Debugged and resolved SQLite directory permissions issue
+- ✅ Backups verified on Google Cloud
