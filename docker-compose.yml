@@ -11,6 +11,10 @@ services:
     # Run container with specific UID/GID for Synology NAS permissions
     user: "1026:100"
     
+    # Load environment variables from .env file (for OAuth credentials)
+    env_file:
+      - .env
+    
     ports:
       - "3000:3000"
     
