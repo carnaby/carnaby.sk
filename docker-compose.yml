@@ -24,7 +24,7 @@ services:
     
     volumes:
       # Persistent database storage (outside Google Drive sync)
-      - /volume1/docker/carnaby/data:/app/data
+      - /volume1/docker/carnaby-sk/data:/app/data
       
       # Backup location (Google Drive synced folder)
       # Note: Only backups go here, not the live database
