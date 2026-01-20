@@ -101,7 +101,7 @@ npm start  # Server started successfully
 **Database Verification:**
 ```sql
 SELECT * FROM users;
--- 1|<google_id>|dodusik@gmail.com|Jozef Sokol|<avatar_url>|2026-01-20 13:09:00
+-- 1|<google_id>|user@example.com|Jozef Sokol|<avatar_url>|2026-01-20 13:09:00
 
 SELECT * FROM sessions;
 -- <session_id>|<session_data>|<expiry_timestamp>
