@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for carnaby.sk
-# Optimized for Synology NAS deployment
+# Optimized for Synology NAS deployment with persistent SQLite database
 
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
@@ -10,31 +10,16 @@ COPY package.json package-lock.json ./
 
 # Install production dependencies only
 # Using npm ci for reproducible builds with exact versions from package-lock.json
-# Verbose output for debugging if build fails
-RUN npm ci --omit=dev --verbose && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Stage 2: Builder (initialize database)
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-# Copy package files and install all dependencies (including dev)
-COPY package.json package-lock.json ./
-RUN npm ci --verbose
-
-# Copy application files
-COPY . .
-
-# Initialize database with sample data
-RUN node init-db.js
-
-# Stage 3: Runner
+# Stage 2: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Set to production
 ENV NODE_ENV=production
 
-# Create non-root user for security
+# Create non-root user for security (UID/GID will be overridden by docker-compose)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 appuser
 
@@ -44,8 +29,13 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application files
 COPY --chown=appuser:nodejs . .
 
-# Copy initialized database from builder
-COPY --from=builder --chown=appuser:nodejs /app/videos.db ./videos.db
+# Create data directory for database (will be mounted as volume)
+RUN mkdir -p /app/data && \
+    chown -R appuser:nodejs /app/data
+
+# Create backups directory (will be mounted to Google Drive sync folder)
+RUN mkdir -p /app/backups && \
+    chown -R appuser:nodejs /app/backups
 
 # Switch to non-root user
 USER appuser
@@ -54,8 +44,8 @@ USER appuser
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application
+# Start application (migrations run automatically in server.js)
 CMD ["node", "server.js"]

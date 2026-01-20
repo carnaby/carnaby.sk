@@ -1,12 +1,31 @@
 const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
+const { runMigrations } = require('./migrations/migration-runner');
 
 const app = express();
 const PORT = 3000;
 
-// Initialize database
-const db = new Database(path.join(__dirname, 'videos.db'));
+// Database path (configurable via environment variable)
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'database.sqlite');
+
+// Run migrations before starting server
+console.log('🚀 Starting carnaby.sk server...');
+try {
+    runMigrations();
+} catch (error) {
+    console.error('❌ Migration failed, cannot start server:', error);
+    process.exit(1);
+}
+
+// Initialize database connection
+const db = new Database(DB_PATH);
+
+// Enable WAL mode for better concurrency and data integrity
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('wal_autocheckpoint = 1000');
+console.log('✅ Database connected with WAL mode');
 
 // Serve static files from the current directory
 app.use(express.static(__dirname));
@@ -55,12 +74,38 @@ app.get('/', (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
+    console.log('\n🛑 Shutting down gracefully...');
+
+    // Checkpoint WAL file before closing
+    try {
+        db.pragma('wal_checkpoint(TRUNCATE)');
+        console.log('✅ WAL checkpoint completed');
+    } catch (error) {
+        console.error('⚠️  WAL checkpoint failed:', error.message);
+    }
+
     db.close();
-    console.log('\n✅ Database connection closed');
+    console.log('✅ Database connection closed');
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Received SIGTERM, shutting down...');
+
+    // Checkpoint WAL file before closing
+    try {
+        db.pragma('wal_checkpoint(TRUNCATE)');
+        console.log('✅ WAL checkpoint completed');
+    } catch (error) {
+        console.error('⚠️  WAL checkpoint failed:', error.message);
+    }
+
+    db.close();
+    console.log('✅ Database connection closed');
     process.exit(0);
 });

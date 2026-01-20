@@ -7,21 +7,35 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY:-dodus/carnaby.sk}:latest
     container_name: carnaby-sk
     restart: unless-stopped
+    
+    # Run container with specific UID/GID for Synology NAS permissions
+    user: "1026:100"
+    
     ports:
       - "3000:3000"
+    
     environment:
       - NODE_ENV=production
+      - DB_PATH=/app/data/database.sqlite
+    
     volumes:
-      # Persist database outside container
-      - ./data:/app/data
+      # Persistent database storage (outside Google Drive sync)
+      - /volume1/docker/carnaby/data:/app/data
+      
+      # Backup location (Google Drive synced folder)
+      # Note: Only backups go here, not the live database
+      - /volume1/private/clouds/GoogleDrive/carnaby_sk/backups:/app/backups
+    
     networks:
       - carnaby-network
+    
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      start_period: 10s
+    
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
@@ -52,6 +66,3 @@ services:
 networks:
   carnaby-network:
     driver: bridge
-
-volumes:
-  carnaby-data:
