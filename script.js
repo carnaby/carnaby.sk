@@ -366,12 +366,14 @@ async function checkAuth() {
                 this.src = defaultAvatar;
             };
 
-            document.getElementById('user-name').textContent = data.user.displayName;
-            authUser.style.display = 'flex';
+            // Set user name in dropdown
+            document.getElementById('user-name-dropdown').textContent = data.user.displayName;
+            authUser.style.display = 'block';
 
             // Add logout handler
             const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
+            if (logoutBtn && !logoutBtn.hasAttribute('data-listener')) {
+                logoutBtn.setAttribute('data-listener', 'true');
                 logoutBtn.addEventListener('click', () => {
                     window.location.href = '/auth/logout';
                 });
