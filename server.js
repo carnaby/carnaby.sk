@@ -34,6 +34,10 @@ db.pragma('synchronous = NORMAL');
 db.pragma('wal_autocheckpoint = 1000');
 console.log('✅ Database connected with WAL mode');
 
+// Trust proxy - Required for Synology reverse proxy
+// This allows Express to trust the X-Forwarded-* headers
+app.set('trust proxy', 1);
+
 // Initialize Passport with database connection
 const passport = initializePassport(db);
 
@@ -52,7 +56,7 @@ app.use(session({
     cookie: {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        secure: 'auto', // Auto-detect based on connection (works with reverse proxy)
         sameSite: 'lax'
     }
 }));
