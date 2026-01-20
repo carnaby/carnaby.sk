@@ -46,7 +46,11 @@ const translations = {
         // Loading
         loadingVideos: "Loading videos...",
         errorLoadingVideos: "Failed to load videos",
-        noVideosFound: "No videos found"
+        noVideosFound: "No videos found",
+
+        // Authentication
+        signInWithGoogle: "Sign in with Google",
+        logout: "Logout"
     },
     sk: {
         // Navigation
@@ -94,7 +98,11 @@ const translations = {
         // Loading
         loadingVideos: "Načítavam videá...",
         errorLoadingVideos: "Nepodarilo sa načítať videá",
-        noVideosFound: "Žiadne videá neboli nájdené"
+        noVideosFound: "Žiadne videá neboli nájdené",
+
+        // Authentication
+        signInWithGoogle: "Prihlásiť sa cez Google",
+        logout: "Odhlásiť sa"
     }
 };
 
@@ -169,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize theme
     initTheme();
+
+    // Check authentication status
+    checkAuth();
 });
 
 // Global variable to store videos by category
@@ -330,5 +341,49 @@ function initTheme() {
                 applyTheme(e.matches ? 'light' : 'dark');
             }
         });
+    }
+}
+
+// Authentication management
+async function checkAuth() {
+    const authLoading = document.getElementById('auth-loading');
+    const authLogin = document.getElementById('auth-login');
+    const authUser = document.getElementById('auth-user');
+
+    authLoading.style.display = 'block';
+
+    try {
+        const response = await fetch('/auth/user');
+        const data = await response.json();
+
+        if (data.authenticated) {
+            // User is logged in
+            const avatarImg = document.getElementById('user-avatar');
+            const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23d4a574"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/%3E%3C/svg%3E';
+
+            avatarImg.src = data.user.avatarUrl || defaultAvatar;
+            avatarImg.onerror = function () {
+                this.src = defaultAvatar;
+            };
+
+            document.getElementById('user-name').textContent = data.user.displayName;
+            authUser.style.display = 'flex';
+
+            // Add logout handler
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    window.location.href = '/auth/logout';
+                });
+            }
+        } else {
+            // User is not logged in
+            authLogin.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        authLogin.style.display = 'block';
+    } finally {
+        authLoading.style.display = 'none';
     }
 }
