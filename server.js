@@ -1,10 +1,17 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
+const session = require('express-session');
+const SqliteStore = require('better-sqlite3-session-store')(session);
+const initializePassport = require('./config/passport');
+const authRoutes = require('./routes/auth');
 const { runMigrations } = require('./migrations/migration-runner');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Database path (configurable via environment variable)
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'database.sqlite');
@@ -27,8 +34,41 @@ db.pragma('synchronous = NORMAL');
 db.pragma('wal_autocheckpoint = 1000');
 console.log('✅ Database connected with WAL mode');
 
+// Initialize Passport with database connection
+const passport = initializePassport(db);
+
+// Session configuration
+app.use(session({
+    store: new SqliteStore({
+        client: db,
+        expired: {
+            clear: true,
+            intervalMs: 900000 // Clear expired sessions every 15 minutes
+        }
+    }),
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        sameSite: 'lax'
+    }
+}));
+
+console.log('✅ Session store configured');
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+console.log('✅ Passport initialized');
+
 // Serve static files from the current directory
 app.use(express.static(__dirname));
+
+// Authentication routes
+app.use('/auth', authRoutes);
 
 // API endpoint to get all videos
 app.get('/api/videos', (req, res) => {
@@ -78,7 +118,10 @@ app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+function shutdown() {
     console.log('\n🛑 Shutting down gracefully...');
 
     // Checkpoint WAL file before closing
@@ -92,20 +135,4 @@ process.on('SIGINT', () => {
     db.close();
     console.log('✅ Database connection closed');
     process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    console.log('\n🛑 Received SIGTERM, shutting down...');
-
-    // Checkpoint WAL file before closing
-    try {
-        db.pragma('wal_checkpoint(TRUNCATE)');
-        console.log('✅ WAL checkpoint completed');
-    } catch (error) {
-        console.error('⚠️  WAL checkpoint failed:', error.message);
-    }
-
-    db.close();
-    console.log('✅ Database connection closed');
-    process.exit(0);
-});
+}
