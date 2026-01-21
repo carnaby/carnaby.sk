@@ -20,15 +20,17 @@ services:
     
     environment:
       - NODE_ENV=production
-      - DB_PATH=/app/data/database.sqlite
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=carnaby
+      - DB_USER=carnaby
+      - DB_PASSWORD=${DB_PASSWORD}
     
-    volumes:
-      # Persistent database storage (outside Google Drive sync)
-      - /volume1/docker/carnaby-sk/data:/app/data
-      
-      # Backup location (Google Drive synced folder)
-      # Note: Only backups go here, not the live database
-      - /volume1/private/clouds/GoogleDrive/carnaby_sk/backups:/app/backups
+    # No volumes needed - using PostgreSQL instead of SQLite
+    
+    depends_on:
+      db:
+        condition: service_healthy
     
     networks:
       - carnaby-network
