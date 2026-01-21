@@ -82,6 +82,11 @@ function startServer() {
     // Authentication routes
     app.use('/auth', authRoutes);
 
+    // Admin routes
+    const adminRoutes = require('./routes/admin');
+    app.use('/admin', adminRoutes);
+
+
     // API endpoint to get all videos
     app.get('/api/videos', async (req, res) => {
         try {

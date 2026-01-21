@@ -39,19 +39,23 @@ function initializePassport(pool) {
                 console.log(`✅ User logged in: ${user.email}`);
             } else {
                 // Create new user (JIT provisioning)
+                // Set role to 'admin' for dodusik@gmail.com, otherwise 'user'
+                const role = profile.emails[0].value === 'dodusik@gmail.com' ? 'admin' : 'user';
+
                 result = await pool.query(`
-                    INSERT INTO users (google_id, email, display_name, avatar_url)
-                    VALUES ($1, $2, $3, $4)
+                    INSERT INTO users (google_id, email, display_name, avatar_url, role)
+                    VALUES ($1, $2, $3, $4, $5)
                     RETURNING *
                 `, [
                     profile.id,
                     profile.emails[0].value,
                     profile.displayName,
-                    profile.photos[0]?.value || null
+                    profile.photos[0]?.value || null,
+                    role
                 ]);
 
                 user = result.rows[0];
-                console.log(`✅ New user created: ${user.email}`);
+                console.log(`✅ New user created: ${user.email} (role: ${user.role})`);
             }
 
             done(null, user);

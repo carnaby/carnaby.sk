@@ -1729,6 +1729,203 @@ SELECT COUNT(*) FROM videos;      -- 16
 **Real-world incidents handled:** 19 (npm ci, SQLite permissions, OAuth dotenv, missing .env, env_file, volume path, docker-compose sync, session cookies, browser cache, hero-overlay, SVG sizing, CSS corruption, Umami URL encoding, password auth, SSL cert, Docker permissions, PostgreSQL npm ci, postgres role, .env overwrite - ALL RESOLVED ✅)  
 **Production deployments:** 7 (initial, volume fix, env_file, trust proxy, UI redesign, Umami analytics, PostgreSQL migration - ALL SUCCESSFUL 🚀)  
 
+---
+
+### Commit 15: Admin Section with Role-Based Access (Day 6)
+
+**Prompt (Slovak):** "kontorloval som vsetko . a ide .. ! podme este spravit taky cleanup projektu ... no chcem zacat administraciu .. prihlasenie uz mame tak ako prve by sme mohli skusit uplnu banalitu ze ked sa prihlasim ja :) "dodusik@gmail.com" tak vo menu pod mojim avatarom pridaj polozku co ja viem administracia a po kliknuti na nu sa zobrazi samostatne stranka kde zatial nemusi byt nic funkcne len nech sa nieco zobrazi."
+
+**Translation:** "checked everything and it works! let's do some project cleanup ... now I want to start administration .. we already have login so as first we could try a complete triviality that when I log in as "dodusik@gmail.com" then in the menu under my avatar add an item like administration and when clicked it shows a separate page where there doesn't have to be anything functional yet just show something."
+
+**Context:** After successful PostgreSQL migration and project cleanup, starting development of admin features with role-based access control.
+
+**Result:** ✅ Complete admin section with role-based access, protected routes, and conditional UI
+
+**1. Database Schema**
+
+**New migration:** `migrations/003_add_user_roles.sql`
+
+```sql
+-- Add role column to users table
+ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user';
+
+-- Create index for role lookups
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+-- Set dodusik@gmail.com as admin
+UPDATE users SET role = 'admin' WHERE email = 'dodusik@gmail.com';
+```
+
+**Roles:**
+- `user` - default role (can view site, login)
+- `admin` - can access admin section (dodusik@gmail.com)
+
+**2. Backend Implementation**
+
+**Admin Middleware** ([middleware/admin.js](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/middleware/admin.js)):
+```javascript
+function isAdmin(req, res, next) {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Forbidden - Admin access required' });
+    }
+    
+    next();
+}
+```
+
+**Admin Routes** ([routes/admin.js](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/routes/admin.js)):
+- `GET /admin` - Admin page (protected by `isAdmin` middleware)
+- `GET /admin/api/check` - Check if current user is admin
+
+**Passport Updates** ([config/passport.js](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/config/passport.js)):
+- Automatic role assignment on user creation
+- `dodusik@gmail.com` → `admin` role
+- All other users → `user` role
+
+**3. Frontend Implementation**
+
+**Admin Menu Item** ([index.html](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/index.html)):
+```html
+<!-- Admin menu item (only for admins) -->
+<a href="/admin" id="admin-menu-item" class="dropdown-item" style="display: none;">
+    <svg>...</svg>
+    <span>⚙️ Administrácia</span>
+</a>
+```
+
+**Admin Page** ([admin.html](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/admin.html)):
+- Welcome card with feature roadmap
+- User info display (email, role)
+- Modern design with glassmorphism effects
+- Dark/Light theme support
+- Responsive layout
+
+**Admin Check** ([script.js](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/script.js)):
+```javascript
+async function checkAdminAccess() {
+    const response = await fetch('/admin/api/check');
+    const data = await response.json();
+    
+    if (data.isAdmin) {
+        document.getElementById('admin-menu-item').style.display = 'flex';
+    }
+}
+```
+
+**4. Security Features**
+
+✅ **Backend Protection:**
+- Admin routes protected by middleware
+- Role checked on every request
+- 401 Unauthorized for non-authenticated users
+- 403 Forbidden for non-admin users
+
+✅ **Frontend Hiding:**
+- Menu item hidden by default
+- Only shown after successful admin check
+- Direct URL access blocked by backend
+
+✅ **Role Storage:**
+- Role stored in database (tamper-proof)
+- Not in session or cookies
+- Verified on every admin request
+
+**5. Admin Page Features**
+
+**Current:**
+- ⚙️ Welcome message
+- 📋 Feature roadmap preview
+- ℹ️ User info display (email, role)
+
+**Planned Features:**
+- 📝 Content management (add/edit/delete videos)
+- 📊 Analytics dashboard integration
+- 🎵 Category management
+- ✍️ Blog editor (future)
+
+**6. Styling**
+
+**Admin CSS** ([admin.css](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/admin.css)):
+- Modern card-based layout
+- Glassmorphism effects
+- Gold accent colors (brand consistency)
+- Smooth transitions and hover effects
+- Responsive design (mobile-friendly)
+- Dark/Light theme support
+
+**7. Files Created/Modified**
+
+**New files:**
+- `migrations/003_add_user_roles.sql` - Role column migration
+- `middleware/admin.js` - Admin middleware
+- `routes/admin.js` - Admin routes
+- `admin.html` - Admin page
+- `admin.css` - Admin styles
+- `admin.js` - Admin page logic
+
+**Modified files:**
+- `server.js` - Registered admin routes
+- `config/passport.js` - Role assignment on user creation
+- `index.html` - Added admin menu item
+- `script.js` - Admin check function, translations
+
+**8. User Experience**
+
+**Admin User (dodusik@gmail.com):**
+1. Login with Google OAuth
+2. See "⚙️ Administrácia" in dropdown menu
+3. Click → Navigate to `/admin`
+4. View welcome page with roadmap
+
+**Regular User:**
+1. Login with Google OAuth
+2. No admin menu item visible
+3. Cannot access `/admin` (403 Forbidden)
+
+**Not Logged In:**
+1. Cannot access `/admin` (401 Unauthorized)
+2. Redirected to home page
+
+**9. Development Workflow**
+
+**Local Testing:**
+```bash
+# Start development environment
+docker-compose -f docker-compose.dev.yml up
+
+# Login as dodusik@gmail.com
+# Verify admin menu appears
+# Test admin page access
+```
+
+**Production Deployment:**
+```bash
+git add .
+git commit -m "Add admin section with role-based access"
+git push
+# GitHub Actions builds → Watchtower deploys
+```
+
+**Time:** ~1 hour (planning + implementation)  
+**Manual work:** 0 lines of code  
+**AI-generated code:** 100% of functionality  
+**User feedback:** "LGTM" (Looks Good To Me) - approved plan immediately  
+
+**Achievement:** First feature development after infrastructure setup - "žiadna systémačka" (no more system administration) fulfilled! 🎨
+
+---
+
+**Total development time:** ~900 minutes (~15 hours including infrastructure + first feature)  
+**Total manual code written:** ~5 lines (port change)  
+**AI-generated code:** ~100% of functionality  
+**Real-world incidents handled:** 19 (all infrastructure-related - RESOLVED ✅)  
+**Production deployments:** 7 (all successful 🚀)  
+**Features implemented:** 1 (admin section with role-based access) 🎨  
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ Database-driven dynamic content
@@ -1760,5 +1957,8 @@ SELECT COUNT(*) FROM videos;      -- 16
 - ✅ **Async database architecture** (connection pooling, production-ready)
 - ✅ **Unified database infrastructure** (one PostgreSQL instance for all apps)
 - ✅ **"No more system administration"** - ready for pure programming! 🎨
+- ✅ **Admin section with role-based access control** (first feature!)
+- ✅ **Protected admin routes** (middleware-based security)
+- ✅ **Conditional UI rendering** (admin menu only for admins)
 - ✅ **LIVE IN PRODUCTION:** https://carnaby.sk 🚀
 - ✅ **ANALYTICS LIVE:** https://analytics.carnaby.sk 📊

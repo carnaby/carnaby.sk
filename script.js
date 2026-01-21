@@ -50,7 +50,8 @@ const translations = {
 
         // Authentication
         signInWithGoogle: "Sign in with Google",
-        logout: "Logout"
+        logout: "Logout",
+        adminPanel: "Administration"
     },
     sk: {
         // Navigation
@@ -102,7 +103,8 @@ const translations = {
 
         // Authentication
         signInWithGoogle: "Prihlásiť sa cez Google",
-        logout: "Odhlásiť sa"
+        logout: "Odhlásiť sa",
+        adminPanel: "Administrácia"
     }
 };
 
@@ -181,6 +183,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check authentication status
     checkAuth();
 });
+
+// Check if user is admin and show admin menu
+async function checkAdminAccess() {
+    try {
+        const response = await fetch('/admin/api/check');
+        const data = await response.json();
+
+        if (data.isAdmin) {
+            const adminMenuItem = document.getElementById('admin-menu-item');
+            if (adminMenuItem) {
+                adminMenuItem.style.display = 'flex';
+            }
+        }
+    } catch (error) {
+        // Not admin or not logged in - menu stays hidden
+        console.log('Admin check:', error.message);
+    }
+}
 
 // Global variable to store videos by category
 let videosByCategory = {};
@@ -369,6 +389,9 @@ async function checkAuth() {
             // Set user name in dropdown
             document.getElementById('user-name-dropdown').textContent = data.user.displayName;
             authUser.style.display = 'block';
+
+            // Check if user is admin and show admin menu
+            checkAdminAccess();
 
             // Add logout handler
             const logoutBtn = document.getElementById('logout-btn');
