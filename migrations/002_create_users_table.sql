@@ -1,14 +1,15 @@
 -- Create users table for Google OAuth authentication
 -- Stores user profile data from Google
+-- PostgreSQL version
 
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    google_id TEXT NOT NULL UNIQUE,
-    email TEXT NOT NULL UNIQUE,
-    display_name TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    google_id VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    display_name VARCHAR(255) NOT NULL,
     avatar_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on google_id for fast lookups during authentication

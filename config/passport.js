@@ -4,19 +4,19 @@ require('dotenv').config();
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
-// Initialize passport with database connection
+// Initialize passport with database pool
 // This function is called from server.js after database is ready
-function initializePassport(db) {
+function initializePassport(pool) {
     // Serialize user to session (store only user ID)
     passport.serializeUser((user, done) => {
         done(null, user.id);
     });
 
     // Deserialize user from session (fetch full user from DB)
-    passport.deserializeUser((id, done) => {
+    passport.deserializeUser(async (id, done) => {
         try {
-            const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
-            done(null, user);
+            const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+            done(null, result.rows[0]);
         } catch (error) {
             done(error, null);
         }
@@ -30,25 +30,27 @@ function initializePassport(db) {
     }, async (accessToken, refreshToken, profile, done) => {
         try {
             // Check if user exists
-            let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
+            let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [profile.id]);
+            let user = result.rows[0];
 
             if (user) {
                 // Update last login
-                db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+                await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
                 console.log(`✅ User logged in: ${user.email}`);
             } else {
                 // Create new user (JIT provisioning)
-                const result = db.prepare(`
+                result = await pool.query(`
                     INSERT INTO users (google_id, email, display_name, avatar_url)
-                    VALUES (?, ?, ?, ?)
-                `).run(
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING *
+                `, [
                     profile.id,
                     profile.emails[0].value,
                     profile.displayName,
                     profile.photos[0]?.value || null
-                );
+                ]);
 
-                user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+                user = result.rows[0];
                 console.log(`✅ New user created: ${user.email}`);
             }
 

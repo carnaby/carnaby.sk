@@ -1,16 +1,17 @@
 -- Initial database schema for carnaby.sk
 -- Creates categories and videos tables with initial data
+-- PostgreSQL version
 
 -- Create categories table
 CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
 );
 
 -- Create videos table
 CREATE TABLE IF NOT EXISTS videos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    url VARCHAR(255) NOT NULL,
     category_id INTEGER NOT NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
@@ -20,8 +21,8 @@ CREATE INDEX IF NOT EXISTS idx_videos_category_id ON videos(category_id);
 CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
 
 -- Insert default categories
-INSERT OR IGNORE INTO categories (name) VALUES ('Dodo');
-INSERT OR IGNORE INTO categories (name) VALUES ('Carnaby');
+INSERT INTO categories (name) VALUES ('Dodo') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name) VALUES ('Carnaby') ON CONFLICT (name) DO NOTHING;
 
 -- Insert Dodo videos (acoustic folk, storyteller ballads, Americana)
 INSERT INTO videos (url, category_id) VALUES 
