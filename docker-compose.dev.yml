@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  carnaby-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carnaby-sk-dev
+    restart: unless-stopped
+    
+    ports:
+      - "3000:3000"
+    
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=carnaby
+      - DB_USER=carnaby
+      - DB_PASSWORD=${DB_PASSWORD}
+    
+    # Volume mounts for hot reload
+    volumes:
+      # Mount source code (read-write)
+      - ./:/app
+      # Exclude node_modules (use container's version)
+      - /app/node_modules
+    
+    # Override CMD to use nodemon for auto-restart
+    command: npx nodemon server.js
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - carnaby-network
+
+  # PostgreSQL database (shared: Umami + Web App)
+  db:
+    image: postgres:15-alpine
+    container_name: carnaby-db-dev
+    restart: unless-stopped
+    
+    environment:
+      - POSTGRES_DB=umami
+      - POSTGRES_USER=umami
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    
+    ports:
+      - "5432:5432"  # Expose PostgreSQL for local tools (pgAdmin, etc.)
+    
+    volumes:
+      # Use named volume for dev database (easier to reset)
+      - carnaby-db-dev:/var/lib/postgresql/data
+    
+    networks:
+      - carnaby-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Umami Analytics (optional for local dev)
+  umami:
+    image: ghcr.io/umami-software/umami:latest
+    container_name: carnaby-umami-dev
+    restart: unless-stopped
+    
+    ports:
+      - "3001:3000"
+    
+    environment:
+      - DATABASE_URL=postgresql://umami:${DB_PASSWORD}@db:5432/umami
+      - UMAMI_APP_SECRET=${UMAMI_APP_SECRET}
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - carnaby-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/heartbeat || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  carnaby-network:
+    driver: bridge
+
+volumes:
+  carnaby-db-dev:
