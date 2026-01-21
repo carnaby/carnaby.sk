@@ -43,6 +43,41 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
+  # Umami - Web Analytics with SQLite
+  umami:
+    image: ghcr.io/umami-software/umami:sqlite-latest
+    container_name: carnaby-umami
+    restart: unless-stopped
+    
+    # Run container with specific UID/GID for Synology NAS permissions
+    user: "1026:100"
+    
+    ports:
+      - "3001:3000"
+    
+    environment:
+      - DATABASE_TYPE=sqlite
+      - DATABASE_URL=file:/app/data/umami.sqlite
+      # Change this to a random string for security
+      - APP_SECRET=${UMAMI_APP_SECRET:-change-this-secret-to-something-random}
+    
+    volumes:
+      # Persistent SQLite database storage
+      - /volume1/docker/carnaby-sk/umami-data:/app/data
+    
+    networks:
+      - carnaby-network
+    
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/heartbeat"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
   # Watchtower - Automatic container updates
   # Checks for new images every 5 minutes and updates containers
   watchtower:
