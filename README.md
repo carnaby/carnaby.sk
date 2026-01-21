@@ -1336,3 +1336,224 @@ Login a avatar by sa presunul do header aby bol uplne hore v pravo. a
 - ✅ Glassmorphism effects and modern UI patterns
 - ✅ Dropdown menu with smooth animations
 - ✅ **LIVE IN PRODUCTION:** https://carnaby.sk 🚀
+
+---
+
+### Commit 13: Umami Analytics with PostgreSQL (Day 6)
+
+**Prompt (Slovak):** "Mám pre teba ďalšiu chuťovku :) Ideme nasadiť Umami, ale striktne so SQLite.
+
+Uprav docker-compose.yml tak, aby Umami kontajner používal SQLite databázu uloženú v /app/data/umami.sqlite.
+
+Namapuj tento súbor (alebo priečinok) na hostiteľa na Synology, aby som ho mohol zahrnúť do môjho backup skriptu.
+
+Nepridávaj PostgreSQL službu.
+
+Ak je môj návrh v niečom zlý kľudne protestuj."
+
+**Translation:** "I have another treat for you :) We're going to deploy Umami, but strictly with SQLite. Modify docker-compose.yml so that the Umami container uses SQLite database stored in /app/data/umami.sqlite. Map this file (or directory) to the host on Synology so I can include it in my backup script. Don't add PostgreSQL service. If my proposal is wrong in something, feel free to protest."
+
+**AI Response:** ⚠️ **Protest accepted!** Umami does not support SQLite - only PostgreSQL 12.14+, MySQL 8.0+, and MariaDB 10.5+.
+
+**User Decision:** "ok rozumiem .. ale ak tam uz budeme mat kontainer s postgresql tak potom .. a to je len otazka teraz to nebudeme riesit. nebolo by lepsie tuto databazu pouzit aj na web aj na unami ? proste zbavit sa sqlite ?"
+
+**Translation:** "ok I understand .. but if we'll already have a postgresql container there then .. and this is just a question we won't solve now. wouldn't it be better to use this database for both web and umami? simply get rid of sqlite?"
+
+**AI Response:** ✅ Excellent idea! Shared PostgreSQL for both applications - future migration planned.
+
+**Result:** ✅ Complete Umami Analytics deployment with PostgreSQL
+
+**1. Docker Compose Configuration**
+
+- **Added PostgreSQL service** (`db`):
+  - Image: `postgres:15-alpine` (~80MB)
+  - Container: `carnaby-db`
+  - User: `1026:100` (Synology permissions)
+  - Volume: `/volume1/docker/carnaby-sk/db:/var/lib/postgresql/data`
+  - Database: `umami` (user: `umami`, password: `${DB_PASSWORD}`)
+  - Healthcheck: `pg_isready` every 10 seconds
+  - Watchtower auto-updates enabled
+
+- **Added Umami service** (`umami`):
+  - Image: `ghcr.io/umami-software/umami:latest`
+  - Container: `carnaby-umami`
+  - Port: `3001:3000`
+  - Database URL: `postgresql://umami:${DB_PASSWORD}@db:5432/umami`
+  - Depends on: `db` (waits for healthy status)
+  - Healthcheck: `/api/heartbeat` every 30 seconds
+  - Start period: 60s (database initialization time)
+  - Watchtower auto-updates enabled
+
+**2. Environment Variables**
+
+- **Updated `.env.example`**:
+  - `DB_PASSWORD` - PostgreSQL password (hex format, not base64!)
+  - `UMAMI_APP_SECRET` - Umami application secret
+  - Note: Use `openssl rand -hex 32` for DB_PASSWORD (avoids URL-unsafe characters)
+
+**3. Backup System**
+
+- **Created `backup-db.sh`**:
+  - Uses `pg_dump` for PostgreSQL backups
+  - Compressed backups: `db-YYYYMMDD-HHMMSS.sql.gz`
+  - 30-day retention policy
+  - Backup location: `/volume1/private/clouds/GoogleDrive/carnaby_sk/backups`
+  - Requires `sudo` for Docker access on Synology
+  - Configured for Synology Task Scheduler (not crontab)
+
+**4. Synology Task Scheduler Setup**
+
+- **Control Panel → Task Scheduler**:
+  - Task: "Backup PostgreSQL Database"
+  - User: `root` (required for Docker access)
+  - Schedule: Daily at 02:00
+  - Script: `/volume1/docker/carnaby-sk/backup-db.sh`
+
+**5. Subdomain Configuration**
+
+- **DNS setup** (Websupport):
+  - Added A record: `analytics.carnaby.sk` → public IP
+  - Propagation time: ~5-30 minutes
+
+- **Synology Reverse Proxy**:
+  - Source: `https://analytics.carnaby.sk:443`
+  - Destination: `http://localhost:3001`
+  - SSL certificate: Added `analytics.carnaby.sk` to existing certificate
+  - Certificate configuration: Assigned to `analytics.carnaby.sk` service
+
+- **Tracking code** (`index.html`):
+  ```html
+  <script defer src="https://analytics.carnaby.sk/script.js" 
+          data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
+  ```
+
+**6. Documentation Created**
+
+- **UMAMI_QUICK_START.md** (Slovak):
+  - Step-by-step deployment guide
+  - Secret generation (hex vs base64)
+  - Synology Task Scheduler setup
+  - Troubleshooting section
+
+- **UMAMI_SETUP.md** (English):
+  - Comprehensive setup guide
+  - Architecture overview
+  - Backup strategies
+  - Maintenance commands
+  - Security recommendations
+
+**7. Troubleshooting Resolved**
+
+**Issue 1: Invalid URL Error**
+- **Problem**: `TypeError: Invalid URL` - password contained `+`, `/`, `=` from base64
+- **Solution**: Changed to `openssl rand -hex 32` (URL-safe characters)
+
+**Issue 2: Password Authentication Failed**
+- **Problem**: Database created with old password, `.env` had new password
+- **Solution**: Recreate database with new password:
+  ```bash
+  sudo docker-compose down
+  sudo rm -rf /volume1/docker/carnaby-sk/db
+  sudo mkdir -p /volume1/docker/carnaby-sk/db
+  sudo chown 1026:100 /volume1/docker/carnaby-sk/db
+  sudo docker-compose up -d
+  ```
+
+**Issue 3: SSL Certificate Not Applied**
+- **Problem**: `analytics.carnaby.sk` showed "Not Secure"
+- **Solution**: Added `analytics.carnaby.sk` to certificate SAN and assigned in Certificate → Configure
+
+**Issue 4: Docker Permission Denied**
+- **Problem**: Backup script couldn't access Docker socket
+- **Solution**: Added `sudo` to docker commands + configured NOPASSWD:
+  ```bash
+  echo "carnaby ALL=(ALL) NOPASSWD: /usr/bin/docker, /usr/local/bin/docker" | sudo tee /etc/sudoers.d/docker
+  sudo chmod 0440 /etc/sudoers.d/docker
+  ```
+
+**8. Architecture Benefits**
+
+- ✅ **Shared PostgreSQL**: Ready for future carnaby-web migration
+- ✅ **Professional subdomain**: `https://analytics.carnaby.sk`
+- ✅ **SSL encryption**: Same certificate as main site
+- ✅ **Automated backups**: Daily pg_dump to Google Drive
+- ✅ **Auto-updates**: Watchtower monitors both db and umami
+- ✅ **Privacy-focused**: Self-hosted analytics (no Google Analytics)
+- ✅ **Realtime tracking**: Live visitor monitoring
+
+**9. First Visitor Tracked**
+
+User confirmation: "fungujeeee ! 1 visitor :)" 🎉
+
+Analytics now tracking:
+- Page views
+- Unique visitors
+- Referrers
+- Countries
+- Devices (desktop/mobile)
+- Browsers
+
+**10. Naming Conventions**
+
+- Service names: `db`, `umami` (generic, future-proof)
+- Container names: `carnaby-db`, `carnaby-umami`
+- Volume paths: `/volume1/docker/carnaby-sk/db` (shared database)
+- Backup files: `db-*.sql.gz` (not `umami-*.sql.gz`)
+- Script name: `backup-db.sh` (not `backup-umami.sh`)
+
+**Time:** 3.5 hours (including research, troubleshooting, documentation)  
+**Manual work:** 0 lines of code  
+**User manual work:** DNS setup, Synology reverse proxy, SSL certificate (~20 minutes)  
+**Troubleshooting iterations:** 4 (URL encoding, password auth, SSL cert, Docker permissions)  
+**Production deployment:** ✅ SUCCESS - Analytics live at https://analytics.carnaby.sk  
+**First tracked visitor:** ✅ User confirmed working  
+
+**Future migration planned:** Migrate carnaby-web from SQLite to PostgreSQL (use shared `carnaby-db` container)
+
+---
+
+**Total development time:** ~740 minutes (~12.3 hours including OAuth + production + UI redesign + Umami)  
+**Total manual code written:** ~5 lines (port change)  
+**AI-generated code:** ~100% of functionality  
+**Real-world incidents handled:** 16 (npm ci, SQLite permissions, OAuth dotenv, missing .env, env_file, volume path, docker-compose sync, session cookies, browser cache, hero-overlay, SVG sizing, CSS corruption, Umami URL encoding, password auth, SSL cert, Docker permissions - ALL RESOLVED ✅)  
+**Production deployments:** 6 (initial, volume fix, env_file, trust proxy, UI redesign, Umami analytics - ALL SUCCESSFUL 🚀)  
+**CI/CD pipelines:** 1 (GitHub Actions + Watchtower - AUTOMATED ⚡)  
+**Automated deployments:** 7 (CI/CD test, npm ci migration, OAuth deployments, UI redesign, Umami)  
+**Build reproducibility:** 100% (npm ci with package-lock.json) ✅  
+**Debugging iterations:** 30 (npm ci: 3, category tabs: 2, SQLite permissions: 5, OAuth dev: 4, OAuth prod: 6, UI redesign: 6, Umami: 4) 🔧  
+**Features implemented:** 11 (server, gitignore, theme toggle, database, Docker, CI/CD, npm ci, category tabs, persistence architecture, Google OAuth, Umami Analytics) 🎨  
+**Database migrations:** Production-ready system with WAL mode ✅  
+**Automated backups:** Daily backups to Google Drive (SQLite + PostgreSQL) ✅  
+**Authentication:** Google OAuth 2.0 with session management (PRODUCTION LIVE) ✅  
+**UI/UX:** Header authentication with circular avatar and dropdown menu ✅  
+**Analytics:** Umami self-hosted analytics with PostgreSQL (PRODUCTION LIVE) ✅
+
+## 🏆 Achievements Unlocked
+- ✅ Full-stack web application built from scratch
+- ✅ Database-driven dynamic content
+- ✅ Dark/Light theme with system detection
+- ✅ Dockerized for production deployment
+- ✅ Successfully deployed to Synology NAS
+- ✅ Real-world error debugging and resolution (16 production incidents)
+- ✅ Comprehensive documentation maintained throughout
+- ✅ Automated CI/CD pipeline with zero-downtime deployments
+- ✅ Production-grade database persistence architecture
+- ✅ Automated migration system with WAL mode
+- ✅ Automated backup system to Google Drive
+- ✅ Debugged and resolved SQLite directory permissions issue
+- ✅ Backups verified on Google Cloud
+- ✅ Google OAuth 2.0 authentication with session management
+- ✅ JIT user provisioning (automatic user creation)
+- ✅ Google-style UI/UX design
+- ✅ Reverse proxy compatibility (Synology NAS)
+- ✅ Production OAuth deployment with full debugging documentation
+- ✅ Header authentication with circular avatar design
+- ✅ Glassmorphism effects and modern UI patterns
+- ✅ Dropdown menu with smooth animations
+- ✅ **Umami Analytics with PostgreSQL** (self-hosted, privacy-focused)
+- ✅ **Subdomain SSL configuration** (analytics.carnaby.sk)
+- ✅ **Shared PostgreSQL architecture** (ready for web migration)
+- ✅ **Automated PostgreSQL backups** (pg_dump to Google Drive)
+- ✅ **Realtime visitor tracking** (first visitor confirmed!)
+- ✅ **LIVE IN PRODUCTION:** https://carnaby.sk 🚀
+- ✅ **ANALYTICS LIVE:** https://analytics.carnaby.sk 📊
