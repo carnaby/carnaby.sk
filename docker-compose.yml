@@ -43,37 +43,65 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
-  # Umami - Web Analytics with SQLite
+  # PostgreSQL database (shared: Umami + Web App)
+  db:
+    image: postgres:15-alpine
+    container_name: carnaby-db
+    restart: unless-stopped
+    
+    # Run container with specific UID/GID for Synology NAS permissions
+    user: "1026:100"
+    
+    environment:
+      - POSTGRES_DB=umami
+      - POSTGRES_USER=umami
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    
+    volumes:
+      # Persistent PostgreSQL data storage
+      - /volume1/docker/carnaby-sk/db:/var/lib/postgresql/data
+    
+    networks:
+      - carnaby-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # Umami - Web Analytics
   umami:
-    image: ghcr.io/umami-software/umami:sqlite-latest
+    image: ghcr.io/umami-software/umami:latest
     container_name: carnaby-umami
     restart: unless-stopped
     
     # Run container with specific UID/GID for Synology NAS permissions
     user: "1026:100"
     
+    depends_on:
+      db:
+        condition: service_healthy
+    
     ports:
       - "3001:3000"
     
     environment:
-      - DATABASE_TYPE=sqlite
-      - DATABASE_URL=file:/app/data/umami.sqlite
-      # Change this to a random string for security
-      - APP_SECRET=${UMAMI_APP_SECRET:-change-this-secret-to-something-random}
-    
-    volumes:
-      # Persistent SQLite database storage
-      - /volume1/docker/carnaby-sk/umami-data:/app/data
+      - DATABASE_URL=postgresql://umami:${DB_PASSWORD}@db:5432/umami
+      - APP_SECRET=${UMAMI_APP_SECRET}
     
     networks:
       - carnaby-network
     
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/heartbeat"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/heartbeat || exit 1"]
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 60s
     
     labels:
       - "com.centurylinklabs.watchtower.enable=true"

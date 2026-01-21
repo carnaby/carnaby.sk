@@ -1,59 +1,34 @@
-# Umami Analytics Setup
+# Umami Analytics Setup with PostgreSQL
 
-This guide explains how to set up and use Umami web analytics with SQLite database on your Synology NAS.
+This guide explains how to set up and use Umami web analytics with PostgreSQL database on your Synology NAS.
 
 ## Overview
 
 Umami is a simple, fast, privacy-focused alternative to Google Analytics. This setup uses:
-- **SQLite database** instead of PostgreSQL for simplicity
-- **Local storage** on Synology NAS at `/volume1/docker/carnaby-sk/umami-data`
+- **PostgreSQL 15 Alpine** - Lightweight database server
+- **Local storage** on Synology NAS at `/volume1/docker/carnaby-sk/db`
 - **Port 3001** for the Umami web interface
+
+## Architecture
+
+```
+┌─────────────────┐         ┌──────────────────┐
+│  Umami Web UI   │────────▶│  PostgreSQL DB   │
+│  Port: 3001     │         │  umami database  │
+└─────────────────┘         └──────────────────┘
+```
+
+Two containers:
+- `carnaby-umami` - Web application
+- `carnaby-db` - PostgreSQL database (shared with future web app)
 
 ## Initial Setup
 
-### 1. Generate APP_SECRET
-
-Generate a secure random secret for Umami:
-
-```bash
-openssl rand -base64 32
-```
-
-Add this to your `.env` file:
-
-```bash
-UMAMI_APP_SECRET=your-generated-secret-here
-```
-
-### 2. Create Data Directory on Synology
-
-SSH into your Synology NAS and create the data directory:
-
-```bash
-mkdir -p /volume1/docker/carnaby-sk/umami-data
-chown 1026:100 /volume1/docker/carnaby-sk/umami-data
-```
-
-### 3. Deploy Umami
-
-From your project directory on Synology:
-
-```bash
-cd /volume1/docker/carnaby-sk
-docker-compose up -d umami
-```
-
-### 4. First Login
-
-1. Open your browser and navigate to `http://your-synology-ip:3001`
-2. Login with default credentials:
-   - **Username**: `admin`
-   - **Password**: `umami`
-3. **IMPORTANT**: Change the admin password immediately after first login!
+See `UMAMI_QUICK_START.md` for step-by-step deployment instructions.
 
 ## Adding a Website
 
-1. Login to Umami dashboard
+1. Login to Umami dashboard at `http://your-synology-ip:3001`
 2. Click **Settings** → **Websites** → **Add website**
 3. Fill in:
    - **Name**: Carnaby.sk
@@ -77,130 +52,239 @@ For production, you should:
 
 ## Backup Strategy
 
-### SQLite Database Location
+### PostgreSQL Backup
 
-The SQLite database is stored at:
-```
-/volume1/docker/carnaby-sk/umami-data/umami.sqlite
-```
-
-### Adding to Backup Script
-
-Add this path to your existing backup script to include Umami data:
+PostgreSQL backups are simple with `pg_dump`:
 
 ```bash
-# Example backup command
-cp /volume1/docker/carnaby-sk/umami-data/umami.sqlite \
-   /volume1/private/clouds/GoogleDrive/carnaby_sk/backups/umami-$(date +%Y%m%d).sqlite
+# Manual backup (compressed)
+docker exec carnaby-db pg_dump -U umami umami | gzip > db-backup.sql.gz
+
+# Restore from backup
+gunzip < db-backup.sql.gz | docker exec -i carnaby-db psql -U umami umami
 ```
 
-### Automated Backup
+### Automated Backup Script
 
-You can create a simple backup script:
+Create `/volume1/docker/carnaby-sk/backup-db.sh`:
 
 ```bash
 #!/bin/bash
-# /volume1/docker/carnaby-sk/backup-umami.sh
+# /volume1/docker/carnaby-sk/backup-db.sh
+# Backs up PostgreSQL database (Umami + future web app)
 
 BACKUP_DIR="/volume1/private/clouds/GoogleDrive/carnaby_sk/backups"
-DB_PATH="/volume1/docker/carnaby-sk/umami-data/umami.sqlite"
 DATE=$(date +%Y%m%d-%H%M%S)
 
-# Create backup
-cp "$DB_PATH" "$BACKUP_DIR/umami-$DATE.sqlite"
+# Backup database
+sudo docker exec carnaby-db pg_dump -U umami umami | gzip > "$BACKUP_DIR/db-$DATE.sql.gz"
 
 # Keep only last 30 days of backups
-find "$BACKUP_DIR" -name "umami-*.sqlite" -mtime +30 -delete
+find "$BACKUP_DIR" -name "db-*.sql.gz" -mtime +30 -delete
 
-echo "Umami backup completed: umami-$DATE.sqlite"
+echo "Database backup completed: db-$DATE.sql.gz"
 ```
 
-Make it executable and add to cron:
+Make it executable and add to Synology Task Scheduler:
 ```bash
-chmod +x /volume1/docker/carnaby-sk/backup-umami.sh
-# Add to crontab: daily at 2 AM
-0 2 * * * /volume1/docker/carnaby-sk/backup-umami.sh
+chmod +x /volume1/docker/carnaby-sk/backup-db.sh
 ```
+
+**Add to Synology Task Scheduler:**
+
+1. Open **Control Panel** → **Task Scheduler**
+2. Click **Create** → **Scheduled Task** → **User-defined script**
+3. **General tab:**
+   - Task: `Backup PostgreSQL Database`
+   - User: `root` (required for Docker access)
+4. **Schedule tab:**
+   - Date: Daily
+   - Time: `02:00` (2:00 AM)
+5. **Task Settings tab:**
+   - User-defined script:
+     ```bash
+     /volume1/docker/carnaby-sk/backup-db.sh
+     ```
+6. Click **OK**
+```
+
+### Database Location
+
+PostgreSQL data is stored at:
+```
+/volume1/docker/carnaby-sk/db/
+```
+
+This directory should be included in your backup strategy.
 
 ## Maintenance
 
 ### View Logs
 
 ```bash
+# Umami application logs
 docker logs carnaby-umami
+
+# PostgreSQL logs
+docker logs carnaby-db
+
+# Follow logs in real-time
+docker logs -f carnaby-umami
 ```
 
-### Restart Umami
+### Restart Services
 
 ```bash
+# Restart Umami only
 docker-compose restart umami
+
+# Restart database only
+docker-compose restart db
+
+# Restart both
+docker-compose restart db umami
 ```
 
-### Update Umami
+### Update Services
 
-Watchtower will automatically update Umami when new versions are released. To manually update:
+Watchtower will automatically update both services when new versions are released. To manually update:
 
 ```bash
-docker-compose pull umami
-docker-compose up -d umami
+docker-compose pull db umami
+docker-compose up -d db umami
 ```
 
 ### Database Size
 
-Check SQLite database size:
+Check PostgreSQL database size:
 
 ```bash
-ls -lh /volume1/docker/carnaby-sk/umami-data/umami.sqlite
+docker exec carnaby-db psql -U umami -d umami -c "SELECT pg_size_pretty(pg_database_size('umami'));"
 ```
 
-SQLite is very efficient - even with millions of page views, the database typically stays under 100MB.
+### Database Maintenance
+
+Optimize database (vacuum):
+
+```bash
+docker exec carnaby-db psql -U umami -d umami -c "VACUUM ANALYZE;"
+```
 
 ## Troubleshooting
+
+### Password Authentication Failed
+
+**Error:** `password authentication failed for user "umami"`
+
+**Cause:** Password in `.env` doesn't match the password used when database was created.
+
+**Solution 1 - Recreate Database (loses data):**
+
+```bash
+sudo docker-compose down
+sudo rm -rf /volume1/docker/carnaby-sk/db
+sudo mkdir -p /volume1/docker/carnaby-sk/db
+sudo chown 1026:100 /volume1/docker/carnaby-sk/db
+sudo docker-compose up -d
+```
+
+**Solution 2 - Change Password in Existing Database (keeps data):**
+
+```bash
+sudo docker exec -it carnaby-db psql -U postgres
+ALTER USER umami WITH PASSWORD 'your-new-password-from-env';
+\q
+sudo docker-compose restart umami
+```
+
+### Invalid URL in DATABASE_URL
+
+**Error:** `TypeError: Invalid URL`
+
+**Cause:** Password contains URL-unsafe characters (`+`, `/`, `=`) from base64 encoding.
+
+**Solution:** Generate new password using hex format:
+
+```bash
+openssl rand -hex 32
+```
+
+Update `.env` and recreate database (see above).
 
 ### Container Won't Start
 
 Check logs:
 ```bash
+docker logs carnaby-umami-db
 docker logs carnaby-umami
 ```
 
 Common issues:
-- Permission problems: Ensure directory is owned by `1026:100`
-- Port conflict: Make sure port 3001 is not used by another service
+- **Permission problems**: Ensure directory is owned by `1026:100`
+  ```bash
+  sudo chown -R 1026:100 /volume1/docker/carnaby-sk/db
+  ```
+- **Port conflict**: Make sure port 3001 is not used by another service
+- **Database connection**: Ensure `db` is healthy before `umami` starts
 
 ### Can't Access Web Interface
 
-1. Check if container is running: `docker ps | grep umami`
+1. Check if containers are running: `docker ps | grep carnaby`
 2. Check firewall rules on Synology
 3. Verify port mapping in `docker-compose.yml`
+4. Check healthcheck status: `docker inspect carnaby-umami`
 
-### Database Corruption
+### Database Connection Errors
 
-If SQLite database gets corrupted (rare):
+```bash
+# Check if database is accepting connections
+docker exec carnaby-db pg_isready -U umami -d umami
 
-1. Stop the container: `docker-compose stop umami`
-2. Restore from backup
-3. Start the container: `docker-compose start umami`
+# Check database logs
+docker logs carnaby-db
+```
+
+### Reset Admin Password
+
+If you forgot the admin password:
+
+```bash
+# Connect to database
+docker exec -it carnaby-db psql -U umami -d umami
+
+# Reset password to 'umami'
+UPDATE account SET password = '$2b$10$BUli0c.muyCW1ErNJc3jL.vFRFtFJWrT8/GcR4A.sUdCznaXiqFXa' WHERE username = 'admin';
+\q
+```
 
 ## Performance Notes
 
-SQLite is suitable for Umami unless you have:
-- More than 100,000 page views per day
-- Multiple websites with high traffic
-- Need for real-time concurrent analytics
-
-For most personal/small business websites, SQLite performs excellently and is much easier to manage and backup than PostgreSQL.
+PostgreSQL is suitable for Umami at any scale. Benefits over SQLite:
+- ✅ Better concurrent access handling
+- ✅ More efficient for large datasets
+- ✅ Better indexing and query optimization
+- ✅ Supports multiple databases (can share with other apps)
 
 ## Security Recommendations
 
 1. **Change default password** immediately after first login
-2. **Use reverse proxy** with HTTPS in production
-3. **Restrict access** to Umami dashboard (use firewall or VPN)
-4. **Regular backups** - SQLite database contains all your analytics data
-5. **Keep updated** - Watchtower handles this automatically
+2. **Use strong database password** - generate with `openssl rand -base64 32`
+3. **Use reverse proxy** with HTTPS in production
+4. **Restrict access** to Umami dashboard (use firewall or VPN)
+5. **Regular backups** - PostgreSQL database contains all your analytics data
+6. **Keep updated** - Watchtower handles this automatically
+
+## Future: Sharing PostgreSQL
+
+This PostgreSQL instance can be shared with your main Carnaby.sk application:
+- Create separate database: `carnaby`
+- Use same PostgreSQL container
+- Simplify backup strategy (one database server)
+
+See future migration plan for details.
 
 ## Resources
 
 - [Umami Documentation](https://umami.is/docs)
 - [Umami GitHub](https://github.com/umami-software/umami)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
