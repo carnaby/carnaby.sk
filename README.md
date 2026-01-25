@@ -2292,6 +2292,21 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 33: Git Cleanup (Day 8)
+
+**Prompt:** "predpokladam ze neni ziaduce aby thumbnails boli v git repozitari"
+
+**Result:** 🧹 Repository Hygiene
+
+**Changes:**
+- **.gitignore:** Added `public/thumbnails/*` to ignore list to prevent large binary files from bloating the repo.
+- **Maintenance:** Added `.gitkeep` to ensure the directory structure exists for new deployments.
+
+**Time:** 2 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**
