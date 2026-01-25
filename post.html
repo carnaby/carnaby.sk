@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Načítavam... - Dodo</title>
+    <meta name="description" content="Detail príspevku">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/script.js" defer></script>
+    <script src="/post.js" defer></script>
+
+    <!-- Umami Analytics -->
+    <script defer src="https://analytics.carnaby.sk/script.js"
+        data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
+
+    <style>
+        .post-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            min-height: 60vh;
+        }
+
+        .post-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .post-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .post-category {
+            background: rgba(212, 165, 116, 0.1);
+            color: var(--primary-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .post-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .post-media {
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .post-media img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            /* 16:9 */
+            height: 0;
+            overflow: hidden;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        .post-content h2 {
+            font-family: 'Playfair Display', serif;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .post-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .post-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-color);
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-primary) 50%, var(--bg-secondary) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        .skeleton-title {
+            height: 60px;
+            margin-bottom: 20px;
+        }
+
+        .skeleton-media {
+            height: 400px;
+            margin-bottom: 30px;
+        }
+
+        .skeleton-text {
+            height: 20px;
+            margin-bottom: 10px;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Authenticated Header (Same as index.html) -->
+    <header class="mini-header" style="padding: 1rem 2rem; display: flex; justify-content: flex-end;">
+        <div id="auth-section" class="auth-section-header">
+            <!-- Loading state -->
+            <div id="auth-loading" class="auth-loading" style="display: none;">
+                <span class="loading-spinner"></span>
+            </div>
+
+            <!-- Not authenticated -->
+            <a href="/auth/google" id="auth-login" class="auth-avatar-circle" style="display: none;"
+                title="Prihlásiť sa cez Google">
+                <svg class="user-silhouette" viewBox="0 0 24 24">
+                    <path fill="currentColor"
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                </svg>
+            </a>
+
+            <!-- Authenticated -->
+            <div id="auth-user" class="auth-user-header" style="display: none;">
+                <div class="auth-avatar-wrapper">
+                    <img id="user-avatar" class="user-avatar-header" src="" alt="User">
+                    <div id="user-dropdown" class="user-dropdown">
+                        <div class="dropdown-header">
+                            <span id="user-name-dropdown" class="user-name-dropdown"></span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="/admin" id="admin-menu-item" class="dropdown-item" style="display: none;">
+                            <span>⚙️ Administrácia</span>
+                        </a>
+                        <button id="logout-btn" class="dropdown-item">
+                            <span>🚪 Odhlásiť sa</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-links">
+            <a href="/#about" data-i18n="navAbout">O mne</a>
+            <a href="/#songs" data-i18n="navSongs">Piesne</a>
+            <a href="https://www.youtube.com/@jozefsokol3820" target="_blank">YouTube</a>
+            <a href="https://soundcloud.com/jozef-sokol" target="_blank">SoundCloud</a>
+        </div>
+
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="sk">SK</button>
+        </div>
+    </nav>
+
+    <div class="post-container" id="post-container">
+        <!-- Loading Skeleton -->
+        <div id="loading-skeleton">
+            <a href="/" class="back-link">← Späť na domov</a>
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-media"></div>
+            <div class="skeleton skeleton-text" style="width: 100%"></div>
+            <div class="skeleton skeleton-text" style="width: 90%"></div>
+            <div class="skeleton skeleton-text" style="width: 95%"></div>
+            <div class="skeleton skeleton-text" style="width: 80%"></div>
+        </div>
+
+        <!-- Real Content (Hidden initially) -->
+        <div id="post-content-wrapper" style="display: none;">
+            <a href="/" class="back-link">← Späť na domov</a>
+
+            <header class="post-header">
+                <div class="post-meta">
+                    <span id="post-date"></span>
+                    <span id="post-category" class="post-category"></span>
+                </div>
+                <h1 id="post-title" class="post-title"></h1>
+            </header>
+
+            <div class="post-media" id="post-media">
+                <!-- YouTube iframe or Image will be injected here -->
+            </div>
+
+            <div class="post-content" id="post-body">
+                <!-- Markdown content will be injected here -->
+            </div>
+
+            <div class="cta" style="margin-top: 4rem; text-align: center;">
+                <a href="/#songs" class="btn">Ďalšie piesne</a>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" style="display: none; text-align: center; padding: 4rem 0;">
+            <h2>⚠️ Príspevok sa nenašiel</h2>
+            <p>Je nám ľúto, ale hľadaný príspevok neexistuje alebo bol odstránený.</p>
+            <a href="/" class="btn" style="margin-top: 1rem;">Späť na domov</a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>
+                <span data-i18n="footerCopyright">&copy;</span>
+                <span id="copyrightYear"></span>
+                <span data-i18n="footerCopyrightText">Dodo – Songs for the Journey</span>
+            </p>
+            <div class="social-links">
+                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank">YouTube</a>
+                <a href="https://soundcloud.com/jozef-sokol" target="_blank">SoundCloud</a>
+            </div>
+            <div class="theme-toggle">
+                <button class="theme-toggle-btn" id="themeToggle">
+                    <span class="icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

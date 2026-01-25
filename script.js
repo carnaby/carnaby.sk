@@ -277,28 +277,94 @@ function renderVideos(category) {
     }
 
     // Create video cards
-    videosToShow.forEach(video => {
-        const videoCard = createVideoCard(video.url);
-        songsGrid.appendChild(videoCard);
+    videosToShow.forEach(post => {
+        const postCard = createPostCard(post);
+        songsGrid.appendChild(postCard);
     });
 }
 
-// Create video card element
-function createVideoCard(videoUrl) {
+// Create post card element
+function createPostCard(post) {
     const card = document.createElement('div');
     card.className = 'song-card';
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'video-wrapper';
+    // Link wrapper
+    const link = document.createElement('a');
+    link.href = `/posts/${post.slug}`;
+    link.className = 'card-link';
+    link.style.textDecoration = 'none';
+    link.style.color = 'inherit';
+    link.style.display = 'block';
 
-    const iframe = document.createElement('iframe');
-    iframe.src = `https://www.youtube.com/embed/${videoUrl}`;
-    iframe.frameBorder = '0';
-    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-    iframe.allowFullscreen = true;
+    // Thumbnail / Video Wrapper
+    const mediaWrapper = document.createElement('div');
+    mediaWrapper.className = 'video-wrapper';
+    mediaWrapper.style.position = 'relative';
+    mediaWrapper.style.overflow = 'hidden';
 
-    wrapper.appendChild(iframe);
-    card.appendChild(wrapper);
+    // Image
+    const img = document.createElement('img');
+    // Use local thumbnail if available, otherwise fetch from YT (fallback)
+    // Note: The API returns 'url' as youtube_id and 'thumbnail' as path
+    if (post.thumbnail) {
+        img.src = post.thumbnail;
+    } else if (post.url) {
+        img.src = `https://img.youtube.com/vi/${post.url}/hqdefault.jpg`;
+    } else {
+        // Fallback placeholder
+        img.src = 'images/baner.JPG';
+    }
+
+    img.alt = post.title;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    img.style.transition = 'transform 0.3s ease';
+
+    // Play icon overlay to indicate video
+    const playIcon = document.createElement('div');
+    playIcon.className = 'play-icon-overlay';
+    playIcon.innerHTML = '▶';
+    playIcon.style.position = 'absolute';
+    playIcon.style.top = '50%';
+    playIcon.style.left = '50%';
+    playIcon.style.transform = 'translate(-50%, -50%)';
+    playIcon.style.fontSize = '3rem';
+    playIcon.style.color = 'white';
+    playIcon.style.opacity = '0.8';
+    playIcon.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
+
+    mediaWrapper.appendChild(img);
+    if (post.url) {
+        mediaWrapper.appendChild(playIcon);
+    }
+
+    // Content container
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    content.style.padding = '1rem';
+
+    // Title
+    const title = document.createElement('h3');
+    title.textContent = post.title;
+    title.style.margin = '0 0 0.5rem 0';
+    title.style.fontSize = '1.1rem';
+
+    content.appendChild(title);
+
+    link.appendChild(mediaWrapper);
+    link.appendChild(content);
+    card.appendChild(link);
+
+    // Hover effect using JS (or should be CSS)
+    card.addEventListener('mouseenter', () => {
+        img.style.transform = 'scale(1.05)';
+        playIcon.style.opacity = '1';
+    });
+    card.addEventListener('mouseleave', () => {
+        img.style.transform = 'scale(1)';
+        playIcon.style.opacity = '0.8';
+    });
 
     return card;
 }
