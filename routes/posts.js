@@ -367,6 +367,12 @@ router.put('/:id', async (req, res) => {
             });
         }
 
+        // Regenerate slug if empty and title is provided
+        let slugToUpdate = slug;
+        if ((!slugToUpdate || slugToUpdate.trim() === '') && title) {
+            slugToUpdate = generateSlug(title);
+        }
+
         // Update published_at if status changed to 'published'
         let published_at = existingPost.rows[0].published_at;
         if (status === 'published' && existingPost.rows[0].status !== 'published') {
@@ -392,7 +398,7 @@ router.put('/:id', async (req, res) => {
         `;
 
         const result = await pool.query(updateQuery, [
-            title, slug, content, excerpt, thumbnail_path, youtube_id,
+            title, slugToUpdate, content, excerpt, thumbnail_path, youtube_id,
             soundcloud_url, status, is_featured, meta_description,
             published_at, id
         ]);
