@@ -26,8 +26,12 @@ const pool = new Pool({
 // Run migrations before starting server
 const { minifyCSS, inputFile: cssFile } = require('./services/css-minifier');
 
-// Minify CSS on startup
-minifyCSS();
+// Minify CSS on startup (graceful failure)
+try {
+    minifyCSS();
+} catch (e) {
+    console.warn('⚠️ Could not minify CSS on startup (likely read-only fs):', e.message);
+}
 
 // In development, watch for CSS changes
 if (process.env.NODE_ENV !== 'production') {

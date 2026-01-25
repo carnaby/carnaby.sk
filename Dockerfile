@@ -37,6 +37,13 @@ RUN mkdir -p /app/data && \
 RUN mkdir -p /app/backups && \
     chown -R appuser:nodejs /app/backups
 
+# Create cache directory with world-write permissions (so user 1026 can write)
+RUN mkdir -p /app/public/cache && \
+    chmod 777 /app/public/cache
+
+# Minify CSS at build time
+RUN node -e "require('./services/css-minifier').minifyCSS()"
+
 # Switch to non-root user
 USER appuser
 
