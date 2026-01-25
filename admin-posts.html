@@ -266,17 +266,15 @@
             margin-bottom: 1rem;
         }
     </style>
+    <script src="/components/admin-header.js" defer></script>
 </head>
 
 <body>
     <div class="posts-container">
-        <div class="posts-header">
-            <h1>📝 Správa príspevkov</h1>
-            <div class="header-actions">
-                <a href="/" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Späť na web</a>
-                <a href="/admin/posts/new" class="btn btn-primary"><i class="fas fa-plus"></i> Nový príspevok</a>
-            </div>
-        </div>
+        <admin-header title="Správa príspevkov" icon="📝" back-href="/admin" web-btn>
+            <a href="/admin/users" class="btn btn-secondary"><i class="fas fa-users"></i> Používatelia</a>
+            <a href="/admin/posts/new" class="btn btn-primary"><i class="fas fa-plus"></i> Nový príspevok</a>
+        </admin-header>
 
         <div class="filters">
             <div class="filter-group">

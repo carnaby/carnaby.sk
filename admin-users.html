@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Správa používateľov - Administrácia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/admin.css">
+    <script src="/components/admin-header.js" defer></script>
+</head>
+
+<body>
+    <div class="posts-container">
+        <admin-header title="Správa používateľov" icon="👥" back-href="/admin" web-btn></admin-header>
+
+        <div id="error-container"></div>
+
+        <div class="posts-table">
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <div style="color: var(--accent-gold); font-weight: 500;">Načítavam používateľov...</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-user-avatar">Avatar</th>
+                        <th class="col-user-name">Meno</th>
+                        <th class="col-user-email">Email</th>
+                        <th class="col-user-role">Rola</th>
+                        <th class="col-user-date">Posledné prihlásenie</th>
+                        <th class="col-user-date">Dátum registrácie</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                    <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Load users
+        async function loadUsers() {
+            const loading = document.getElementById('loading-overlay');
+            const tbody = document.getElementById('users-tbody');
+            const errorContainer = document.getElementById('error-container');
+
+            loading.style.display = 'flex';
+            errorContainer.innerHTML = '';
+
+            try {
+                const response = await fetch('/admin/api/users');
+                const data = await response.json();
+
+                // Artificial delay for smooth animation
+                // await new Promise(r => setTimeout(r, 300));
+
+                loading.style.display = 'none';
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load users');
+                }
+
+                renderUsers(data.data);
+            } catch (error) {
+                loading.style.display = 'none';
+                errorContainer.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('users-tbody');
+
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">👥</div>
+                                <p>Žiadni používatelia</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const avatar = user.avatar_url
+                    ? `<img src="${user.avatar_url}" alt="${user.display_name}" class="user-avatar-small">`
+                    : '<div class="user-avatar-small" style="background: #333; display: flex; align-items: center; justify-content: center;">Add</div>';
+
+                const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
+
+                const lastLogin = user.last_login
+                    ? new Date(user.last_login).toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '-';
+
+                const created = new Date(user.created_at).toLocaleDateString('sk-SK');
+
+                return `
+                    <tr>
+                        <td class="col-user-avatar" style="text-align: center;">${avatar}</td>
+                        <td><span style="font-weight: 500; font-size: 1.05rem;">${user.display_name}</span></td>
+                        <td style="color: var(--text-secondary);">${user.email}</td>
+                        <td><span class="role-badge ${roleClass}">${user.role}</span></td>
+                        <td style="font-size: 0.9rem; color: var(--text-secondary);">${lastLogin}</td>
+                        <td style="font-size: 0.9rem; color: var(--text-secondary);">${created}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Initialize
+        loadUsers();
+    </script>
+</body>
+
+</html>

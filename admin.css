@@ -4,45 +4,49 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
+    padding: 2rem;
     min-height: 100vh;
 }
 
-.admin-header {
+.posts-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+.admin-header,
+.posts-header,
+.admin-header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    /* margin-bottom handled by component style, but good to have fallback */
     margin-bottom: 2rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
 
-.admin-header h1 {
+.admin-header h1,
+.posts-header h1,
+.admin-header-container h1 {
     margin: 0;
     font-size: 2rem;
     color: var(--accent-gold);
     font-family: 'Playfair Display', serif;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.back-link {
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 25px;
-    background: var(--bg-card);
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
-.back-link:hover {
-    color: var(--accent-gold);
-    border-color: var(--accent-gold);
-    transform: translateY(-2px);
-}
-
-.admin-content {
-    display: grid;
-    gap: 2rem;
+.header-icon {
+    font-size: 1.8rem;
 }
 
 /* Glassmorphism Cards */
@@ -163,6 +167,107 @@ th.sortable i {
 th.sortable.active i {
     opacity: 1;
     color: var(--accent-gold);
+}
+
+/* User Management */
+.col-user-avatar {
+    width: 80px;
+    text-align: center;
+}
+
+.col-user-name {
+    width: 25%;
+}
+
+.col-user-email {
+    width: auto;
+}
+
+.col-user-role {
+    width: 120px;
+}
+
+.col-user-date {
+    width: 180px;
+}
+
+.user-avatar-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+}
+
+.role-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.role-admin {
+    background: rgba(212, 165, 116, 0.1);
+    color: var(--accent-gold);
+    border: 1px solid rgba(212, 165, 116, 0.3);
+}
+
+.role-user {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}
+
+/* Button Styles - Unified */
+.btn {
+    padding: 0 1.5rem;
+    height: 48px;
+    border: none;
+    border-radius: 24px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    line-height: normal;
+    /* Fix for anchor tags */
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #b8860b 100%);
+    color: var(--bg-dark);
+    box-shadow: 0 4px 15px rgba(212, 165, 116, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(212, 165, 116, 0.4);
+}
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Loading Overlay */

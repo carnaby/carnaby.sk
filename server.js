@@ -98,7 +98,7 @@ function startServer() {
     });
 
     // Admin routes
-    const adminRoutes = require('./routes/admin');
+    const adminRoutes = require('./routes/admin')(pool);
     app.use('/admin', adminRoutes);
 
     // Posts API routes
