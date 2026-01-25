@@ -444,8 +444,27 @@
             }
 
             tbody.innerHTML = posts.map(post => {
+                let thumbSrc = '';
+                let thumbFallback = '';
+
+                if (post.thumbnail_path) {
+                    const originalFilename = post.thumbnail_path.split('/').pop();
+                    thumbSrc = `/images/300/${originalFilename.replace(/\.[^/.]+$/, "")}.webp`; // Request 300px WebP
+                    // Fallback to originals
+                    thumbFallback = `/thumbnails/originals/${originalFilename}`;
+
+                    // If it's a YouTube URL (no local file logic in path usually, but let's be safe)
+                    if (post.thumbnail_path.includes('img.youtube.com')) {
+                        thumbSrc = post.thumbnail_path;
+                        thumbFallback = post.thumbnail_path;
+                    }
+                }
+
                 const thumbnail = post.thumbnail_path
-                    ? `<img src="${post.thumbnail_path}" alt="${post.title}" class="post-thumbnail">`
+                    ? `<img src="${thumbSrc}" 
+                            alt="${post.title}" 
+                            class="post-thumbnail"
+                            onerror="this.onerror=null;this.src='${thumbFallback}'">`
                     : '<div class="post-thumbnail" style="background: #e5e7eb; display: flex; align-items: center; justify-content: center; color: #9ca3af;">📄</div>';
 
                 const categoriesHtml = post.categories && post.categories.length > 0
