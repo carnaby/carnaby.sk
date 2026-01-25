@@ -2144,6 +2144,89 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 24: Admin Users Management (Day 8)
+
+**Prompt:** "teraz spravime v admin sekcii taku info sekciu o uzivateloch .. predstavujem si to ako jednoduchu tabulku kde bude meno a email pripadne vsetko co ma zmysel"
+
+**Result:** ✅ New Admin Section "Users"
+
+**Features:**
+- **User List:** Displays all registered users with Avatar, Name, Email, Role, Last Login, Registered Date.
+- **Backend API:** `GET /admin/api/users` (protected by Admin Middleware).
+- **Navigation:** Added links to "Správa používateľov" in Dashboard and Posts header.
+- **Design:** Consistent with Admin Posts (Glassmorphism, Loading Overlay).
+
+**Time:** 25 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 25: Admin Layout Unification (Day 8)
+
+**Prompt:** "super funguje. len ten layout je nepekny sprav to podla toho ako je inede .. cele nech je to jednotne"
+
+**Result:** ✨ UI Standardization
+
+**Changes:**
+- **Consistent Columns:** Applied standardized widths for User table columns (Avatar 80px, Role 120px, etc.).
+- **Typography:** Matched font sizes and colors with the rest of the Admin panel (secondary text for emails/dates).
+- **CSS Architecture:** Moved inline styles to `admin.css` using BEM-like naming (`.col-user-*`).
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 26: Admin Header Component (Day 8)
+
+**Prompt:** "header vude vzy obsahovat povedzme tu ikonu , title, a v pravo tlacitka spet... ak sa da a dava ti to zmysel tak to sprav ako prepouzitelny komponent"
+
+**Result:** 🧩 Web Components Architecture
+
+**Changes:**
+- **New Component:** Created `<admin-header>` generic Web Component (Vanilla JS).
+- **Refactoring:** Replaced ~60 lines of repetitive HTML in 4 admin files with single-line implementations.
+- **Features:** Dynamic Title/Icon, optional Back/Web buttons, Slot support for custom actions.
+- **Maintainability:** Styles and structure are now centralized in `admin-header.js` and `admin.css`.
+
+- **Maintainability:** Styles and structure are now centralized in `admin-header.js` and `admin.css`.
+
+**Time:** 20 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 27: Fix Admin Layout & Component Styles (Day 8)
+
+**Prompt:** "admin ako vidis je rozbity... admin/posts .. tu je to dobre ale si tam dve horizontalne ciary"
+
+**Result:** ✅ Visual Regression Fixed
+
+**Fixes:**
+- **Missing Styles:** Added global `.btn` style definitions to `admin.css` (previously inline in specific files).
+- **Double Borders:** Removed redundant `border-bottom` from component JS (letting CSS handle it).
+- **Layout:** Fixed Flexbox behavior by ensuring buttons have proper dimensions.
+
+**Time:** 10 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 28: Fix Missing Styles (Day 8)
+
+**Prompt:** "admin stale rozbity... zeby len css selektory ?"
+
+**Result:** ✅ Fully Restored Styling
+
+**Fixes:**
+- **Missing CSS:** Restored `<link rel="stylesheet" href="/admin.css">` in `admin.html` and `admin-users.html` (accidentally removed during script injection).
+- **Architecture:** Moved `.posts-container` styles from inline `admin-posts.html` to global `admin.css` so `admin-users.html` can access them.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**

@@ -8,22 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/admin.css">
-
-    <!-- Umami Analytics -->
-    <script defer src="https://analytics.carnaby.sk/script.js"
-        data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
+    <script src="/components/admin-header.js" defer></script>
 </head>
 
 <body>
     <div class="admin-container">
-        <header class="admin-header">
-            <div class="header-left">
-                <h1>⚙️ Administrácia</h1>
-            </div>
-            <div class="header-right">
-                <a href="/" class="back-link">← Späť na hlavnú stránku</a>
-            </div>
-        </header>
+        <admin-header title="Administrácia" icon="⚙️" web-btn></admin-header>
 
         <main class="admin-content">
             <div class="welcome-card">
@@ -50,6 +40,14 @@
                         <div>
                             <strong>Správa videí a kategórií</strong>
                             <p>Organizácia hudobného obsahu (v príprave)</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="icon">👥</span>
+                        <div>
+                            <strong><a href="/admin/users" style="color: #667eea; text-decoration: none;">Správa
+                                    používateľov</a></strong>
+                            <p>Zoznam registrovaných používateľov a rolí</p>
                         </div>
                     </li>
                 </ul>
