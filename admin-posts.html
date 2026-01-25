@@ -307,19 +307,32 @@
         </div>
 
         <div id="error-container"></div>
-        <div id="loading" class="loading" style="display: none;">Načítavam...</div>
 
         <div class="posts-table">
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <div style="color: var(--accent-gold); font-weight: 500;">Načítavam príspevky...</div>
+            </div>
+
             <table>
                 <thead>
                     <tr>
-                        <th>Náhľad</th>
-                        <th>Názov</th>
-                        <th>Kategórie</th>
-                        <th>Stav</th>
-                        <th>Zobrazenia</th>
-                        <th>Dátum</th>
-                        <th>Akcie</th>
+                        <th class="col-thumb">Náhľad</th>
+                        <th class="col-title sortable" onclick="handleSort('title')">
+                            Názov <i class="fas fa-sort" id="sort-title"></i>
+                        </th>
+                        <th class="col-cat">Kategórie</th>
+                        <th class="col-status sortable" onclick="handleSort('status')">
+                            Stav <i class="fas fa-sort" id="sort-status"></i>
+                        </th>
+                        <th class="col-views sortable" onclick="handleSort('views')">
+                            Zobrazenia <i class="fas fa-sort" id="sort-views"></i>
+                        </th>
+                        <th class="col-date sortable" onclick="handleSort('created_at')">
+                            Dátum <i class="fas fa-sort" id="sort-created_at"></i>
+                        </th>
+                        <th class="col-actions">Akcie</th>
                     </tr>
                 </thead>
                 <tbody id="posts-tbody">
@@ -327,11 +340,21 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <div id="pagination-container" class="pagination"></div>
     </div>
 
     <script>
         let posts = [];
         let categories = [];
+
+        // Pagination & Sorting State
+        let currentPage = 1;
+        const limit = 5; // Reduced to 5 to show pagination
+        let totalPages = 1;
+        let currentSort = 'created_at';
+        let currentOrder = 'DESC';
 
         // Load categories
         async function loadCategories() {
@@ -355,13 +378,12 @@
             }
         }
 
-        // Load posts
+        // Load posts with pagination and sorting
         async function loadPosts() {
-            const loading = document.getElementById('loading');
-            const tbody = document.getElementById('posts-tbody');
+            const loading = document.getElementById('loading-overlay'); // Updated ID
             const errorContainer = document.getElementById('error-container');
 
-            loading.style.display = 'block';
+            loading.style.display = 'flex'; // Flex for centering
             errorContainer.innerHTML = '';
 
             try {
@@ -369,13 +391,17 @@
                 const category = document.getElementById('category-filter').value;
                 const featured = document.getElementById('featured-filter').value;
 
-                let url = '/api/posts?';
+                let url = `/api/posts?page=${currentPage}&limit=${limit}&sortBy=${currentSort}&order=${currentOrder}&`;
+
                 if (status) url += `status=${status}&`;
                 if (category) url += `category=${category}&`;
                 if (featured) url += `featured=${featured}&`;
 
                 const response = await fetch(url);
                 const data = await response.json();
+
+                // Artificial delay for smooth animation (optional, remove in prod if too slow)
+                // await new Promise(r => setTimeout(r, 300)); 
 
                 loading.style.display = 'none';
 
@@ -384,7 +410,16 @@
                 }
 
                 posts = data.data;
+
+                // Update pagination state
+                if (data.pagination) {
+                    totalPages = data.pagination.totalPages;
+                    currentPage = data.pagination.page;
+                }
+
                 renderPosts();
+                renderPagination();
+                updateSortIcons();
             } catch (error) {
                 loading.style.display = 'none';
                 errorContainer.innerHTML = `<div class="error">❌ ${error.message}</div>`;
@@ -392,7 +427,7 @@
             }
         }
 
-        // Render posts
+        // Render posts table
         function renderPosts() {
             const tbody = document.getElementById('posts-tbody');
 
@@ -402,7 +437,7 @@
                         <td colspan="7">
                             <div class="empty-state">
                                 <div class="empty-state-icon">📭</div>
-                                <p>Žiadne príspevky</p>
+                                <p>Žiadne príspevky sa nenašli</p>
                             </div>
                         </td>
                     </tr>
@@ -457,6 +492,89 @@
             }).join('');
         }
 
+        // Render Pagination Controls
+        function renderPagination() {
+            const container = document.getElementById('pagination-container');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // Prev Button
+            html += `
+                <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+
+            // Page Numbers
+            // Simple logic: show all for now (or limit if too many)
+            for (let i = 1; i <= totalPages; i++) {
+                // Show first, last, current, and surrounding
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `<span style="padding: 0.5rem; color: var(--text-secondary);">...</span>`;
+                }
+            }
+
+            // Next Button
+            html += `
+                <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Change Page
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadPosts();
+        }
+
+        // Handle Sorting
+        function handleSort(column) {
+            if (currentSort === column) {
+                // Toggle order
+                currentOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+            } else {
+                currentSort = column;
+                currentOrder = 'ASC'; // Default to ASC for new column? Or DESC for dates?
+                if (column === 'created_at' || column === 'views') {
+                    currentOrder = 'DESC'; // Better default for numbers/dates
+                }
+            }
+            currentPage = 1; // Reset to first page
+            loadPosts();
+        }
+
+        // Update Sort Icons
+        function updateSortIcons() {
+            // Reset all icons
+            document.querySelectorAll('.sortable').forEach(th => {
+                th.classList.remove('active');
+                const i = th.querySelector('i');
+                if (i) {
+                    i.className = 'fas fa-sort'; // Default icon
+                }
+            });
+
+            // Set active icon
+            const activeTh = document.querySelector(`th[onclick="handleSort('${currentSort}')"]`);
+            if (activeTh) {
+                activeTh.classList.add('active');
+                const i = activeTh.querySelector('i');
+                if (i) {
+                    i.className = currentOrder === 'ASC' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                }
+            }
+        }
+
         // Delete post
         async function deletePost(id) {
             if (!confirm('Naozaj chcete zmazať tento príspevok?')) {
@@ -483,9 +601,9 @@
         }
 
         // Event listeners
-        document.getElementById('status-filter').addEventListener('change', loadPosts);
-        document.getElementById('category-filter').addEventListener('change', loadPosts);
-        document.getElementById('featured-filter').addEventListener('change', loadPosts);
+        document.getElementById('status-filter').addEventListener('change', () => { currentPage = 1; loadPosts(); });
+        document.getElementById('category-filter').addEventListener('change', () => { currentPage = 1; loadPosts(); });
+        document.getElementById('featured-filter').addEventListener('change', () => { currentPage = 1; loadPosts(); });
 
         // Initialize
         loadCategories();

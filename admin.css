@@ -63,6 +63,147 @@
     margin-bottom: 1rem;
 }
 
+/* Pagination & Sorting */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding: 1rem;
+}
+
+.page-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    background: var(--bg-secondary);
+    transform: translateY(-2px);
+}
+
+.page-btn.active {
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+    border-color: var(--accent-gold);
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(212, 165, 116, 0.3);
+}
+
+.page-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Table Column Widths */
+.col-thumb {
+    width: 100px;
+}
+
+.col-title {
+    width: auto;
+}
+
+/* Grow to fill space */
+.col-cat {
+    width: 15%;
+}
+
+.col-status {
+    width: 110px;
+}
+
+.col-views {
+    width: 120px;
+    text-align: center;
+}
+
+.col-date {
+    width: 130px;
+}
+
+.col-actions {
+    width: 180px;
+    text-align: right;
+}
+
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+th.sortable:hover {
+    color: var(--text-primary);
+}
+
+th.sortable i {
+    margin-left: 8px;
+    font-size: 0.8rem;
+    opacity: 0.3;
+    transition: all 0.2s;
+}
+
+th.sortable.active i {
+    opacity: 1;
+    color: var(--accent-gold);
+}
+
+/* Loading Overlay */
+.posts-table {
+    position: relative;
+    /* Context for absolute loading */
+    min-height: 200px;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(18, 18, 18, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 12px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(212, 165, 116, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-gold);
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .feature-list {
     list-style: none;
     padding: 0;
@@ -115,6 +256,71 @@
     color: var(--text-primary);
 }
 
+/* Toast Notifications */
+#message-container {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    pointer-events: none;
+    /* Allow clicking through container */
+}
+
+.toast {
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--accent-gold);
+    min-width: 300px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUpFade 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    pointer-events: auto;
+    /* Enable clicks on toasts */
+    backdrop-filter: blur(10px);
+}
+
+.toast.success {
+    border-left-color: #10b981;
+}
+
+.toast.success i {
+    color: #10b981;
+    font-size: 1.2rem;
+}
+
+.toast.error {
+    border-left-color: #ef4444;
+}
+
+.toast.error i {
+    color: #ef4444;
+    font-size: 1.2rem;
+}
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutFade {
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .admin-container {
@@ -133,5 +339,16 @@
 
     .feature-list li {
         padding: 1rem;
+    }
+
+    #message-container {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+    }
+
+    .toast {
+        min-width: auto;
+        width: 100%;
     }
 }

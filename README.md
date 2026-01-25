@@ -159,6 +159,22 @@ Požiadavky:
 
 **Result:** ✅ Complete Docker deployment solution
 - **Dockerfile**: Multi-stage build with node:20-alpine
+...
+
+### ⚠️ IMPORTANT: Manual Deployment Reminders
+**Files NOT handled by Watchtower/Automation:**
+These files must be updated **manually** on the Synology NAS via SSH or File Station:
+1. `docker-compose.yml` (e.g., adding/changing volumes, ports)
+2. `.env` (API keys, passwords, environment variables)
+
+**Procedure:**
+1. Edit file on NAS.
+2. Run `sudo docker-compose up -d` in the project folder.
+3. Restart container.
+
+---
+
+### Commit 7: Docker Build Fix - npm ci Error (Day 3)
   - Stage 1: Dependencies installation
   - Stage 2: Database initialization
   - Stage 3: Production runner with non-root user
@@ -1123,9 +1139,9 @@ The main challenge was configuring Express sessions to work correctly behind a r
 #### User Request (Slovak)
 
 ```
-Login a avatar by sa presunul do header aby bol uplne hore v pravo. a 
-- neprihlaseny nebude standardne google trlacitko ale tiez kruzok tak isto velky ale bude vnom len silueta. bez teztu
-- prihlaseny bude len kruzok s avatarom. na hover sa zobrazi jeho meno ze je prihlaseny, a po kliknuti na avatara sa zobrazi pulldown menu kde bude zatialo iba jedna polozka Odhlasit.
+Login a avatar by sa mali presunúť do hlavičky (header), aby boli úplne hore vpravo.
+- Neprihlásený: Nebude štandardné Google tlačidlo, ale tiež krúžok, rovnako veľký, ale bude v ňom len silueta (bez textu).
+- Prihlásený: Bude len krúžok s avatarom. Na hover sa zobrazí jeho meno, že je prihlásený, a po kliknutí na avatara sa zobrazí pulldown menu, kde bude zatiaľ iba jedna položka: "Odhlásiť".
 ```
 
 **Translation:** Move login/avatar to header (top right). Logged-out state: circular button with user silhouette icon (no text). Logged-in state: circular avatar, on hover show name, on click show dropdown menu with logout option.
@@ -1533,7 +1549,7 @@ Analytics now tracking:
 
 ### Commit 14: SQLite to PostgreSQL Migration (Day 6)
 
-**Prompt (Slovak):** "podme teraz na tu migraciu sqlite.. a dufam ze to uz bude posledna systemacka vec :)"
+**Prompt (Slovak):** "Poďme teraz na tú migráciu SQLite... a dúfam, že to už bude posledná systémová vec :)"
 
 **Translation:** "let's now do the sqlite migration.. and I hope this will be the last system administration thing :)"
 
@@ -1733,7 +1749,7 @@ SELECT COUNT(*) FROM videos;      -- 16
 
 ### Commit 15: Admin Section with Role-Based Access (Day 6)
 
-**Prompt (Slovak):** "kontorloval som vsetko . a ide .. ! podme este spravit taky cleanup projektu ... no chcem zacat administraciu .. prihlasenie uz mame tak ako prve by sme mohli skusit uplnu banalitu ze ked sa prihlasim ja :) "dodusik@gmail.com" tak vo menu pod mojim avatarom pridaj polozku co ja viem administracia a po kliknuti na nu sa zobrazi samostatne stranka kde zatial nemusi byt nic funkcne len nech sa nieco zobrazi."
+**Prompt (Slovak):** "Kontroloval som všetko... a ide to! Poďme ešte spraviť taký 'cleanup' projektu... No chcem začať administráciu. Prihlásenie už máme, tak ako prvé by sme mohli skúsiť úplnú banalitu: keď sa prihlásim ja ('dodusik@gmail.com'), tak v menu pod mojím avatarom pridaj položku, čo ja viem, 'Administrácia', a po kliknutí na ňu sa zobrazí samostatná stránka, kde zatiaľ nemusí byť nič funkčné, len nech sa niečo zobrazí."
 
 **Translation:** "checked everything and it works! let's do some project cleanup ... now I want to start administration .. we already have login so as first we could try a complete triviality that when I log in as "dodusik@gmail.com" then in the menu under my avatar add an item like administration and when clicked it shows a separate page where there doesn't have to be anything functional yet just show something."
 
@@ -1920,7 +1936,7 @@ git push
 
 ### Commit 16: Blog System Backend & Database (Day 7)
 
-**Prompt (Slovak):** "podme implementovat ten blog. potrebujeme tabulky pre posty, kategorie a API endpointy. chcem aby to podporovalo aj youtube videa aj vlastne obrazky."
+**Prompt (Slovak):** "Poďme implementovať ten blog. Potrebujeme tabuľky pre príspevky, kategórie a API endpointy. Chcem, aby to podporovalo aj YouTube videá, aj vlastné obrázky."
 
 **Translation:** "let's implement the blog. we need tables for posts, categories and API endpoints. i want it to support youtube videos as well as custom images."
 
@@ -1954,7 +1970,7 @@ git push
 
 ### Commit 17: Admin Dashboard - Content Management (Day 7)
 
-**Prompt (Slovak):** "teraz to admin rozhranie. chcem zoznam postov a editor. editor by mal mat markdown nahlad v realnom case."
+**Prompt (Slovak):** "Teraz to admin rozhranie. Chcem zoznam príspevkov a editor. Editor by mal mať Markdown náhľad v reálnom čase."
 
 **Translation:** "now the admin interface. i want a list of posts and an editor. the editor should have realtime markdown preview."
 
@@ -1977,7 +1993,7 @@ git push
 
 ### Commit 18: Video Migration & Frontend Integration (Day 7)
 
-**Prompt (Slovak):** "podme spravit migraciu videi .. staci ze .. sa vytvoria zaznamy s yt id... a potom upravit frontend aby nacitaval posty z databazy."
+**Prompt (Slovak):** "Poďme spraviť migráciu videí... Stačí, že sa vytvoria záznamy s YT ID... a potom upraviť frontend, aby načítaval príspevky z databázy."
 
 **Translation:** "let's do the migration of videos .. it's enough if .. records with yt id are created... and then update the frontend to load posts from database."
 
@@ -2007,7 +2023,7 @@ Created `scripts/migrate-videos.js`:
 
 ### Commit 19: Multi-language Support (Day 7)
 
-**Prompt (Slovak):** "zabudol som na to ze stranka je multi language... ojj. normalne by som sa klonil ku moznosti 2 ale volim moznost 1 [Simple Column].. nepredpokladam ze budem pridavat dalsi jazyk."
+**Prompt (Slovak):** "Zabudol som na to, že stránka je multi-language... ojj. Normálne by som sa klonil ku možnosti 2, ale volím možnosť 1 [Simple Column]... Nepredpokladám, že budem pridávať ďalší jazyk."
 
 **Translation:** "i forgot that the site is multi language... oops. normally i would lean towards option 2 but i choose option 1 [Simple Column].. i don't assume i will be adding another language."
 
@@ -2067,6 +2083,64 @@ Created `scripts/migrate-videos.js`:
 
 **Time:** 45 minutes
 **Manual work:** 0 lines of code
+
+---
+
+### Commit 21: Admin Data Management - Sort & Paging (Day 8)
+
+**Prompt:** "Poďme na niečo zložitejšie v admin sekcii. V zozname príspevkov sprav zoraďovanie podľa stĺpcov a tiež implementuj paginátor."
+
+**Result:** ✅ Advanced Data Grid Features
+
+**1. Backend (API)**
+- Updated `GET /api/posts` to support:
+  - `page` & `limit` (Pagination)
+  - `sortBy` & `order` (Sorting)
+- Added `COUNT(*)` query for calculating total pages
+- Implemented **whitelist validation** for sort columns (security)
+
+**2. Frontend (UI)**
+- **Sortable Headers:** Clickable table headers with FontAwesome icons (▲/▼)
+- **Pagination Controls:** Next/Prev buttons and Page Numbers (1, 2, 3...)
+- **State Management:** URL memory is not used (SPA style), state persists during filtering
+- **Visual Feedback:** Active column highlight, loading states
+
+**Features:**
+- Sort by: Title, Status, Views, Date
+- Filter + Sort + Pagination works together (e.g., "Page 2 of Published posts sorted by Views")
+- "No posts found" message for empty pages
+
+---
+
+### Commit 22: Fix Sorting Buffer & Pagination Visibility (Day 8)
+
+**Prompt:** "Vidím krásne šípky, ale obsah tabuľky len preblikne a je rovnaký... a nevidím paginátor."
+
+**Result:** ✅ Bug Fixes & Optimization
+
+**1. Sorting Fix (Backend)**
+- **Issue:** SQL Error when sorting by `views` because column name in DB is `view_count`.
+- **Fix:** Added mapping layer in `routes/posts.js` (`sortBy='views'` → `ORDER BY view_count`).
+
+**2. Pagination Visibility (Frontend)**
+- **Issue:** User had 15 posts, limit was 10 = 2 pages. Might be edge case or user expected more pages.
+- **Change:** Temporarily reduced default limit to **5 posts per page** to verify pagination UI works correctly (shows 3 pages for 15 posts).
+
+**Time:** 10 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 23: Admin UI Polish - Adjustments (Day 8)
+
+**Prompt:** "Naštýluj paginátor do stredu, loading sprav ako plávajúci overlay a zafixuj šírku stĺpcov."
+
+**Result:** ✨ Visual Improvements
+
+**Changes:**
+- **Loading Overlay:** Replaced text with a centered, semi-transparent overlay backdrop + animated spinner. Prevents table "jumping" during data load.
+- **Fixed Columns:** Determined fixed widths for Thumbnails (100px), Status (110px), Views (120px), Actions (180px). Title column now takes remaining flexible space.
+- **Pagination:** Centered layout, styled buttons with hover effects matching the theme.
 
 ---
 

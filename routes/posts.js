@@ -105,11 +105,77 @@ async function downloadYouTubeThumbnail(videoId, savePath) {
 }
 
 // GET /api/posts - Get all posts with optional filters
+// GET /api/posts - Get all posts with optional filters
 router.get('/', async (req, res) => {
     try {
-        const { status, category, featured, language, limit = 50, offset = 0 } = req.query;
+        const {
+            status,
+            category,
+            featured,
+            language,
+            limit = 50,
+            page = 1,
+            sortBy = 'created_at',
+            order = 'DESC'
+        } = req.query;
 
-        let query = `
+        // Calculate offset from page and limit
+        const limitVal = parseInt(limit);
+        const pageVal = parseInt(page);
+        const offsetVal = (pageVal - 1) * limitVal;
+
+        // Validation for sorting
+        const allowedSortColumns = ['title', 'status', 'published_at', 'views', 'created_at', 'view_count'];
+        let sortCol = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
+
+        // Map frontend sort keys to database columns
+        if (sortCol === 'views') sortCol = 'view_count';
+        if (sortCol === 'date') sortCol = 'created_at';
+
+        const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+        // Base query conditions
+        let whereConditions = ['1=1'];
+        const params = [];
+        let paramIndex = 1;
+
+        if (status) {
+            whereConditions.push(`p.status = $${paramIndex++}`);
+            params.push(status);
+        }
+
+        if (category) {
+            whereConditions.push(`c.slug = $${paramIndex++}`);
+            params.push(category);
+        }
+
+        if (featured !== undefined) {
+            whereConditions.push(`p.is_featured = $${paramIndex++}`);
+            params.push(featured === 'true');
+        }
+
+        if (language) {
+            whereConditions.push(`p.language = $${paramIndex++}`);
+            params.push(language);
+        }
+
+        const whereClause = whereConditions.join(' AND ');
+
+        // 1. Get Total Count (for pagination)
+        // We need joins if filtering by category
+        const countQuery = `
+            SELECT COUNT(DISTINCT p.id) 
+            FROM posts p
+            LEFT JOIN post_categories pc ON p.id = pc.post_id
+            LEFT JOIN categories c ON pc.category_id = c.id
+            WHERE ${whereClause}
+        `;
+
+        const countResult = await pool.query(countQuery, params);
+        const total = parseInt(countResult.rows[0].count);
+
+        // 2. Get Data
+        const query = `
             SELECT 
                 p.*,
                 u.display_name as author_name,
@@ -124,46 +190,24 @@ router.get('/', async (req, res) => {
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN post_categories pc ON p.id = pc.post_id
             LEFT JOIN categories c ON pc.category_id = c.id
-            WHERE 1=1
-        `;
-
-        const params = [];
-        let paramIndex = 1;
-
-        if (status) {
-            query += ` AND p.status = $${paramIndex++}`;
-            params.push(status);
-        }
-
-        if (category) {
-            query += ` AND c.slug = $${paramIndex++}`;
-            params.push(category);
-        }
-
-        if (featured !== undefined) {
-            query += ` AND p.is_featured = $${paramIndex++}`;
-            params.push(featured === 'true');
-        }
-
-        if (language) {
-            query += ` AND p.language = $${paramIndex++}`;
-            params.push(language);
-        }
-
-        query += `
+            WHERE ${whereClause}
             GROUP BY p.id, u.display_name, u.email
-            ORDER BY p.is_featured DESC, p.published_at DESC NULLS LAST, p.created_at DESC
+            ORDER BY p.${sortCol} ${sortOrder} NULLS LAST
             LIMIT $${paramIndex++} OFFSET $${paramIndex++}
         `;
 
-        params.push(parseInt(limit), parseInt(offset));
-
-        const result = await pool.query(query, params);
+        const dataParams = [...params, limitVal, offsetVal];
+        const result = await pool.query(query, dataParams);
 
         res.json({
             success: true,
             data: result.rows,
-            total: result.rows.length
+            pagination: {
+                total,
+                page: pageVal,
+                limit: limitVal,
+                totalPages: Math.ceil(total / limitVal)
+            }
         });
     } catch (error) {
         console.error('Error fetching posts:', error);
