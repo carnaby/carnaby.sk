@@ -121,6 +121,7 @@ function startServer() {
                     p.title,
                     p.slug,
                     p.thumbnail_path,
+                    p.is_featured,
                     COALESCE(
                         json_agg(
                             c.name
@@ -130,8 +131,8 @@ function startServer() {
                 FROM posts p
                 LEFT JOIN post_categories pc ON p.id = pc.post_id
                 LEFT JOIN categories c ON pc.category_id = c.id
-                WHERE p.status = 'published' AND p.youtube_id IS NOT NULL
-                GROUP BY p.id, p.youtube_id, p.title, p.slug, p.thumbnail_path
+                WHERE p.status = 'published'
+                GROUP BY p.id, p.youtube_id, p.title, p.slug, p.thumbnail_path, p.is_featured
                 ORDER BY p.created_at DESC
             `);
 
@@ -148,7 +149,8 @@ function startServer() {
                         url: post.url, // youtube_id
                         title: post.title,
                         slug: post.slug,
-                        thumbnail: post.thumbnail_path
+                        thumbnail: post.thumbnail_path,
+                        isFeatured: post.is_featured
                     });
                 });
             });

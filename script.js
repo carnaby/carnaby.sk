@@ -3,7 +3,7 @@ const translations = {
     en: {
         // Navigation
         navAbout: "About",
-        navSongs: "Songs",
+        navSongs: "Posts",
 
         // Hero
         heroTitle: "DODO",
@@ -26,7 +26,7 @@ const translations = {
         noteLyrics: "✍️ All lyrics are original and written for these songs.",
 
         // Songs section
-        songsTitle: "Songs",
+        songsTitle: "Posts",
         songsSubtitle: "If you're looking for music that doesn't push anywhere and allows you to be quiet, you're in the right place.",
 
         // CTA
@@ -56,7 +56,8 @@ const translations = {
     sk: {
         // Navigation
         navAbout: "O mne",
-        navSongs: "Piesne",
+        navSongs: "Príspevky",
+        navAbout: "O mne",
 
         // Hero
         heroTitle: "DODO",
@@ -79,7 +80,7 @@ const translations = {
         noteLyrics: "✍️ Všetky texty sú originálne a napísané pre tieto skladby.",
 
         // Songs section
-        songsTitle: "Piesne",
+        songsTitle: "Príspevky",
         songsSubtitle: "Ak hľadáš hudbu, ktorá nikam netlačí a dovolí ti byť ticho, si na správnom mieste.",
 
         // CTA
@@ -296,11 +297,36 @@ function createPostCard(post) {
     link.style.color = 'inherit';
     link.style.display = 'block';
 
+    // Highlight featured posts
+    if (post.isFeatured) {
+        card.classList.add('featured-post');
+        card.style.border = '1px solid var(--accent-gold)';
+        card.style.position = 'relative'; // Ensure positioning context
+    }
+
     // Thumbnail / Video Wrapper
     const mediaWrapper = document.createElement('div');
     mediaWrapper.className = 'video-wrapper';
     mediaWrapper.style.position = 'relative';
     mediaWrapper.style.overflow = 'hidden';
+
+    // Featured Badge
+    if (post.isFeatured) {
+        const badge = document.createElement('div');
+        badge.className = 'featured-badge';
+        badge.textContent = '⭐'; // Simple star icon
+        badge.title = 'Top Príspevok';
+        badge.style.position = 'absolute';
+        badge.style.top = '10px';
+        badge.style.right = '10px';
+        badge.style.zIndex = '5';
+        badge.style.background = 'rgba(0,0,0,0.6)';
+        badge.style.backdropFilter = 'blur(4px)';
+        badge.style.padding = '5px';
+        badge.style.borderRadius = '50%';
+        badge.style.border = '1px solid var(--accent-gold)';
+        mediaWrapper.appendChild(badge);
+    }
 
     // Image
     const img = document.createElement('img');
@@ -335,7 +361,7 @@ function createPostCard(post) {
     playIcon.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
 
     mediaWrapper.appendChild(img);
-    if (post.url) {
+    if (post.url && post.url.trim() !== '') {
         mediaWrapper.appendChild(playIcon);
     }
 

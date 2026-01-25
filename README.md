@@ -2227,6 +2227,71 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 29: Blog Support on Frontend (Day 8)
+
+**Prompt:** "nezobrazuje jeden prispevok ktory je publikovany ale nema ziadne yt video... a nazvi to Prispevky"
+
+**Result:** 📝 Full Blog Support
+
+**Features:**
+- **Hybrid Content:** Main Page now displays both Video Posts and Text-Only Blog Posts.
+- **Backend Fix:** Removed `youtube_id IS NOT NULL` filter from API.
+- **Smart UI:** "Play" icon now only appears on posts with videos.
+- **Renaming:** Changed "Piesne" to "Príspevky" (Posts) to reflect the broader content scope.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 30: Featured Content & Polish (Day 8)
+
+**Prompt:** "trosku zvyraznit ten zvyrazneny prispevok .. a premenuj Dalsie piesne"
+
+**Result:** ⭐ Visual Highlights
+
+**Features:**
+- **Featured Posts:** Items marked as "Featured" in Admin now have a subtle **Gold Border** and a **Star Icon** in the top corner.
+- **Detail View:** Renamed "Ďalšie piesne" to "Ďalšie príspevky" to maintain consistency.
+- **Backend:** Updated API to expose `is_featured` flag to the frontend.
+
+- **Backend:** Updated API to expose `is_featured` flag to the frontend.
+
+**Time:** 10 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 31: Detail View Polish (Day 8)
+
+**Prompt:** "ten button co je na konci prispevku treba premenovat na Ďalšie príspevky .. a ten samostatny text zmaz"
+
+**Result:** 🧹 UI Cleanup
+
+**Changes:**
+- **CTA Button:** Renamed bottom button to "Ďalšie príspevky".
+- **Cleanup:** Removed the empty "Ďalšie príspevky" section that was cluttering the detail page.
+- **Navigation:** Standardized back link text.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 32: Fix Post Detail Crash (Day 8)
+
+**Prompt:** "no nieco sa pri tom pokazilo lebo prestali fungovat prispevku"
+
+**Result:** 🐛 Fixed Regression
+
+**Fixes:**
+- **DOM Structure:** Restored missing `<span id="post-date">` and category info in `post.html` which I accidentally deleted during the previous edit. JavaScript was crashing when trying to fill these fields, triggering the "Post not found" error state.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**
