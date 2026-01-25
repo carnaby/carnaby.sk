@@ -23,6 +23,23 @@ const pool = new Pool({
 });
 
 // Run migrations before starting server
+// Run migrations before starting server
+const { minifyCSS, inputFile: cssFile } = require('./services/css-minifier');
+
+// Minify CSS on startup
+minifyCSS();
+
+// In development, watch for CSS changes
+if (process.env.NODE_ENV !== 'production') {
+    const fs = require('fs');
+    console.log('👀 Watching style.css for changes...');
+    fs.watch(cssFile, (eventType, filename) => {
+        if (eventType === 'change') {
+            minifyCSS();
+        }
+    });
+}
+
 console.log('🚀 Starting carnaby.sk server...');
 runMigrations()
     .then(() => {
@@ -104,6 +121,10 @@ function startServer() {
     // Posts API routes
     const postsRoutes = require('./routes/posts');
     app.use('/api/posts', postsRoutes);
+
+    // Image Optimization Route
+    const imageRoutes = require('./routes/images');
+    app.use('/images', imageRoutes);
 
 
 

@@ -330,15 +330,39 @@ function createPostCard(post) {
 
     // Image
     const img = document.createElement('img');
-    // Use local thumbnail if available, otherwise fetch from YT (fallback)
-    // Note: The API returns 'url' as youtube_id and 'thumbnail' as path
+
+    // Handle image source
     if (post.thumbnail) {
-        img.src = post.thumbnail;
+        // Extract filename from path (works for /thumbnails/file.jpg or /thumbnails/originals/file.jpg)
+        const filename = post.thumbnail.split('/').pop().replace(/\.[^/.]+$/, "") + ".webp"; // always requests webp
+        // Wait, routes/images.js takes filename as input (with extension?)
+        // routes/images.js: const filename = req.params.filename; 
+        // It looks for invalid widths.
+        // It constructs cachedFilename = parse(filename).name + .webp
+        // It looks for SOURCE called filename.
+        // So we must pass the ORIGINAL extension in the URL request if we want to find the source?
+        // NO, the route parameter :filename is what we pass.
+        // If we pass thumb.jpg, it looks for thumb.jpg in originals.
+        // It saves as thumb.webp.
+        // So we should pass the ORIGINAL filename.
+
+        const originalFilename = post.thumbnail.split('/').pop();
+
+        img.src = `/images/600/${originalFilename}`;
+        img.srcset = `/images/300/${originalFilename} 300w, /images/600/${originalFilename} 600w`;
+        img.sizes = "(max-width: 768px) 100vw, 50vw";
+        // Fallback for error?
+        img.onerror = function () {
+            this.onerror = null; // Prevent infinite loop
+            this.srcset = '';
+            // Try to load from originals since we moved them there
+            this.src = `/thumbnails/originals/${originalFilename}`;
+        };
     } else if (post.url) {
         img.src = `https://img.youtube.com/vi/${post.url}/hqdefault.jpg`;
     } else {
         // Fallback placeholder
-        img.src = 'images/baner.JPG';
+        img.src = 'images/baner.webp';
     }
 
     img.alt = post.title;

@@ -18,7 +18,7 @@ const pool = new Pool({
 // Multer configuration for thumbnail uploads
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../public/thumbnails');
+        const uploadDir = path.join(__dirname, '../public/thumbnails/originals');
         try {
             await fs.mkdir(uploadDir, { recursive: true });
             cb(null, uploadDir);
@@ -626,7 +626,7 @@ router.post('/:id/thumbnail-from-youtube', async (req, res) => {
         }
 
         // Download thumbnail
-        const uploadDir = path.join(__dirname, '../public/thumbnails');
+        const uploadDir = path.join(__dirname, '../public/thumbnails/originals');
         await fs.mkdir(uploadDir, { recursive: true });
 
         const thumbnailPath = await downloadYouTubeThumbnail(post.youtube_id, uploadDir);
