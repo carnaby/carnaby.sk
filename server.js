@@ -159,6 +159,11 @@ function startServer() {
         }
     });
 
+    // Serve post detail page
+    app.get('/posts/:slug', (req, res) => {
+        res.sendFile(path.join(__dirname, 'post.html'));
+    });
+
     // Serve index.html for the root route
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'index.html'));
