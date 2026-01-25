@@ -76,8 +76,15 @@ function startServer() {
     app.use(passport.session());
     console.log('✅ Passport initialized');
 
+    // Serve static files from public directory (for thumbnails, etc.)
+    app.use(express.static(path.join(__dirname, 'public')));
+
     // Serve static files from the current directory
     app.use(express.static(__dirname));
+
+    // Body parser middleware for JSON
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
 
     // Authentication routes
     app.use('/auth', authRoutes);
@@ -86,29 +93,57 @@ function startServer() {
     const adminRoutes = require('./routes/admin');
     app.use('/admin', adminRoutes);
 
+    // Posts API routes
+    const postsRoutes = require('./routes/posts');
+    app.use('/api/posts', postsRoutes);
 
-    // API endpoint to get all videos
+
+
+
+
+    // API endpoint to get all published posts (replaces videos)
+    // Maintains backward compatibility with same response format
     app.get('/api/videos', async (req, res) => {
         try {
-            // Get all videos with category names
+            // Get all published posts with their categories
             const result = await pool.query(`
-                SELECT v.id, v.url, c.name as category
-                FROM videos v
-                JOIN categories c ON v.category_id = c.id
-                ORDER BY v.id
+                SELECT 
+                    p.id,
+                    p.youtube_id as url,
+                    p.title,
+                    p.slug,
+                    p.thumbnail_path,
+                    COALESCE(
+                        json_agg(
+                            c.name
+                        ) FILTER (WHERE c.id IS NOT NULL),
+                        '[]'
+                    ) as categories
+                FROM posts p
+                LEFT JOIN post_categories pc ON p.id = pc.post_id
+                LEFT JOIN categories c ON pc.category_id = c.id
+                WHERE p.status = 'published' AND p.youtube_id IS NOT NULL
+                GROUP BY p.id, p.youtube_id, p.title, p.slug, p.thumbnail_path
+                ORDER BY p.created_at DESC
             `);
 
-            // Group videos by category
-            const groupedVideos = result.rows.reduce((acc, video) => {
-                if (!acc[video.category]) {
-                    acc[video.category] = [];
-                }
-                acc[video.category].push({
-                    id: video.id,
-                    url: video.url
+            // Group posts by category (maintaining old format)
+            const groupedVideos = {};
+            result.rows.forEach(post => {
+                const categories = post.categories || [];
+                categories.forEach(category => {
+                    if (!groupedVideos[category]) {
+                        groupedVideos[category] = [];
+                    }
+                    groupedVideos[category].push({
+                        id: post.id,
+                        url: post.url, // youtube_id
+                        title: post.title,
+                        slug: post.slug,
+                        thumbnail: post.thumbnail_path
+                    });
                 });
-                return acc;
-            }, {});
+            });
 
             res.json({
                 success: true,

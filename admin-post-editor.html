@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Nový príspevok - Administrácia</title>
+    <link rel="stylesheet" href="/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .post-editor-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .editor-header h1 {
+            font-size: 2rem;
+            color: var(--text-primary);
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .editor-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 400px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .preview-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-section h2 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        #preview-content {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            min-height: 400px;
+            color: var(--text-primary);
+        }
+
+        #preview-content h1,
+        #preview-content h2,
+        #preview-content h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #preview-content p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        #preview-content code {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        #preview-content pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .thumbnail-upload {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .thumbnail-preview {
+            width: 200px;
+            height: 112px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            overflow: hidden;
+        }
+
+        .thumbnail-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .thumbnail-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .category-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .category-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-checkbox input {
+            width: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="post-editor-container">
+        <div class="editor-header">
+            <h1 id="editor-title">📝 Nový príspevok</h1>
+            <div class="editor-actions">
+                <a href="/admin/posts" class="btn btn-secondary">← Späť</a>
+                <button id="save-draft-btn" class="btn btn-secondary">Uložiť koncept</button>
+                <button id="publish-btn" class="btn btn-primary">Publikovať</button>
+            </div>
+        </div>
+
+        <div id="message-container"></div>
+
+        <div class="editor-grid">
+            <div class="editor-section">
+                <h2>Základné informácie</h2>
+
+                <div class="form-group">
+                    <label for="title">Názov *</label>
+                    <input type="text" id="title" placeholder="Názov príspevku" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="slug">URL slug</label>
+                    <input type="text" id="slug" placeholder="automaticky-generovany-slug">
+                    <small style="color: var(--text-secondary);">Nechajte prázdne pre automatické generovanie</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="excerpt">Krátky popis</label>
+                    <textarea id="excerpt" rows="3" placeholder="Krátky popis pre náhľad a SEO..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Kategórie</label>
+                    <div id="categories-container" class="category-checkboxes">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="youtube-id">YouTube ID</label>
+                        <input type="text" id="youtube-id" placeholder="dQw4w9WgXcQ">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="soundcloud-url">SoundCloud URL</label>
+                        <input type="text" id="soundcloud-url" placeholder="https://soundcloud.com/...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Náhľadový obrázok</label>
+                    <div class="thumbnail-upload">
+                        <div class="thumbnail-preview" id="thumbnail-preview">
+                            📷 Žiadny obrázok
+                        </div>
+                        <div class="thumbnail-actions">
+                            <input type="file" id="thumbnail-file" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-small btn-secondary"
+                                onclick="document.getElementById('thumbnail-file').click()">
+                                Nahrať obrázok
+                            </button>
+                            <button type="button" id="fetch-youtube-thumb-btn" class="btn btn-small btn-secondary">
+                                Stiahnuť z YouTube
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="is-featured">
+                        <label for="is-featured">⭐ Zvýraznený príspevok</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="meta-description">Meta popis (SEO)</label>
+                    <textarea id="meta-description" rows="2" placeholder="SEO meta popis..."></textarea>
+                </div>
+            </div>
+
+            <div class="editor-section">
+                <h2>Obsah (Markdown)</h2>
+                <div class="form-group">
+                    <textarea id="content" placeholder="Napíšte obsah v Markdown formáte..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section" style="margin-top: 2rem;">
+            <h2>👁️ Náhľad</h2>
+            <div id="preview-content">
+                <p style="color: var(--text-secondary);">Náhľad sa zobrazí tu...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let postId = null;
+        let categories = [];
+        let currentThumbnailPath = null;
+
+        // Get post ID from URL if editing
+        // URL format: /admin/posts/123/edit
+        const pathParts = window.location.pathname.split('/');
+        const editIndex = pathParts.indexOf('edit');
+        if (editIndex > 0 && pathParts[editIndex - 1]) {
+            postId = pathParts[editIndex - 1];
+            document.getElementById('page-title').textContent = 'Upraviť príspevok - Administrácia';
+            document.getElementById('editor-title').textContent = '✏️ Upraviť príspevok';
+        }
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/posts/categories/all');
+                const data = await response.json();
+
+                if (data.success) {
+                    categories = data.data;
+                    renderCategories();
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Render categories
+        function renderCategories(selectedCategories = []) {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = categories.map(category => `
+                <div class="category-checkbox">
+                    <input type="checkbox" id="cat-${category.id}" value="${category.id}" 
+                        ${selectedCategories.includes(category.id) ? 'checked' : ''}>
+                    <label for="cat-${category.id}">${category.name}</label>
+                </div>
+            `).join('');
+        }
+
+        // Load post if editing
+        async function loadPost() {
+            if (!postId) return;
+
+            try {
+                const response = await fetch(`/api/posts/by-id/${postId}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                const post = data.data;
+
+                document.getElementById('title').value = post.title || '';
+                document.getElementById('slug').value = post.slug || '';
+                document.getElementById('content').value = post.content || '';
+                document.getElementById('excerpt').value = post.excerpt || '';
+                document.getElementById('youtube-id').value = post.youtube_id || '';
+                document.getElementById('soundcloud-url').value = post.soundcloud_url || '';
+                document.getElementById('is-featured').checked = post.is_featured || false;
+                document.getElementById('meta-description').value = post.meta_description || '';
+
+                if (post.thumbnail_path) {
+                    currentThumbnailPath = post.thumbnail_path;
+                    updateThumbnailPreview(post.thumbnail_path);
+                }
+
+                // Select categories
+                const selectedCategories = post.categories.map(c => c.id);
+                renderCategories(selectedCategories);
+
+                // Update preview
+                updatePreview();
+            } catch (error) {
+                showMessage('error', `Chyba pri načítaní príspevku: ${error.message}`);
+            }
+        }
+
+        // Update preview
+        function updatePreview() {
+            const content = document.getElementById('content').value;
+            const previewContent = document.getElementById('preview-content');
+
+            if (content.trim()) {
+                previewContent.innerHTML = marked.parse(content);
+            } else {
+                previewContent.innerHTML = '<p style="color: var(--text-secondary);">Náhľad sa zobrazí tu...</p>';
+            }
+        }
+
+        // Update thumbnail preview
+        function updateThumbnailPreview(path) {
+            const preview = document.getElementById('thumbnail-preview');
+            preview.innerHTML = `<img src="${path}" alt="Thumbnail">`;
+        }
+
+        // Upload thumbnail
+        document.getElementById('thumbnail-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!postId) {
+                showMessage('error', 'Najprv uložte príspevok pred nahraním obrázka');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('thumbnail', file);
+
+            try {
+                const response = await fetch(`/api/posts/${postId}/upload-thumbnail`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                currentThumbnailPath = data.data.thumbnail_path;
+                updateThumbnailPreview(currentThumbnailPath);
+                showMessage('success', 'Obrázok bol úspešne nahraný');
+            } catch (error) {
+                showMessage('error', `Chyba pri nahrávaní obrázka: ${error.message}`);
+            }
+        });
+
+        // Fetch YouTube thumbnail
+        document.getElementById('fetch-youtube-thumb-btn').addEventListener('click', async () => {
+            const youtubeId = document.getElementById('youtube-id').value;
+
+            if (!youtubeId) {
+                showMessage('error', 'Najprv zadajte YouTube ID');
+                return;
+            }
+
+            if (!postId) {
+                showMessage('error', 'Najprv uložte príspevok pred stiahnutím obrázka');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/posts/${postId}/thumbnail-from-youtube`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                currentThumbnailPath = data.data.thumbnail_path;
+                updateThumbnailPreview(currentThumbnailPath);
+                showMessage('success', 'Obrázok bol úspešne stiahnutý z YouTube');
+            } catch (error) {
+                showMessage('error', `Chyba pri sťahovaní obrázka: ${error.message}`);
+            }
+        });
+
+        // Save post
+        async function savePost(status) {
+            const title = document.getElementById('title').value;
+
+            if (!title) {
+                showMessage('error', 'Názov je povinný');
+                return;
+            }
+
+            const selectedCategories = Array.from(document.querySelectorAll('#categories-container input:checked'))
+                .map(input => parseInt(input.value));
+
+            const postData = {
+                title,
+                slug: document.getElementById('slug').value || null,
+                content: document.getElementById('content').value,
+                excerpt: document.getElementById('excerpt').value,
+                youtube_id: document.getElementById('youtube-id').value || null,
+                soundcloud_url: document.getElementById('soundcloud-url').value || null,
+                is_featured: document.getElementById('is-featured').checked,
+                meta_description: document.getElementById('meta-description').value,
+                status,
+                categories: selectedCategories
+            };
+
+            if (currentThumbnailPath) {
+                postData.thumbnail_path = currentThumbnailPath;
+            }
+
+            try {
+                const url = postId ? `/api/posts/${postId}` : '/api/posts';
+                const method = postId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                if (!postId) {
+                    postId = data.data.id;
+                    window.history.replaceState({}, '', `?id=${postId}`);
+                }
+
+                showMessage('success', status === 'published' ? 'Príspevok bol publikovaný' : 'Príspevok bol uložený ako koncept');
+
+                // Redirect after 1 second
+                setTimeout(() => {
+                    window.location.href = '/admin/posts';
+                }, 1000);
+            } catch (error) {
+                showMessage('error', `Chyba pri ukladaní: ${error.message}`);
+            }
+        }
+
+        // Show message
+        function showMessage(type, message) {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="${type}">${type === 'error' ? '❌' : '✅'} ${message}</div>`;
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('content').addEventListener('input', updatePreview);
+        document.getElementById('save-draft-btn').addEventListener('click', () => savePost('draft'));
+        document.getElementById('publish-btn').addEventListener('click', () => savePost('published'));
+
+        // Initialize
+        loadCategories().then(() => {
+            if (postId) {
+                loadPost();
+            }
+        });
+    </script>
+</body>
+
+</html>

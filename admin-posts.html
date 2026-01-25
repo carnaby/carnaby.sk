@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Správa príspevkov - Administrácia</title>
+    <link rel="stylesheet" href="/admin.css">
+    <style>
+        .posts-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .posts-header h1 {
+            font-size: 2rem;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .filter-group select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .posts-table {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .post-thumbnail {
+            width: 80px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .post-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .post-categories {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .category-badge {
+            padding: 0.25rem 0.75rem;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-published {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .status-draft {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .status-archived {
+            background: rgba(107, 114, 128, 0.1);
+            color: #6b7280;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #2563eb;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="posts-container">
+        <div class="posts-header">
+            <h1>📝 Správa príspevkov</h1>
+            <a href="/admin/posts/new" class="btn btn-primary">+ Nový príspevok</a>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label for="status-filter">Stav</label>
+                <select id="status-filter">
+                    <option value="">Všetky</option>
+                    <option value="published">Publikované</option>
+                    <option value="draft">Koncepty</option>
+                    <option value="archived">Archivované</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="category-filter">Kategória</label>
+                <select id="category-filter">
+                    <option value="">Všetky</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="featured-filter">Zvýraznené</label>
+                <select id="featured-filter">
+                    <option value="">Všetky</option>
+                    <option value="true">Áno</option>
+                    <option value="false">Nie</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="error-container"></div>
+        <div id="loading" class="loading" style="display: none;">Načítavam...</div>
+
+        <div class="posts-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Náhľad</th>
+                        <th>Názov</th>
+                        <th>Kategórie</th>
+                        <th>Stav</th>
+                        <th>Zobrazenia</th>
+                        <th>Dátum</th>
+                        <th>Akcie</th>
+                    </tr>
+                </thead>
+                <tbody id="posts-tbody">
+                    <!-- Posts will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let posts = [];
+        let categories = [];
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/posts/categories/all');
+                const data = await response.json();
+
+                if (data.success) {
+                    categories = data.data;
+
+                    const categoryFilter = document.getElementById('category-filter');
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.slug;
+                        option.textContent = category.name;
+                        categoryFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Load posts
+        async function loadPosts() {
+            const loading = document.getElementById('loading');
+            const tbody = document.getElementById('posts-tbody');
+            const errorContainer = document.getElementById('error-container');
+
+            loading.style.display = 'block';
+            errorContainer.innerHTML = '';
+
+            try {
+                const status = document.getElementById('status-filter').value;
+                const category = document.getElementById('category-filter').value;
+                const featured = document.getElementById('featured-filter').value;
+
+                let url = '/api/posts?';
+                if (status) url += `status=${status}&`;
+                if (category) url += `category=${category}&`;
+                if (featured) url += `featured=${featured}&`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                loading.style.display = 'none';
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load posts');
+                }
+
+                posts = data.data;
+                renderPosts();
+            } catch (error) {
+                loading.style.display = 'none';
+                errorContainer.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                console.error('Error loading posts:', error);
+            }
+        }
+
+        // Render posts
+        function renderPosts() {
+            const tbody = document.getElementById('posts-tbody');
+
+            if (posts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <p>Žiadne príspevky</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = posts.map(post => {
+                const thumbnail = post.thumbnail_path
+                    ? `<img src="${post.thumbnail_path}" alt="${post.title}" class="post-thumbnail">`
+                    : '<div class="post-thumbnail" style="background: #e5e7eb; display: flex; align-items: center; justify-content: center; color: #9ca3af;">📄</div>';
+
+                const categoriesHtml = post.categories && post.categories.length > 0
+                    ? post.categories.map(cat => `<span class="category-badge">${cat.name}</span>`).join('')
+                    : '<span style="color: var(--text-secondary); font-size: 0.875rem;">-</span>';
+
+                const statusClass = `status-${post.status}`;
+                const statusText = {
+                    'published': 'Publikované',
+                    'draft': 'Koncept',
+                    'archived': 'Archivované'
+                }[post.status] || post.status;
+
+                const date = post.published_at
+                    ? new Date(post.published_at).toLocaleDateString('sk-SK')
+                    : new Date(post.created_at).toLocaleDateString('sk-SK');
+
+                return `
+                    <tr>
+                        <td>${thumbnail}</td>
+                        <td>
+                            <div class="post-title" title="${post.title}">
+                                ${post.is_featured ? '⭐ ' : ''}${post.title}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="post-categories">${categoriesHtml}</div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>${post.view_count || 0}</td>
+                        <td>${date}</td>
+                        <td>
+                            <div class="post-actions">
+                                <a href="/admin/posts/${post.id}/edit" class="btn btn-small btn-edit">Upraviť</a>
+                                <button onclick="deletePost(${post.id})" class="btn btn-small btn-delete">Zmazať</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Delete post
+        async function deletePost(id) {
+            if (!confirm('Naozaj chcete zmazať tento príspevok?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/posts/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to delete post');
+                }
+
+                alert('Príspevok bol úspešne zmazaný');
+                loadPosts();
+            } catch (error) {
+                alert(`Chyba: ${error.message}`);
+                console.error('Error deleting post:', error);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('status-filter').addEventListener('change', loadPosts);
+        document.getElementById('category-filter').addEventListener('change', loadPosts);
+        document.getElementById('featured-filter').addEventListener('change', loadPosts);
+
+        // Initialize
+        loadCategories();
+        loadPosts();
+    </script>
+</body>
+
+</html>

@@ -23,8 +23,6 @@ services:
     volumes:
       # Mount source code (read-write)
       - ./:/app
-      # Exclude node_modules (use container's version)
-      - /app/node_modules
     
     # Override CMD to use nodemon for auto-restart
     command: npx nodemon server.js
