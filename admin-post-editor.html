@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="page-title">Nový príspevok - Administrácia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -12,6 +14,7 @@
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
+            min-height: 100vh;
         }
 
         .editor-header {
@@ -19,98 +22,125 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .editor-header h1 {
             font-size: 2rem;
-            color: var(--text-primary);
+            color: var(--accent-gold);
+            font-family: 'Playfair Display', serif;
         }
 
+        /* Unified Button Sizes */
         .editor-actions {
             display: flex;
             gap: 1rem;
+            align-items: stretch;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0 1.5rem;
+            height: 48px;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background-color: var(--accent-gold);
+            color: var(--bg-dark);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
         .btn-primary:hover {
+            background-color: var(--accent-orange);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 12px rgba(212, 165, 116, 0.4);
         }
 
         .btn-secondary {
-            background: #6b7280;
-            color: white;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
         }
 
         .btn-secondary:hover {
-            background: #4b5563;
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 165, 116, 0.05);
         }
 
-        .editor-grid {
+        .editor-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 1fr;
             gap: 2rem;
         }
 
-        .editor-section {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            border: 1px solid var(--border-color);
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
         }
 
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-primary);
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        /* Material UI Style Inputs */
+        .form-control {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: var(--bg-primary);
+            padding: 1rem 1.2rem;
+            border: 1px solid transparent;
+            border-bottom: 2px solid var(--border-color);
+            border-radius: 8px 8px 0 0;
+            font-size: 1.05rem;
+            background: rgba(255, 255, 255, 0.03);
             color: var(--text-primary);
-            font-size: 1rem;
-            font-family: inherit;
+            transition: all 0.3s ease;
         }
 
-        .form-group textarea {
-            resize: vertical;
-            min-height: 400px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-control:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: rgba(255, 255, 255, 0.07);
+            border-bottom-color: var(--accent-gold);
+        }
+
+        textarea.form-control {
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.6;
+            min-height: 150px;
+            resize: vertical;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        textarea.content-editor {
+            min-height: 600px !important;
+            font-size: 1.1rem;
         }
 
         .form-row {
@@ -119,60 +149,143 @@
             gap: 1rem;
         }
 
+        .helper-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .preview-pane {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            height: 100%;
+            overflow-y: auto;
+            max-height: 800px;
+        }
+
+        .preview-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        /* Markdown Preview Styles */
+        .markdown-preview h1,
+        .markdown-preview h2,
+        .markdown-preview h3 {
+            color: var(--accent-gold);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .markdown-preview p {
+            margin-bottom: 1rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .markdown-preview blockquote {
+            border-left: 4px solid var(--accent-gold);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .markdown-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        .markdown-preview code {
+            background: var(--bg-secondary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            color: var(--accent-orange);
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .category-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .category-checkbox:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 165, 116, 0.1);
+        }
+
+        .category-checkbox input:checked+span {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            cursor: pointer;
         }
 
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
+        .checkbox-group:hover {
+            background: rgba(212, 165, 116, 0.1);
         }
 
-        .preview-section {
+        .image-preview {
+            width: 100%;
+            height: 250px;
             background: var(--bg-secondary);
             border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .preview-section h2 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
             margin-bottom: 1rem;
-            color: var(--text-primary);
+            transition: all 0.3s;
         }
 
-        #preview-content {
-            background: var(--bg-primary);
-            padding: 1.5rem;
-            border-radius: 8px;
-            min-height: 400px;
-            color: var(--text-primary);
+        .image-preview:hover {
+            border-color: var(--accent-gold);
         }
 
-        #preview-content h1,
-        #preview-content h2,
-        #preview-content h3 {
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        #preview-content p {
-            margin-bottom: 1rem;
-            line-height: 1.6;
-        }
-
-        #preview-content code {
-            background: rgba(102, 126, 234, 0.1);
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-        }
-
-        #preview-content pre {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
+        .image-preview-placeholder {
+            color: var(--text-secondary);
+            font-size: 3rem;
         }
 
         .thumbnail-upload {
@@ -184,19 +297,14 @@
         .thumbnail-preview {
             width: 200px;
             height: 112px;
-            background: #e5e7eb;
+            background: var(--bg-secondary);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #9ca3af;
+            color: var(--text-secondary);
             overflow: hidden;
-        }
-
-        .thumbnail-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            border: 1px solid var(--border-color);
         }
 
         .thumbnail-actions {
@@ -206,8 +314,9 @@
         }
 
         .btn-small {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
+            height: 36px;
+            padding: 0 1rem;
+            font-size: 0.85rem;
         }
 
         .error {
@@ -216,6 +325,7 @@
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
         .success {
@@ -224,22 +334,13 @@
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
-        .category-checkboxes {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .category-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .category-checkbox input {
-            width: auto;
+        @media (max-width: 1024px) {
+            .editor-layout {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -249,50 +350,79 @@
         <div class="editor-header">
             <h1 id="editor-title">📝 Nový príspevok</h1>
             <div class="editor-actions">
-                <a href="/admin/posts" class="btn btn-secondary">← Späť</a>
-                <button id="save-draft-btn" class="btn btn-secondary">Uložiť koncept</button>
-                <button id="publish-btn" class="btn btn-primary">Publikovať</button>
+                <a href="/admin/posts" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Späť
+                </a>
+                <button id="save-draft-btn" class="btn btn-secondary">
+                    <i class="fas fa-save"></i> Uložiť koncept
+                </button>
+                <button id="publish-btn" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Publikovať
+                </button>
             </div>
         </div>
 
         <div id="message-container"></div>
 
-        <div class="editor-grid">
-            <div class="editor-section">
+        <div class="editor-layout">
+            <div class="card">
                 <h2>Základné informácie</h2>
 
                 <div class="form-group">
                     <label for="title">Názov *</label>
-                    <input type="text" id="title" placeholder="Názov príspevku" required>
+                    <input type="text" id="title" class="form-control" placeholder="Sem napíšte názov príspevku..."
+                        required>
                 </div>
 
                 <div class="form-group">
                     <label for="slug">URL slug</label>
-                    <input type="text" id="slug" placeholder="automaticky-generovany-slug">
-                    <small style="color: var(--text-secondary);">Nechajte prázdne pre automatické generovanie</small>
+                    <input type="text" id="slug" class="form-control" placeholder="automaticky-generovany-slug">
+                    <div class="helper-text">Nechajte prázdne pre automatické generovanie z názvu</div>
                 </div>
 
                 <div class="form-group">
-                    <label for="excerpt">Krátky popis</label>
-                    <textarea id="excerpt" rows="3" placeholder="Krátky popis pre náhľad a SEO..."></textarea>
+                    <label for="excerpt">Krátky popis (Excerpt)</label>
+                    <textarea id="excerpt" class="form-control" rows="3"
+                        placeholder="Krátky popis pre náhľad na domovskej stránke a SEO..."></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>Kategórie</label>
-                    <div id="categories-container" class="category-checkboxes">
-                        <!-- Categories will be loaded here -->
-                    </div>
+                    <label for="content">Obsah (Markdown)</label>
+                    <textarea id="content" class="form-control content-editor" placeholder="Sem píšte obsah článku v Markdown formáte...
+# Nadpis
+Text článku...
+
+![Popis obrázka](url-obrazka)"></textarea>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="youtube-id">YouTube ID</label>
-                        <input type="text" id="youtube-id" placeholder="dQw4w9WgXcQ">
+                        <input type="text" id="youtube-id" class="form-control" placeholder="napr. dQw4w9WgXcQ">
+                        <div class="helper-text">Iba ID videa, nie celá URL</div>
                     </div>
 
                     <div class="form-group">
                         <label for="soundcloud-url">SoundCloud URL</label>
-                        <input type="text" id="soundcloud-url" placeholder="https://soundcloud.com/...">
+                        <input type="text" id="soundcloud-url" class="form-control"
+                            placeholder="https://soundcloud.com/...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="form-group">
+                    <label>Kategórie</label>
+                    <div id="categories-container" class="categories-grid">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nastavenia</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="is-featured">
+                        <label for="is-featured" style="margin:0; cursor:pointer;">⭐ Zvýraznený príspevok</label>
                     </div>
                 </div>
 
@@ -300,7 +430,7 @@
                     <label>Náhľadový obrázok</label>
                     <div class="thumbnail-upload">
                         <div class="thumbnail-preview" id="thumbnail-preview">
-                            📷 Žiadny obrázok
+                            <i class="fas fa-image" style="font-size: 2rem;"></i>
                         </div>
                         <div class="thumbnail-actions">
                             <input type="file" id="thumbnail-file" accept="image/*" style="display: none;">
@@ -316,30 +446,17 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="is-featured">
-                        <label for="is-featured">⭐ Zvýraznený príspevok</label>
+                    <label for="meta-description">Meta popis (SEO)</label>
+                    <textarea id="meta-description" class="form-control" rows="3"
+                        placeholder="SEO meta popis..."></textarea>
+                </div>
+
+                <div class="preview-section" style="margin-top: 2rem;">
+                    <div class="preview-header">👁️ Živý Náhľad</div>
+                    <div id="preview-content" class="markdown-preview">
+                        <p style="color: var(--text-secondary);">Náhľad sa zobrazí tu automaticky pri písaní...</p>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="meta-description">Meta popis (SEO)</label>
-                    <textarea id="meta-description" rows="2" placeholder="SEO meta popis..."></textarea>
-                </div>
-            </div>
-
-            <div class="editor-section">
-                <h2>Obsah (Markdown)</h2>
-                <div class="form-group">
-                    <textarea id="content" placeholder="Napíšte obsah v Markdown formáte..."></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="preview-section" style="margin-top: 2rem;">
-            <h2>👁️ Náhľad</h2>
-            <div id="preview-content">
-                <p style="color: var(--text-secondary);">Náhľad sa zobrazí tu...</p>
             </div>
         </div>
     </div>
@@ -356,7 +473,7 @@
         if (editIndex > 0 && pathParts[editIndex - 1]) {
             postId = pathParts[editIndex - 1];
             document.getElementById('page-title').textContent = 'Upraviť príspevok - Administrácia';
-            document.getElementById('editor-title').textContent = '✏️ Upraviť príspevok';
+            document.getElementById('editor-title').innerHTML = '✏️ Upraviť príspevok';
         }
 
         // Load categories
@@ -378,11 +495,11 @@
         function renderCategories(selectedCategories = []) {
             const container = document.getElementById('categories-container');
             container.innerHTML = categories.map(category => `
-                <div class="category-checkbox">
+                <label class="category-checkbox">
                     <input type="checkbox" id="cat-${category.id}" value="${category.id}" 
                         ${selectedCategories.includes(category.id) ? 'checked' : ''}>
-                    <label for="cat-${category.id}">${category.name}</label>
-                </div>
+                    <span>${category.name}</span>
+                </label>
             `).join('');
         }
 
@@ -492,7 +609,9 @@
 
             try {
                 const response = await fetch(`/api/posts/${postId}/thumbnail-from-youtube`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ youtube_id: youtubeId })
                 });
 
                 const data = await response.json();

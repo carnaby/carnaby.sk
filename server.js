@@ -89,6 +89,14 @@ function startServer() {
     // Authentication routes
     app.use('/auth', authRoutes);
 
+    // Login page
+    app.get('/login', (req, res) => {
+        if (req.isAuthenticated()) {
+            return res.redirect('/admin');
+        }
+        res.sendFile(path.join(__dirname, 'login.html'));
+    });
+
     // Admin routes
     const adminRoutes = require('./routes/admin');
     app.use('/admin', adminRoutes);

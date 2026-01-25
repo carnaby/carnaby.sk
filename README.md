@@ -2039,6 +2039,37 @@ Created `scripts/migrate-videos.js`:
 **Production deployments:** 8 (PostgreSQL migration & Blog System - ALL SUCCESSFUL 🚀)  
 **Features implemented:** Complete Blog System (Backend + Admin + Frontend) 📝  
 
+### Commit 20: Admin UI Unification & Login System (Day 8)
+
+**Prompt:** "Sprav to admin rozhranie tak, aby vyzeralo rovnako dobre ako hlavná stránka (Hero, farby, sklo). Zjednoť tlačidlá, formuláre a pridaj Login obrazovku, aby to nebolo len JSON chybové hlásenie."
+
+**Result:** ✅ Complete UI/UX Overhaul & Security Polish
+
+**1. Design Unification**
+- **Shared Design System:** Admin interfaces now use main `style.css` variables
+- **Glassmorphism:** Applied to Admin Dashboard and Editor cards
+- **Typography:** Unified fonts (Playfair Display for headings, Segoe UI for text)
+- **Material UI Inputs:** Editor inputs redesigned with bottom-border style
+
+**2. UX Improvements**
+- **Navigation:** Added "← Back to Web" buttons in Admin panels
+- **Editor Refinement:** Unified button sizes, improved mobile layout
+- **Visual Feedback:** Better status messages and hover states
+
+**3. Login System**
+- Created `/login` page with dedicated design
+- Updated Middleware to redirect unauthenticated browser requests to Login
+- Preserved API security (JSON responses for API calls)
+
+**4. Production Fixes**
+- **NAS Permissions:** Debugged "Unexpected token <" error caused by missing write permissions on new Docker volume
+- **Solution:** `chown 1026:100` on thumbnails directory
+
+**Time:** 45 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**

@@ -13,28 +13,31 @@
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid var(--gold);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .admin-header h1 {
     margin: 0;
     font-size: 2rem;
-    color: var(--gold);
+    color: var(--accent-gold);
+    font-family: 'Playfair Display', serif;
 }
 
 .back-link {
-    color: var(--gold);
+    color: var(--text-secondary);
     text-decoration: none;
     font-size: 1rem;
-    transition: opacity 0.3s;
+    transition: all 0.3s ease;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--gold);
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    background: var(--bg-card);
 }
 
 .back-link:hover {
-    opacity: 0.8;
-    background: rgba(212, 175, 55, 0.1);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
 }
 
 .admin-content {
@@ -42,19 +45,22 @@
     gap: 2rem;
 }
 
+/* Glassmorphism Cards */
 .welcome-card,
 .info-card {
-    background: var(--card-bg, rgba(255, 255, 255, 0.05));
+    background: var(--bg-card);
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
 }
 
 .welcome-card h2,
 .info-card h3 {
     margin-top: 0;
-    color: var(--gold);
+    color: var(--accent-gold);
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 1rem;
 }
 
 .feature-list {
@@ -66,61 +72,47 @@
 .feature-list li {
     display: flex;
     gap: 1rem;
-    margin: 1.5rem 0;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    transition: background 0.3s;
+    margin: 1rem 0;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
 }
 
 .feature-list li:hover {
-    background: rgba(212, 175, 55, 0.1);
+    transform: translateY(-5px);
+    border-color: var(--accent-gold);
+    box-shadow: 0 5px 15px rgba(212, 165, 116, 0.1);
 }
 
 .feature-list .icon {
     font-size: 2rem;
     flex-shrink: 0;
+    color: var(--text-primary);
 }
 
 .feature-list strong {
     display: block;
-    color: var(--gold);
-    margin-bottom: 0.25rem;
-    font-size: 1.1rem;
+    color: var(--accent-gold);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
 }
 
 .feature-list p {
     margin: 0;
-    opacity: 0.8;
-    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
 }
 
 .info-card p {
     margin: 0.75rem 0;
     font-size: 1rem;
+    color: var(--text-secondary);
 }
 
 .info-card strong {
-    color: var(--gold);
-}
-
-/* Dark/Light theme support */
-[data-theme="light"] .admin-container {
-    color: #333;
-}
-
-[data-theme="light"] .welcome-card,
-[data-theme="light"] .info-card {
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="light"] .feature-list li {
-    background: rgba(0, 0, 0, 0.03);
-}
-
-[data-theme="light"] .feature-list li:hover {
-    background: rgba(212, 175, 55, 0.15);
+    color: var(--text-primary);
 }
 
 /* Responsive */
@@ -139,12 +131,7 @@
         font-size: 1.5rem;
     }
 
-    .welcome-card,
-    .info-card {
-        padding: 1.5rem;
-    }
-
-    .feature-list .icon {
-        font-size: 1.5rem;
+    .feature-list li {
+        padding: 1rem;
     }
 }
