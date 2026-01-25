@@ -26,7 +26,9 @@ services:
       - DB_USER=carnaby
       - DB_PASSWORD=${DB_PASSWORD}
     
-    # No volumes needed - using PostgreSQL instead of SQLite
+    # Persistent storage for thumbnails
+    volumes:
+      - /volume1/docker/carnaby-sk/thumbnails:/app/public/thumbnails
     
     depends_on:
       db:
