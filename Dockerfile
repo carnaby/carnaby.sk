@@ -42,7 +42,8 @@ RUN mkdir -p /app/public/cache && \
     chmod 777 /app/public/cache
 
 # Minify CSS at build time
-RUN node -e "require('./services/css-minifier').minifyCSS()"
+RUN node -e "require('./services/css-minifier').minifyCSS()" && \
+    chmod 666 /app/style.min.css
 
 # Switch to non-root user
 USER appuser

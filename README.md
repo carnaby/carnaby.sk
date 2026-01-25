@@ -2446,6 +2446,22 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 42: Production Permissions Fix (Day 8)
+
+**Prompt:** "Image optimization error: unable to open for write"
+
+**Result:** 🔒 Permissions Hardening
+
+**Fixes:**
+- **Cache:** `chmod 777 public/cache` in Dockerfile to allow Synology user (1026) to write optimized images.
+- **CSS:** `chmod 666 style.min.css` to allow runtime updates of minified CSS.
+- **CI/CD:** Fixed "unknown blob" build error by adding `setup-buildx` and caching to GitHub Actions workflow.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**
