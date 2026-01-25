@@ -5,12 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Správa príspevkov - Administrácia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/admin.css">
     <style>
         .posts-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
+            min-height: 100vh;
         }
 
         .posts-header {
@@ -18,33 +21,61 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .posts-header h1 {
             font-size: 2rem;
-            color: var(--text-primary);
+            color: var(--accent-gold);
+            font-family: 'Playfair Display', serif;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0 1.5rem;
+            height: 48px;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background-color: var(--accent-gold);
+            color: var(--bg-dark);
+            border: 2px solid var(--accent-gold);
         }
 
         .btn-primary:hover {
+            background-color: var(--accent-orange);
+            border-color: var(--accent-orange);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 5px 15px rgba(212, 165, 116, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 165, 116, 0.05);
         }
 
         .filters {
@@ -52,6 +83,11 @@
             gap: 1rem;
             margin-bottom: 2rem;
             flex-wrap: wrap;
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         .filter-group {
@@ -62,8 +98,8 @@
 
         .filter-group label {
             font-size: 0.875rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+            color: var(--accent-gold);
+            font-weight: 600;
         }
 
         .filter-group select {
@@ -73,13 +109,20 @@
             background: var(--bg-secondary);
             color: var(--text-primary);
             font-size: 0.875rem;
+            min-width: 150px;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
         }
 
         .posts-table {
-            background: var(--bg-secondary);
+            background: var(--bg-card);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
         }
 
         table {
@@ -88,26 +131,28 @@
         }
 
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--accent-gold);
         }
 
         th {
             padding: 1rem;
             text-align: left;
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            color: var(--accent-gold);
         }
 
         td {
             padding: 1rem;
             border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
         }
 
         tbody tr:hover {
-            background: var(--bg-hover);
+            background: var(--bg-secondary);
         }
 
         tbody tr:last-child td {
@@ -227,7 +272,10 @@
     <div class="posts-container">
         <div class="posts-header">
             <h1>📝 Správa príspevkov</h1>
-            <a href="/admin/posts/new" class="btn btn-primary">+ Nový príspevok</a>
+            <div class="header-actions">
+                <a href="/" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Späť na web</a>
+                <a href="/admin/posts/new" class="btn btn-primary"><i class="fas fa-plus"></i> Nový príspevok</a>
+            </div>
         </div>
 
         <div class="filters">

@@ -61,27 +61,46 @@ function generateSlug(title) {
 }
 
 // Helper function to download YouTube thumbnail
-function downloadYouTubeThumbnail(videoId, savePath) {
+async function downloadYouTubeThumbnail(videoId, savePath) {
+    // Ensure directory exists
+    try {
+        await fs.mkdir(savePath, { recursive: true });
+    } catch (error) {
+        console.error('Error creating directory:', error);
+        throw error;
+    }
+
     return new Promise((resolve, reject) => {
         const url = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         const filePath = path.join(savePath, `yt-${videoId}.jpg`);
-        const file = require('fs').createWriteStream(filePath);
 
-        https.get(url, (response) => {
-            if (response.statusCode !== 200) {
-                reject(new Error(`Failed to download thumbnail: ${response.statusCode}`));
-                return;
-            }
+        try {
+            const file = require('fs').createWriteStream(filePath);
 
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close();
-                resolve(`/thumbnails/yt-${videoId}.jpg`);
+            file.on('error', (err) => {
+                console.error('File write stream error:', err);
+                reject(err);
             });
-        }).on('error', (err) => {
-            require('fs').unlink(filePath, () => { }); // Delete incomplete file
-            reject(err);
-        });
+
+            https.get(url, (response) => {
+                if (response.statusCode !== 200) {
+                    reject(new Error(`Failed to download thumbnail: ${response.statusCode}`));
+                    return;
+                }
+
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    resolve(`/thumbnails/yt-${videoId}.jpg`);
+                });
+            }).on('error', (err) => {
+                console.error('HTTPS request error:', err);
+                require('fs').unlink(filePath, () => { }); // Delete incomplete file
+                reject(err);
+            });
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
