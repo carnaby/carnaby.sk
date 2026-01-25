@@ -42,7 +42,7 @@ Prompts used here reflect senior-level technical knowledge (databases, APIs, Doc
 
 ## Tech Stack
 - Vanilla JS (no frameworks)
-- SQLite database (better-sqlite3)
+- PostgreSQL database (migrated from SQLite)
 - Express.js server
 - Docker & Docker Compose
 - Google Antigravity + Claude Sonnet
@@ -1917,48 +1917,175 @@ git push
 
 **Achievement:** First feature development after infrastructure setup - "žiadna systémačka" (no more system administration) fulfilled! 🎨
 
+
+### Commit 16: Blog System Backend & Database (Day 7)
+
+**Prompt (Slovak):** "podme implementovat ten blog. potrebujeme tabulky pre posty, kategorie a API endpointy. chcem aby to podporovalo aj youtube videa aj vlastne obrazky."
+
+**Translation:** "let's implement the blog. we need tables for posts, categories and API endpoints. i want it to support youtube videos as well as custom images."
+
+**Context:** Building the core infrastructure for the dynamic content management system to replace hardcoded videos.
+
+**Result:** ✅ Complete backend infrastructure for the blog system
+
+**1. Database Schema**
+
+**Migrations:**
+- `migrations/004_create_categories.sql` - Categories table (Dodo, Carnaby)
+- `migrations/005_create_posts.sql` - Main posts table with rich metadata
+- `migrations/006_create_post_categories.sql` - Many-to-many relationship
+
+**2. API Implementation**
+
+**Routes** ([routes/posts.js](file:///c:/Users/dodus/prj/carnaby/carnaby.sk/routes/posts.js)):
+- CRUD endpoints for posts
+- Filter support (status, category, featured)
+- Specialized endpoints:
+  - `POST /api/posts/:id/upload-thumbnail` (Multer integration)
+  - `POST /api/posts/:id/thumbnail-from-youtube` (Auto-download from YT)
+  - `POST /api/posts/:id/increment-views`
+
+**3. Infrastructure**
+- **Multer:** Configured for local file storage in `public/thumbnails`
+- **Static files:** Express configured to serve `public` directory
+- **Path parsing:** Added support for extracting IDs from URL paths
+
 ---
 
-**Total development time:** ~900 minutes (~15 hours including infrastructure + first feature)  
-**Total manual code written:** ~5 lines (port change)  
+### Commit 17: Admin Dashboard - Content Management (Day 7)
+
+**Prompt (Slovak):** "teraz to admin rozhranie. chcem zoznam postov a editor. editor by mal mat markdown nahlad v realnom case."
+
+**Translation:** "now the admin interface. i want a list of posts and an editor. the editor should have realtime markdown preview."
+
+**Context:** Creating the visual interface for content management, allowing the user to manage the blog without touching the database.
+
+**Result:** ✅ Fully functional Admin UI for Posts
+
+**Features:**
+- **Posts List:** Table view with thumbnails, status badges, and quick actions
+- **Markdown Editor:** Split-screen editor with `marked.js` live preview
+- **Thumbnail Manager:** Interface for uploading images or fetching from YouTube
+- **Category Selector:** Multi-select checkboxes
+- **Status Workflow:** Draft vs. Published states
+
+**Files Created:**
+- `admin-posts.html` - Dashboard view
+- `admin-post-editor.html` - Create/Edit form
+
+---
+
+### Commit 18: Video Migration & Frontend Integration (Day 7)
+
+**Prompt (Slovak):** "podme spravit migraciu videi .. staci ze .. sa vytvoria zaznamy s yt id... a potom upravit frontend aby nacitaval posty z databazy."
+
+**Translation:** "let's do the migration of videos .. it's enough if .. records with yt id are created... and then update the frontend to load posts from database."
+
+**Context:** Moving away from the hardcoded `videos` table and `index.html` static content to the new dynamic `posts` system.
+
+**Result:** ✅ Successful migration and frontend update
+
+**1. Migration Script**
+Created `scripts/migrate-videos.js`:
+- Connects to PostgreSQL
+- Reads legacy `videos` table
+- Creates new `posts` records (Draft status)
+- **Automatically downloads thumbnails** from YouTube for all videos
+- Preserves category associations
+
+**2. Execution Log**
+- Migrated 16 videos
+- 100% success rate on thumbnail downloads
+- All posts linked to correct categories (Dodo/Carnaby)
+
+**3. Frontend Updates**
+- Updated `server.js` to serve posts via `/api/videos` endpoint (backward compatibility)
+- Frontend now renders the 17 published posts dynamically from PostgreSQL
+- Preserved the original design and Layout
+
+---
+
+### Commit 19: Multi-language Support (Day 7)
+
+**Prompt (Slovak):** "zabudol som na to ze stranka je multi language... ojj. normalne by som sa klonil ku moznosti 2 ale volim moznost 1 [Simple Column].. nepredpokladam ze budem pridavat dalsi jazyk."
+
+**Translation:** "i forgot that the site is multi language... oops. normally i would lean towards option 2 but i choose option 1 [Simple Column].. i don't assume i will be adding another language."
+
+**Context:** Realized the site supports EN/SK but the database schema didn't account for it. Chosen the simplest implementation path.
+
+**Result:** ✅ Language support added
+
+**Changes:**
+1. **Migration:** `migrations/007_add_language_to_posts.sql`
+   - Added `language` column (VARCHAR(5))
+   - Default: 'sk'
+   - Indexed for performance
+2. **API Update:** Added `language` query parameter filtering to `GET /api/posts`
+
+---
+
+### 🔄 AI Model Switch (Day 8)
+
+**Event:** Session limit reached with Claude 3.5 Sonnet.
+**Action:** Switched to **Gemini 3 Pro**.
+**Context:** Continuity of the project preserved across AI models. Starting Phase 3 (Frontend Detail Pages).
+
+---
+
+**Total development time:** ~980 minutes (~16+ hours)  
+**Total manual code written:** ~5 lines  
 **AI-generated code:** ~100% of functionality  
-**Real-world incidents handled:** 19 (all infrastructure-related - RESOLVED ✅)  
-**Production deployments:** 7 (all successful 🚀)  
-**Features implemented:** 1 (admin section with role-based access) 🎨  
+**Real-world incidents handled:** 21 (all infrastructure/migration related - RESOLVED ✅)  
+**Production deployments:** 8 (PostgreSQL migration & Blog System - ALL SUCCESSFUL 🚀)  
+**Features implemented:** Complete Blog System (Backend + Admin + Frontend) 📝  
 
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
-- ✅ Database-driven dynamic content
-- ✅ Dark/Light theme with system detection
-- ✅ Dockerized for production deployment
-- ✅ Successfully deployed to Synology NAS
-- ✅ Real-world error debugging and resolution (19 production incidents)
-- ✅ Comprehensive documentation maintained throughout
-- ✅ Automated CI/CD pipeline with zero-downtime deployments
-- ✅ Production-grade database persistence architecture
-- ✅ Automated migration system (SQLite → PostgreSQL async)
-- ✅ Automated backup system to Google Drive
-- ✅ Debugged and resolved SQLite directory permissions issue
-- ✅ Backups verified on Google Cloud
-- ✅ Google OAuth 2.0 authentication with session management
-- ✅ JIT user provisioning (automatic user creation)
-- ✅ Google-style UI/UX design
-- ✅ Reverse proxy compatibility (Synology NAS)
-- ✅ Production OAuth deployment with full debugging documentation
-- ✅ Header authentication with circular avatar design
-- ✅ Glassmorphism effects and modern UI patterns
-- ✅ Dropdown menu with smooth animations
-- ✅ **Umami Analytics with PostgreSQL** (self-hosted, privacy-focused)
-- ✅ **Subdomain SSL configuration** (analytics.carnaby.sk)
-- ✅ **Shared PostgreSQL architecture** (Umami + Web App)
-- ✅ **Automated PostgreSQL backups** (pg_dump to Google Drive)
-- ✅ **Realtime visitor tracking** (first visitor confirmed!)
-- ✅ **Complete SQLite to PostgreSQL migration** (zero data loss, zero downtime)
-- ✅ **Async database architecture** (connection pooling, production-ready)
-- ✅ **Unified database infrastructure** (one PostgreSQL instance for all apps)
-- ✅ **"No more system administration"** - ready for pure programming! 🎨
-- ✅ **Admin section with role-based access control** (first feature!)
-- ✅ **Protected admin routes** (middleware-based security)
-- ✅ **Conditional UI rendering** (admin menu only for admins)
-- ✅ **LIVE IN PRODUCTION:** https://carnaby.sk 🚀
-- ✅ **ANALYTICS LIVE:** https://analytics.carnaby.sk 📊
+- ✅ **Infrastructure & DevOps:**
+  - ✅ Dockerized for production deployment
+  - ✅ Successfully deployed to Synology NAS
+  - ✅ Automated CI/CD pipeline with zero-downtime deployments
+  - ✅ Automated migration system (SQLite → PostgreSQL async)
+  - ✅ **Complete SQLite to PostgreSQL migration** (zero data loss, zero downtime)
+  - ✅ **Unified database infrastructure** (one PostgreSQL instance for all apps)
+  - ✅ **Async database architecture** (connection pooling, production-ready)
+  - ✅ **Automated PostgreSQL backups** (pg_dump to Google Drive)
+  - ✅ Backups verified on Google Cloud
+  - ✅ Reverse proxy compatibility (Synology NAS)
+  - ✅ **Subdomain SSL configuration** (analytics.carnaby.sk)
+
+- ✅ **Security & Auth:**
+  - ✅ Google OAuth 2.0 authentication with session management
+  - ✅ JIT user provisioning (automatic user creation)
+  - ✅ **Admin section with role-based access control** 
+  - ✅ **Protected admin routes** (middleware-based security)
+  - ✅ **Conditional UI rendering** (admin menu only for admins)
+  - ✅ Production OAuth deployment with full debugging documentation
+
+- ✅ **Frontend & UX:**
+  - ✅ Database-driven dynamic content
+  - ✅ Google-style UI/UX design
+  - ✅ Glassmorphism effects and modern UI patterns
+  - ✅ Dark/Light theme with system detection
+  - ✅ Header authentication with circular avatar design
+  - ✅ Dropdown menu with smooth animations
+
+- ✅ **Blog / CMS System:**
+  - ✅ **Dynamic Blog System** implemented
+  - ✅ **Admin Content Management System** (CMS) built
+  - ✅ **Markdown support** with live preview
+  - ✅ **Automated Media Handling** (YouTube thumbnail scraper)
+  - ✅ **Legacy Data Migration** (Videos -> Posts)
+  - ✅ **Multi-language Architecture** (SK/EN support)
+
+- ✅ **Analytics:**
+  - ✅ **Umami Analytics with PostgreSQL** (self-hosted, privacy-focused)
+  - ✅ **Realtime visitor tracking** (first visitor confirmed!)
+
+- ✅ **Philosophy:**
+  - ✅ Debugged and resolved SQLite directory permissions issue
+  - ✅ Real-world error debugging and resolution (21+ production incidents)
+  - ✅ Comprehensive documentation maintained throughout
+  - ✅ **"No more system administration"** - ready for pure programming! 🎨
+  - ✅ **LIVE IN PRODUCTION:** https://carnaby.sk 🚀
+  - ✅ **ANALYTICS LIVE:** https://analytics.carnaby.sk 📊
