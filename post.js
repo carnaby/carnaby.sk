@@ -83,7 +83,14 @@ function renderPost(post) {
             </div>
         `;
     } else if (post.thumbnail_path) {
-        mediaContainer.innerHTML = `<img src="${post.thumbnail_path}" alt="${post.title}">`;
+        const originalFilename = post.thumbnail_path.split('/').pop();
+        mediaContainer.innerHTML = `
+            <img 
+                src="/images/1200/${originalFilename}" 
+                alt="${post.title}"
+                onerror="this.onerror=null;this.src='/thumbnails/originals/${originalFilename}'"
+            >
+        `;
     } else {
         mediaContainer.style.display = 'none';
     }

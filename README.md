@@ -2307,6 +2307,145 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 34: Image Optimization (Day 8)
+
+**Prompt:** "vypracovat plan na implementaciu optimalizovania obrazkov ... univerzalne riesenie cez specialny endpoint"
+
+**Result:** 🚀 Dynamic Image Optimization Service
+
+**Architecture:**
+- **On-Demand Processing:** Implemented `/images/:width/:filename` endpoint.
+- **Library:** Uses `sharp` for high-performance resizing and WebP conversion.
+- **Caching:** First request generates the image (takes ms), subsequent requests serve from file system cache (instant).
+- **Frontend Optimization:**
+  - **Grid:** Loads `600w` images (instead of full 4-10MB originals).
+  - **Detail:** Loads `1200w` images.
+  - **Mobile:** Uses `srcset` to fetch `300w` on small screens.
+
+- **Mobile:** Uses `srcset` to fetch `300w` on small screens.
+
+**Performance Impact:** Dramatic reduction in data transfer (e.g., 5MB -> 50KB for thumbnails).
+
+**Time:** 15 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 35: Fix Image Loop (Day 8)
+
+**Prompt:** "zacalo v slucke tahat obrazky a vsetko s chybou"
+
+**Result:** 🐛 Critical Fix
+
+**Fixes:**
+- **Infinite Loop:** The `onerror` handler in `script.js` was trying to load a fallback image which *also* didn't exist (because we moved the originals), causing an infinite recursion of error handlers.
+- **Path Correction:** Updated the fallback mechanism to point to the correct `thumbnails/originals/` location.
+- **Safety:** Added `this.onerror = null` to prevent any future recursion.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 36: Static Assets Optimization (Day 8)
+
+**Prompt:** "zoptimalizuj aj obrazky co su v /images original ponechaj"
+
+**Result:** 📉 62% Size Reduction
+
+**Benchmark:**
+- `baner.jpg`: 242 KB -> 107 KB (WebP) **[-56%]**
+- `photo.jpg`: 182 KB -> 53 KB (WebP) **[-71%]**
+
+**Action:** Generated WebP variants alongside originals. Ready for deployment.
+
+**Time:** 2 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 37: Clean Up Static Assets (Day 8)
+
+**Prompt:** "pouzi nove obrazky a stare mozeme zmazat"
+
+**Result:** 🧹 Switch & Delete
+
+**Changes:**
+- **Code:** Updated `index.html` and `script.js` to reference `.webp` files.
+- **Cleanup:** Deleted `baner.JPG` and `photo.JPG`.
+- **Result:** Pure optimized assets in production.
+
+**Time:** 2 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 38: Final Polish (Day 8)
+
+**Prompt:** "na stranke sa nacitavaju obrazky v zozname z linky /thumbnails/originals/"
+
+**Result:** 🧹 Cache & Fallback Fixes
+
+**Fixes:**
+- **Cache Warm-up:** Verified `sharp` processing is working correctly via debug script.
+- **Fallback Logic:** Ensured `onerror` fallback correctly points to moved originals.
+- **Server:** Ensure `sharp` dependency is loaded (requires restart if not picked up).
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 39: Lighthouse Polish (Day 8)
+
+**Prompt:** "screenshot z lighthouse + LCP request discovery"
+
+**Result:** ⚡ LCP Optimization
+
+**Change:**
+- **Hero Image:** Added `fetchpriority="high"` to the main banner. This tells the browser to prioritize downloading this image above everything else, fixing the "LCP request discovery" warning.
+
+**Stats:**
+- **Performance:** 94/100 🟢
+- **SEO:** 100/100 🟢
+
+**Time:** 1 minute
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 40: CSS Minification (Day 8)
+
+**Prompt:** "Avoid chaining critical requests"
+
+**Result:** 📉 30% Payload Reduction
+
+**Fixes:**
+- **Minification:** Created `minify-css.js` and generated `style.min.css`.
+- **Latency:** Reduced CSS file size from 14KB to 9.5KB, speeding up the critical rendering path.
+- **Reference:** Switched HTML files to use the minified version.
+
+**Time:** 2 minutes
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 41: Auto-Minification (Day 8)
+
+**Prompt:** "ked budes robit zmeny v style.css tak sa to prenesie aj do minifikovanej verzie?"
+
+**Result:** 🔄 Automated Build Pipeline
+
+**Architecture:**
+- **Service:** Refactored minifier into `services/css-minifier.js`.
+- **Startup:** Server regenerates `style.min.css` every time it starts.
+- **Watcher:** In development mode (`NODE_ENV != production`), server watches `style.css` and re-minifies instantly on save.
+
+**Time:** 5 minutes
+**Manual work:** 0 lines of code
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**
