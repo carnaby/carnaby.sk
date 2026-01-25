@@ -44,9 +44,9 @@ const translations = {
         themeToggle: "Toggle theme",
 
         // Loading
-        loadingVideos: "Loading videos...",
-        errorLoadingVideos: "Failed to load videos",
-        noVideosFound: "No videos found",
+        loadingVideos: "Loading posts...",
+        errorLoadingVideos: "Error loading posts. Please refresh the page.",
+        noVideosFound: "No posts found.",
 
         // Authentication
         signInWithGoogle: "Sign in with Google",
@@ -97,9 +97,9 @@ const translations = {
         themeToggle: "Prepnúť tému",
 
         // Loading
-        loadingVideos: "Načítavam videá...",
-        errorLoadingVideos: "Nepodarilo sa načítať videá",
-        noVideosFound: "Žiadne videá neboli nájdené",
+        loadingVideos: "Načítavam príspevky...",
+        errorLoadingVideos: "Nepodarilo sa načítať príspevky",
+        noVideosFound: "Nenašli sa žiadne príspevky",
 
         // Authentication
         signInWithGoogle: "Prihlásiť sa cez Google",
