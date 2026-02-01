@@ -25,6 +25,8 @@ services:
       - ./:/app
       # Exclude node_modules to prevents Windows binaries from breaking Linux container
       - /app/node_modules
+      # Persistent cache (mirrored from prod setup)
+      - ./public/cache:/app/public/cache
     
     # Override CMD to use nodemon for auto-restart
     command: npx nodemon server.js

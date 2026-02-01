@@ -55,11 +55,38 @@ router.get('/:width/:filename', async (req, res) => {
 
         // 3. Find Original
         let sourcePath = null;
-        if (existsSync(originalPath)) {
-            sourcePath = originalPath;
-        } else if (existsSync(legacyPath)) {
-            sourcePath = legacyPath;
-        } else {
+
+        // Strip .webp extension from request if present to get the "base" name
+        const baseName = path.parse(filename).name; // 'thumb-123' from 'thumb-123.webp' or 'thumb-123.jpg'
+
+        // Possible extensions for source images
+        const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+        // Directories to search in (order matters: originals first)
+        const searchDirs = [originalDir, legacyDir];
+
+        // Search loop
+        for (const dir of searchDirs) {
+            // First try the filename exactly as requested (in case source IS webp)
+            const exactPath = path.join(dir, filename);
+            if (existsSync(exactPath)) {
+                sourcePath = exactPath;
+                break;
+            }
+
+            // Then try all extensions with the base name
+            for (const ext of extensions) {
+                const testPath = path.join(dir, baseName + ext);
+                if (existsSync(testPath)) {
+                    sourcePath = testPath;
+                    break;
+                }
+            }
+            if (sourcePath) break;
+        }
+
+        if (!sourcePath) {
+            console.warn(`Image source not found for: ${filename} (Base: ${baseName})`);
             return res.status(404).send('Image not found');
         }
 

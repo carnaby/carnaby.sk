@@ -567,7 +567,30 @@ Text článku...
         // Update thumbnail preview
         function updateThumbnailPreview(path) {
             const preview = document.getElementById('thumbnail-preview');
-            preview.innerHTML = `<img src="${path}" alt="Thumbnail">`;
+
+            if (!path) {
+                preview.innerHTML = '<i class="fas fa-image" style="font-size: 2rem;"></i>';
+                return;
+            }
+
+            let src = path;
+            const originalFilename = path.split('/').pop();
+
+            // Logic to determine optimized path vs youtube vs legacy
+            if (path.includes('img.youtube.com')) {
+                src = path;
+            } else {
+                // It's a local file. Use optimized version for preview
+                // Remove extension and append .webp
+                const baseName = originalFilename.replace(/\.[^/.]+$/, "");
+                src = `/images/300/${baseName}.webp`;
+            }
+
+            // Fallback for local files (if optimization fails)
+            const fallback = `/thumbnails/originals/${originalFilename}`;
+            const onerror = path.includes('img.youtube.com') ? "" : `this.onerror=null;this.src='${fallback}'`;
+
+            preview.innerHTML = `<img src="${src}" alt="Thumbnail" onerror="${onerror}">`;
         }
 
         // Upload thumbnail

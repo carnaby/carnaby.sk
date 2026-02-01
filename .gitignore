@@ -45,3 +45,6 @@ build/
 # Uploads
 public/thumbnails/*
 !public/thumbnails/.gitkeep
+
+# Image Cache
+public/cache/
