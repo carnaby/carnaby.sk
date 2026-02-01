@@ -112,7 +112,7 @@ router.get('/', async (req, res) => {
             status,
             category,
             featured,
-            language,
+            language = 'en', // Default to English as per user preference
             limit = 50,
             page = 1,
             sortBy = 'created_at',
@@ -154,15 +154,12 @@ router.get('/', async (req, res) => {
             params.push(featured === 'true');
         }
 
-        if (language) {
-            whereConditions.push(`p.language = $${paramIndex++}`);
-            params.push(language);
-        }
+        // Language filter is applied at the JOIN level usually, or selection level
+        // Here we select the specific translation.
 
         const whereClause = whereConditions.join(' AND ');
 
-        // 1. Get Total Count (for pagination)
-        // We need joins if filtering by category
+        // 1. Get Total Count
         const countQuery = `
             SELECT COUNT(DISTINCT p.id) 
             FROM posts p
@@ -174,10 +171,26 @@ router.get('/', async (req, res) => {
         const countResult = await pool.query(countQuery, params);
         const total = parseInt(countResult.rows[0].count);
 
-        // 2. Get Data
+        // 2. Get Data with Translation Fallback
+        // Priority: 
+        // 1. Translation in requested 'language'
+        // 2. Translation in 'en' (default)
+        // 3. Original column in 'posts' (legacy fallback)
         const query = `
             SELECT 
-                p.*,
+                p.id, p.slug, p.thumbnail_path, p.youtube_id, p.soundcloud_url, 
+                p.author_id, p.created_at, p.updated_at, p.published_at, 
+                p.view_count, p.status, p.is_featured,
+                
+                -- Title Fallback
+                COALESCE(pt_req.title, pt_en.title, p.title) as title,
+                
+                -- Content Fallback
+                COALESCE(pt_req.content, pt_en.content, p.content) as content,
+                
+                -- Excerpt Fallback
+                COALESCE(pt_req.excerpt, pt_en.excerpt, p.excerpt) as excerpt,
+
                 u.display_name as author_name,
                 u.email as author_email,
                 COALESCE(
@@ -190,13 +203,21 @@ router.get('/', async (req, res) => {
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN post_categories pc ON p.id = pc.post_id
             LEFT JOIN categories c ON pc.category_id = c.id
+            
+            -- Join requested language
+            LEFT JOIN post_translations pt_req ON p.id = pt_req.post_id AND pt_req.language = $${paramIndex}
+            
+            -- Join default language (EN)
+            LEFT JOIN post_translations pt_en ON p.id = pt_en.post_id AND pt_en.language = 'en'
+            
             WHERE ${whereClause}
-            GROUP BY p.id, u.display_name, u.email
+            GROUP BY p.id, u.display_name, u.email, pt_req.title, pt_req.content, pt_req.excerpt, pt_en.title, pt_en.content, pt_en.excerpt
             ORDER BY p.${sortCol} ${sortOrder} NULLS LAST
-            LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+            LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
         `;
 
-        const dataParams = [...params, limitVal, offsetVal];
+        // Add language, limit, offset params
+        const dataParams = [...params, language, limitVal, offsetVal];
         const result = await pool.query(query, dataParams);
 
         res.json({
@@ -224,22 +245,40 @@ router.get('/by-id/:id', async (req, res) => {
         const { id } = req.params;
 
         const query = `
+            WITH post_cats AS (
+                SELECT pc.post_id, 
+                       json_agg(json_build_object('id', c.id, 'name', c.name, 'slug', c.slug)) as categories
+                FROM post_categories pc
+                JOIN categories c ON pc.category_id = c.id
+                WHERE pc.post_id = $1
+                GROUP BY pc.post_id
+            ),
+            post_trans AS (
+                SELECT post_id, 
+                       json_object_agg(
+                           language,
+                           json_build_object(
+                               'title', title,
+                               'content', content,
+                               'excerpt', excerpt,
+                               'meta_description', meta_description
+                           )
+                       ) as translations
+                FROM post_translations
+                WHERE post_id = $1
+                GROUP BY post_id
+            )
             SELECT 
                 p.*,
                 u.display_name as author_name,
                 u.email as author_email,
-                COALESCE(
-                    json_agg(
-                        json_build_object('id', c.id, 'name', c.name, 'slug', c.slug)
-                    ) FILTER (WHERE c.id IS NOT NULL),
-                    '[]'
-                ) as categories
+                COALESCE(pc.categories, '[]'::json) as categories,
+                COALESCE(pt.translations, '{}'::json) as translations
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
-            LEFT JOIN post_categories pc ON p.id = pc.post_id
-            LEFT JOIN categories c ON pc.category_id = c.id
+            LEFT JOIN post_cats pc ON p.id = pc.post_id
+            LEFT JOIN post_trans pt ON p.id = pt.post_id
             WHERE p.id = $1
-            GROUP BY p.id, u.display_name, u.email
         `;
 
         const result = await pool.query(query, [id]);
@@ -269,9 +308,23 @@ router.get('/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
 
+        const { language = 'en' } = req.query; // Language param
+
         const query = `
             SELECT 
-                p.*,
+                p.id, p.slug, p.thumbnail_path, p.youtube_id, p.soundcloud_url, 
+                p.author_id, p.created_at, p.updated_at, p.published_at, 
+                p.view_count, p.status, p.is_featured,
+                
+                -- Title Fallback
+                COALESCE(pt_req.title, pt_en.title, p.title) as title,
+                
+                -- Content Fallback
+                COALESCE(pt_req.content, pt_en.content, p.content) as content,
+                
+                -- Excerpt Fallback
+                COALESCE(pt_req.excerpt, pt_en.excerpt, p.excerpt) as excerpt,
+                
                 u.display_name as author_name,
                 u.email as author_email,
                 COALESCE(
@@ -284,11 +337,18 @@ router.get('/:slug', async (req, res) => {
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN post_categories pc ON p.id = pc.post_id
             LEFT JOIN categories c ON pc.category_id = c.id
+            
+             -- Join requested language
+            LEFT JOIN post_translations pt_req ON p.id = pt_req.post_id AND pt_req.language = $2
+            
+            -- Join default language (EN)
+            LEFT JOIN post_translations pt_en ON p.id = pt_en.post_id AND pt_en.language = 'en'
+            
             WHERE p.slug = $1
-            GROUP BY p.id, u.display_name, u.email
+            GROUP BY p.id, u.display_name, u.email, pt_req.title, pt_req.content, pt_req.excerpt, pt_en.title, pt_en.content, pt_en.excerpt
         `;
 
-        const result = await pool.query(query, [slug]);
+        const result = await pool.query(query, [slug, language]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -312,6 +372,7 @@ router.get('/:slug', async (req, res) => {
 
 // POST /api/posts - Create new post (admin only)
 router.post('/', async (req, res) => {
+    const client = await pool.connect();
     try {
         // Check if user is authenticated and is admin
         if (!req.user || req.user.role !== 'admin') {
@@ -322,32 +383,37 @@ router.post('/', async (req, res) => {
         }
 
         const {
-            title,
+            translations = {}, // { en: {title, content...}, sk: {title, content...} }
             slug: customSlug,
-            content,
-            excerpt,
             youtube_id,
             soundcloud_url,
             status = 'draft',
             is_featured = false,
-            meta_description,
             categories = []
         } = req.body;
 
-        if (!title) {
+        // Validation: Need at least one language with a title
+        const langs = Object.keys(translations);
+        if (langs.length === 0 || !translations[langs[0]].title) {
             return res.status(400).json({
                 success: false,
-                error: 'Title is required'
+                error: 'At least one language with a title is required'
             });
         }
 
+        // Pick primary content for main table Legacy columns (prefer EN, then SK, then first avail)
+        const primaryLang = translations['en'] ? 'en' : (translations['sk'] ? 'sk' : langs[0]);
+        const primaryContent = translations[primaryLang];
+
         // Generate slug if not provided
-        const slug = customSlug || generateSlug(title);
+        const slug = customSlug || generateSlug(primaryContent.title);
 
         // Set published_at if status is 'published'
         const published_at = status === 'published' ? new Date() : null;
 
-        // Insert post
+        await client.query('BEGIN');
+
+        // Insert post (with fallback content in legacy columns)
         const insertQuery = `
             INSERT INTO posts (
                 title, slug, content, excerpt, youtube_id, soundcloud_url,
@@ -356,17 +422,32 @@ router.post('/', async (req, res) => {
             RETURNING *
         `;
 
-        const result = await pool.query(insertQuery, [
-            title, slug, content, excerpt, youtube_id, soundcloud_url,
-            req.user.id, status, is_featured, meta_description, published_at
+        const result = await client.query(insertQuery, [
+            primaryContent.title, slug, primaryContent.content, primaryContent.excerpt, youtube_id, soundcloud_url,
+            req.user.id, status, is_featured, primaryContent.meta_description, published_at
         ]);
 
         const post = result.rows[0];
 
+        // Insert translations
+        for (const [lang, data] of Object.entries(translations)) {
+            if (!data.title) continue; // Skip incomplete
+            await client.query(
+                `INSERT INTO post_translations (post_id, language, title, content, excerpt, meta_description)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (post_id, language) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    content = EXCLUDED.content,
+                    excerpt = EXCLUDED.excerpt,
+                    meta_description = EXCLUDED.meta_description`,
+                [post.id, lang, data.title, data.content, data.excerpt, data.meta_description]
+            );
+        }
+
         // Insert categories
         if (categories.length > 0) {
-            const categoryInserts = categories.map((categoryId, index) => {
-                return pool.query(
+            const categoryInserts = categories.map((categoryId) => {
+                return client.query(
                     'INSERT INTO post_categories (post_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                     [post.id, categoryId]
                 );
@@ -374,11 +455,14 @@ router.post('/', async (req, res) => {
             await Promise.all(categoryInserts);
         }
 
+        await client.query('COMMIT');
+
         res.status(201).json({
             success: true,
             data: post
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error creating post:', error);
 
         if (error.code === '23505') { // Unique violation
@@ -392,11 +476,14 @@ router.post('/', async (req, res) => {
             success: false,
             error: 'Failed to create post'
         });
+    } finally {
+        client.release();
     }
 });
 
 // PUT /api/posts/:id - Update post (admin only)
 router.put('/:id', async (req, res) => {
+    const client = await pool.connect();
     try {
         // Check if user is authenticated and is admin
         if (!req.user || req.user.role !== 'admin') {
@@ -408,21 +495,18 @@ router.put('/:id', async (req, res) => {
 
         const { id } = req.params;
         const {
-            title,
+            translations = {}, // { en: {title...}, sk: {title...} }
             slug,
-            content,
-            excerpt,
             thumbnail_path,
             youtube_id,
             soundcloud_url,
             status,
             is_featured,
-            meta_description,
             categories = []
         } = req.body;
 
         // Check if post exists
-        const existingPost = await pool.query('SELECT * FROM posts WHERE id = $1', [id]);
+        const existingPost = await client.query('SELECT * FROM posts WHERE id = $1', [id]);
         if (existingPost.rows.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -430,10 +514,19 @@ router.put('/:id', async (req, res) => {
             });
         }
 
-        // Regenerate slug if empty and title is provided
+        // Determine primary content for legacy updates (prefer EN, then SK, then whatever came in)
+        // If translations are provided, use them. If not, fallback to existing to avoid nulling out.
+        const langs = Object.keys(translations);
+        let primaryContent = null;
+        if (langs.length > 0) {
+            const primaryLang = translations['en'] ? 'en' : (translations['sk'] ? 'sk' : langs[0]);
+            primaryContent = translations[primaryLang];
+        }
+
+        // Regenerate slug if empty and title is provided (in primary content)
         let slugToUpdate = slug;
-        if ((!slugToUpdate || slugToUpdate.trim() === '') && title) {
-            slugToUpdate = generateSlug(title);
+        if ((!slugToUpdate || slugToUpdate.trim() === '') && primaryContent && primaryContent.title) {
+            slugToUpdate = generateSlug(primaryContent.title);
         }
 
         // Update published_at if status changed to 'published'
@@ -442,7 +535,10 @@ router.put('/:id', async (req, res) => {
             published_at = new Date();
         }
 
-        // Update post
+        await client.query('BEGIN');
+
+        // Update main post (legacy fallback columns + common metadata)
+        // Only update legacy text columns if primaryContent is resolved from translations
         const updateQuery = `
             UPDATE posts SET
                 title = COALESCE($1, title),
@@ -460,21 +556,44 @@ router.put('/:id', async (req, res) => {
             RETURNING *
         `;
 
-        const result = await pool.query(updateQuery, [
-            title, slugToUpdate, content, excerpt, thumbnail_path, youtube_id,
-            soundcloud_url, status, is_featured, meta_description,
+        const result = await client.query(updateQuery, [
+            primaryContent ? primaryContent.title : null,
+            slugToUpdate,
+            primaryContent ? primaryContent.content : null,
+            primaryContent ? primaryContent.excerpt : null,
+            thumbnail_path, youtube_id,
+            soundcloud_url, status, is_featured,
+            primaryContent ? primaryContent.meta_description : null,
             published_at, id
         ]);
+
+        // Upsert translations
+        for (const [lang, data] of Object.entries(translations)) {
+            // If a language object is provided but empty, we might typically skip it, 
+            // but here we check for title as a minimum for validity or just update fields
+            if (!data) continue;
+
+            await client.query(
+                `INSERT INTO post_translations (post_id, language, title, content, excerpt, meta_description)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (post_id, language) DO UPDATE SET
+                    title = COALESCE(EXCLUDED.title, post_translations.title),
+                    content = COALESCE(EXCLUDED.content, post_translations.content),
+                    excerpt = COALESCE(EXCLUDED.excerpt, post_translations.excerpt),
+                    meta_description = COALESCE(EXCLUDED.meta_description, post_translations.meta_description)`,
+                [id, lang, data.title, data.content, data.excerpt, data.meta_description]
+            );
+        }
 
         // Update categories
         if (categories.length >= 0) {
             // Delete existing categories
-            await pool.query('DELETE FROM post_categories WHERE post_id = $1', [id]);
+            await client.query('DELETE FROM post_categories WHERE post_id = $1', [id]);
 
             // Insert new categories
             if (categories.length > 0) {
                 const categoryInserts = categories.map((categoryId) => {
-                    return pool.query(
+                    return client.query(
                         'INSERT INTO post_categories (post_id, category_id) VALUES ($1, $2)',
                         [id, categoryId]
                     );
@@ -483,16 +602,21 @@ router.put('/:id', async (req, res) => {
             }
         }
 
+        await client.query('COMMIT');
+
         res.json({
             success: true,
             data: result.rows[0]
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error updating post:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update post'
         });
+    } finally {
+        client.release();
     }
 });
 

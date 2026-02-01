@@ -62,9 +62,12 @@ function renderPost(post) {
     });
 
     // Category
-    const categorySpan = document.getElementById('post-category');
+    const categorySpan = document.getElementById('post-category'); // The HTML ID remained post-category, only class changed?
+    // Let's check post.html from step 2477: <span id="post-category" class="post-category-badge"></span>
+    // So ID is still 'post-category'. Logic is fine.
     if (post.categories && post.categories.length > 0) {
         categorySpan.textContent = post.categories[0].name;
+        categorySpan.style.display = 'inline-block';
     } else {
         categorySpan.style.display = 'none';
     }
@@ -103,6 +106,17 @@ function renderPost(post) {
         contentDiv.innerHTML = `<p>${post.excerpt}</p>`;
     } else {
         contentDiv.innerHTML = '<p><em>Tento príspevok zatiaľ nemá text.</em></p>';
+    }
+
+    // Update "More Posts" button
+    const moreBtn = document.getElementById('more-posts-btn');
+    if (moreBtn && post.categories && post.categories.length > 0) {
+        // Assume first category is primary
+        const primaryCat = post.categories[0];
+        // Ensure slug is lowercase for consistency
+        const slug = primaryCat.slug || primaryCat.name.toLowerCase();
+        moreBtn.href = `/category/${slug}`;
+        moreBtn.innerHTML = `<iconify-icon icon="lucide:arrow-left"></iconify-icon> Viac z ${primaryCat.name}`;
     }
 }
 

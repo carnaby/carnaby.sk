@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kategória - Jozef Sokol</title>
+    <meta name="description" content="Kategória príspevkov">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- Scripts -->
+    <script src="/category.js" defer></script>
+    <script defer src="https://analytics.carnaby.sk/script.js"
+        data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
+    <style>
+        .category-header {
+            margin-top: 40px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .cat-title-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .cat-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+        }
+
+        .cat-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .cat-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+    <!-- Ambient BG -->
+    <div class="ambient-bg">
+        <div class="blob blob-purple"></div>
+        <div class="blob blob-emerald"></div>
+        <div class="blob blob-amber"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="glass-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <div class="logo-icon"><iconify-icon icon="lucide:code-2"></iconify-icon></div>
+                <span>JS / DODO</span>
+            </a>
+            <div class="nav-items">
+                <div class="nav-links hidden-mobile">
+                    <a href="/#about" data-i18n="navAbout">O mne</a>
+                    <a href="/category/devlog">DevLog</a>
+                    <a href="/category/dodo">Dodo</a>
+                    <a href="/category/carnaby">Carnaby</a>
+                </div>
+                <div class="nav-divider hidden-mobile"></div>
+                <div class="nav-controls">
+                    <button id="theme-toggle" class="control-btn"><iconify-icon icon="lucide:moon"
+                            class="icon-moon"></iconify-icon><iconify-icon icon="lucide:sun"
+                            class="icon-sun"></iconify-icon></button>
+                    <div class="lang-dropdown">
+                        <button class="control-btn lang-btn"><span id="current-lang">SK</span> <iconify-icon
+                                icon="lucide:chevron-down"></iconify-icon></button>
+                        <div class="lang-menu">
+                            <button onclick="switchLanguage('sk')">Slovenčina</button>
+                            <button onclick="switchLanguage('en')">English</button>
+                        </div>
+                    </div>
+                    <div id="auth-section" class="auth-section">
+                        <a href="/auth/google" id="auth-login" class="control-btn"><iconify-icon
+                                icon="lucide:user"></iconify-icon></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Category Header -->
+        <div class="category-header animate-slide-up">
+            <div class="cat-title-row">
+                <div class="cat-icon-box" id="cat-icon">
+                    <iconify-icon icon="lucide:folder"></iconify-icon>
+                </div>
+                <h1 class="cat-title" id="cat-title">Loading...</h1>
+            </div>
+            <p class="cat-desc" id="cat-desc"></p>
+        </div>
+
+        <!-- Posts -->
+        <div id="posts-container" class="posts-grid">
+            <div class="loading-state">
+                <iconify-icon icon="lucide:loader-2" class="spin" style="font-size: 2rem;"></iconify-icon>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+            <div class="social-row">
+                <a href="https://github.com/carnaby/carnaby.sk" target="_blank"
+                    class="social-link hover-emerald">GitHub</a>
+                <a href="https://x.com/jozef_sokol" target="_blank" class="social-link hover-amber">Twitter/X</a>
+                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank"
+                    class="social-link hover-rose">YouTube</a>
+                <a href="https://soundcloud.com/jozef-sokol" target="_blank" class="social-link hover-green">Spotify</a>
+            </div>
+            <p>&copy; <span id="year">2024</span> Jozef Sokol. Code & Music.</p>
+        </footer>
+    </main>
+</body>
+
+</html>
