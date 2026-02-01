@@ -29,6 +29,8 @@ services:
     # Persistent storage for thumbnails
     volumes:
       - /volume1/docker/carnaby-sk/thumbnails:/app/public/thumbnails
+      # Persistent cache to fix permissions and keep optimized images
+      - /volume1/docker/carnaby-sk/cache:/app/public/cache
     
     depends_on:
       db:
@@ -73,9 +75,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
 
   # Umami - Web Analytics
   umami:
@@ -111,7 +110,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
   # Watchtower - Automatic container updates
-  # Checks for new images every 5 minutes and updates containers
+  # Checks for new images every 24 hours and updates containers
   watchtower:
     image: containrrr/watchtower:latest
     container_name: carnaby-watchtower
@@ -120,8 +119,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.docker/config.json:/config.json:ro
     environment:
-      # Check for updates every 5 minutes (300 seconds)
-      - WATCHTOWER_POLL_INTERVAL=300
+      # Check for updates every 24 hours (86400 seconds)
+      - WATCHTOWER_POLL_INTERVAL=86400
       # Only update containers with the watchtower.enable label
       - WATCHTOWER_LABEL_ENABLE=true
       # Clean up old images after updating
