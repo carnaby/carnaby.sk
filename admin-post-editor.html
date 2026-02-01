@@ -33,7 +33,6 @@
             font-family: 'Playfair Display', serif;
         }
 
-        /* Unified Button Sizes */
         .editor-actions {
             display: flex;
             gap: 1rem;
@@ -94,6 +93,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             padding: 2rem;
             border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
         }
 
         .form-group {
@@ -111,7 +111,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Material UI Style Inputs */
         .form-control {
             width: 100%;
             padding: 1rem 1.2rem;
@@ -142,6 +141,13 @@
         textarea.content-editor {
             min-height: 600px !important;
             font-size: 1.1rem;
+        }
+
+        /* Force visibility just in case */
+        .form-control {
+            color: var(--text-primary) !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         .form-row {
@@ -176,6 +182,55 @@
             text-transform: uppercase;
             font-size: 0.8rem;
             letter-spacing: 1px;
+        }
+
+        /* Tabs */
+        .lang-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .lang-tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .lang-tab:hover {
+            color: var(--accent-gold);
+        }
+
+        .lang-tab.active {
+            color: var(--accent-gold);
+            border-bottom-color: var(--accent-gold);
+        }
+
+        .lang-content {
+            display: none;
+        }
+
+        .lang-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Markdown Preview Styles */
@@ -260,35 +315,6 @@
             background: rgba(212, 165, 116, 0.1);
         }
 
-        .image-preview {
-            width: 100%;
-            height: 250px;
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            margin-bottom: 1rem;
-            transition: all 0.3s;
-        }
-
-        .image-preview:hover {
-            border-color: var(--accent-gold);
-        }
-
-        .image-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .image-preview-placeholder {
-            color: var(--text-secondary);
-            font-size: 3rem;
-        }
-
         .thumbnail-upload {
             display: flex;
             gap: 1rem;
@@ -308,6 +334,12 @@
             border: 1px solid var(--border-color);
         }
 
+        .thumbnail-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .thumbnail-actions {
             display: flex;
             flex-direction: column;
@@ -320,22 +352,50 @@
             font-size: 0.85rem;
         }
 
-        .error {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            padding: 1rem;
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
             border-radius: 8px;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+            z-index: 9999;
+            border: 1px solid var(--border-color);
         }
 
-        .success {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(16, 185, 129, 0.2);
+        .toast.success {
+            border-color: var(--emerald);
+            color: var(--emerald);
+        }
+
+        .toast.error {
+            border-color: var(--rose);
+            color: var(--rose);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutFade {
+            to {
+                transform: translateY(20px);
+                opacity: 0;
+            }
         }
 
         @media (max-width: 1024px) {
@@ -366,96 +426,134 @@
         <div id="message-container"></div>
 
         <div class="editor-layout">
-            <div class="card">
-                <h2>Základné informácie</h2>
-
-                <div class="form-group">
-                    <label for="title">Názov *</label>
-                    <input type="text" id="title" class="form-control" placeholder="Sem napíšte názov príspevku..."
-                        required>
-                </div>
-
-                <div class="form-group">
-                    <label for="slug">URL slug</label>
-                    <input type="text" id="slug" class="form-control" placeholder="automaticky-generovany-slug">
-                    <div class="helper-text">Nechajte prázdne pre automatické generovanie z názvu</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="excerpt">Krátky popis (Excerpt)</label>
-                    <textarea id="excerpt" class="form-control" rows="3"
-                        placeholder="Krátky popis pre náhľad na domovskej stránke a SEO..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="content">Obsah (Markdown)</label>
-                    <textarea id="content" class="form-control content-editor" placeholder="Sem píšte obsah článku v Markdown formáte...
-# Nadpis
-Text článku...
-
-![Popis obrázka](url-obrazka)"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="youtube-id">YouTube ID</label>
-                        <input type="text" id="youtube-id" class="form-control" placeholder="napr. dQw4w9WgXcQ">
-                        <div class="helper-text">Iba ID videa, nie celá URL</div>
+            <!-- Left Column: Content -->
+            <div class="main-column">
+                <div class="card">
+                    <!-- Language Tabs -->
+                    <div class="lang-tabs">
+                        <button class="lang-tab active" data-tab="en">🇬🇧 English (Default)</button>
+                        <button class="lang-tab" data-tab="sk">🇸🇰 Slovenčina</button>
                     </div>
 
-                    <div class="form-group">
-                        <label for="soundcloud-url">SoundCloud URL</label>
-                        <input type="text" id="soundcloud-url" class="form-control"
-                            placeholder="https://soundcloud.com/...">
+                    <!-- English Content -->
+                    <div id="lang-pane-en" class="lang-content active">
+                        <div class="form-group">
+                            <label for="title-en">Title (English) *</label>
+                            <input type="text" id="title-en" class="form-control" placeholder="Post title..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="excerpt-en">Excerpt (English)</label>
+                            <textarea id="excerpt-en" class="form-control" rows="3"
+                                placeholder="Short description..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content-en">Content (English Markdown)</label>
+                            <textarea id="content-en" class="form-control content-editor"
+                                placeholder="# Heading..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="meta-description-en">Meta Description (English SEO)</label>
+                            <textarea id="meta-description-en" class="form-control" rows="2"
+                                placeholder="SEO description..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Slovak Content -->
+                    <div id="lang-pane-sk" class="lang-content">
+                        <div class="form-group">
+                            <label for="title-sk">Názov (Slovensky)</label>
+                            <input type="text" id="title-sk" class="form-control" placeholder="Názov príspevku...">
+                            <div class="helper-text">Ak nevyplníte, použije sa anglický názov</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="excerpt-sk">Krátky popis (Slovensky)</label>
+                            <textarea id="excerpt-sk" class="form-control" rows="3"
+                                placeholder="Krátky popis..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content-sk">Obsah (Slovenský Markdown)</label>
+                            <textarea id="content-sk" class="form-control content-editor"
+                                placeholder="# Nadpis..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="meta-description-sk">Meta popis (Slovensky SEO)</label>
+                            <textarea id="meta-description-sk" class="form-control" rows="2"
+                                placeholder="SEO popis..."></textarea>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Preview Card -->
+                <div class="card">
+                    <div class="preview-section">
+                        <div class="preview-header">👁️ Živý Náhľad (<span id="preview-lang-label">English</span>)</div>
+                        <div id="preview-content" class="markdown-preview">
+                            <p style="color: var(--text-secondary);">Náhľad sa zobrazí tu automaticky pri písaní...</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="form-group">
-                    <label>Kategórie</label>
-                    <div id="categories-container" class="categories-grid">
-                        <!-- Categories will be loaded here -->
+            <!-- Right Column: Settings -->
+            <div class="sidebar-column">
+                <div class="card">
+                    <div class="form-group">
+                        <label for="slug">URL Slug (Shared)</label>
+                        <input type="text" id="slug" class="form-control" placeholder="auto-generated-slug">
+                        <div class="helper-text">Shared across all languages</div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Nastavenia</label>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="is-featured">
-                        <label for="is-featured" style="margin:0; cursor:pointer;">⭐ Zvýraznený príspevok</label>
+                    <div class="form-group">
+                        <label>Kategórie</label>
+                        <div id="categories-container" class="categories-grid"></div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Náhľadový obrázok</label>
-                    <div class="thumbnail-upload">
-                        <div class="thumbnail-preview" id="thumbnail-preview">
-                            <i class="fas fa-image" style="font-size: 2rem;"></i>
-                        </div>
-                        <div class="thumbnail-actions">
-                            <input type="file" id="thumbnail-file" accept="image/*" style="display: none;">
-                            <button type="button" class="btn btn-small btn-secondary"
-                                onclick="document.getElementById('thumbnail-file').click()">
-                                Nahrať obrázok
-                            </button>
-                            <button type="button" id="fetch-youtube-thumb-btn" class="btn btn-small btn-secondary">
-                                Stiahnuť z YouTube
-                            </button>
+                    <div class="form-group">
+                        <label>Nastavenia</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="is-featured">
+                            <label for="is-featured" style="margin:0; cursor:pointer;">⭐ Featured Post</label>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="meta-description">Meta popis (SEO)</label>
-                    <textarea id="meta-description" class="form-control" rows="3"
-                        placeholder="SEO meta popis..."></textarea>
-                </div>
+                    <div class="form-group">
+                        <label>Media</label>
+                        <div class="form-group">
+                            <label for="youtube-id">YouTube ID</label>
+                            <input type="text" id="youtube-id" class="form-control" placeholder="e.g. dQw4w9WgXcQ">
+                        </div>
 
-                <div class="preview-section" style="margin-top: 2rem;">
-                    <div class="preview-header">👁️ Živý Náhľad</div>
-                    <div id="preview-content" class="markdown-preview">
-                        <p style="color: var(--text-secondary);">Náhľad sa zobrazí tu automaticky pri písaní...</p>
+                        <div class="form-group">
+                            <label for="soundcloud-url">SoundCloud URL</label>
+                            <input type="text" id="soundcloud-url" class="form-control"
+                                placeholder="https://soundcloud.com/...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thumbnail</label>
+                        <div class="thumbnail-upload">
+                            <div class="thumbnail-preview" id="thumbnail-preview">
+                                <i class="fas fa-image" style="font-size: 2rem;"></i>
+                            </div>
+                            <div class="thumbnail-actions">
+                                <input type="file" id="thumbnail-file" accept="image/*" style="display: none;">
+                                <button type="button" class="btn btn-small btn-secondary"
+                                    onclick="document.getElementById('thumbnail-file').click()">
+                                    Upload
+                                </button>
+                                <button type="button" id="fetch-youtube-thumb-btn" class="btn btn-small btn-secondary">
+                                    From YouTube
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -466,95 +564,125 @@ Text článku...
         let postId = null;
         let categories = [];
         let currentThumbnailPath = null;
+        let currentTab = 'en';
 
-        // Get post ID from URL if editing
-        // URL format: /admin/posts/123/edit
+        // Tabs Logic
+        document.querySelectorAll('.lang-tab').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const lang = btn.getAttribute('data-tab');
+                currentTab = lang;
+
+                // Toggle active tab
+                document.querySelectorAll('.lang-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Toggle content
+                document.querySelectorAll('.lang-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`lang-pane-${lang}`).classList.add('active');
+
+                // Update preview label
+                document.getElementById('preview-lang-label').textContent = lang === 'en' ? 'English' : 'Slovenčina';
+                updatePreview();
+            });
+        });
+
         const pathParts = window.location.pathname.split('/');
         const editIndex = pathParts.indexOf('edit');
         if (editIndex > 0 && pathParts[editIndex - 1]) {
             postId = pathParts[editIndex - 1];
-            // Update header via component attribute
-            const headerComponent = document.getElementById('editor-header-component');
-            if (headerComponent) {
-                headerComponent.setAttribute('title', 'Upraviť príspevok');
-            } else {
-                // Fallback using legacy ID if component not ready/found
-                const titleEl = document.getElementById('header-title');
-                if (titleEl) titleEl.textContent = 'Upraviť príspevok';
-            }
-
-            document.getElementById('page-title').textContent = 'Upraviť príspevok - Administrácia';
+            document.getElementById('editor-title').textContent = '📝 Upraviť príspevok';
+            document.getElementById('page-title').textContent = 'Upraviť príspevok';
         }
 
-        // Load categories
         async function loadCategories() {
             try {
                 const response = await fetch('/api/posts/categories/all');
                 const data = await response.json();
-
                 if (data.success) {
                     categories = data.data;
                     renderCategories();
                 }
-            } catch (error) {
-                console.error('Error loading categories:', error);
-            }
+            } catch (error) { console.error(error); }
         }
 
-        // Render categories
         function renderCategories(selectedCategories = []) {
             const container = document.getElementById('categories-container');
             container.innerHTML = categories.map(category => `
                 <label class="category-checkbox">
-                    <input type="checkbox" id="cat-${category.id}" value="${category.id}" 
+                    <input type="checkbox" value="${category.id}" 
                         ${selectedCategories.includes(category.id) ? 'checked' : ''}>
                     <span>${category.name}</span>
                 </label>
             `).join('');
         }
 
-        // Load post if editing
         async function loadPost() {
             if (!postId) return;
-
             try {
+                // Fetch post with ALL translations
                 const response = await fetch(`/api/posts/by-id/${postId}`);
                 const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error);
-                }
+                if (!data.success) throw new Error(data.error);
 
                 const post = data.data;
 
-                document.getElementById('title').value = post.title || '';
+                // Load Shared Data
                 document.getElementById('slug').value = post.slug || '';
-                document.getElementById('content').value = post.content || '';
-                document.getElementById('excerpt').value = post.excerpt || '';
                 document.getElementById('youtube-id').value = post.youtube_id || '';
                 document.getElementById('soundcloud-url').value = post.soundcloud_url || '';
                 document.getElementById('is-featured').checked = post.is_featured || false;
-                document.getElementById('meta-description').value = post.meta_description || '';
 
                 if (post.thumbnail_path) {
                     currentThumbnailPath = post.thumbnail_path;
                     updateThumbnailPreview(post.thumbnail_path);
                 }
 
-                // Select categories
-                const selectedCategories = post.categories.map(c => c.id);
+                const selectedCategories = post.categories ? post.categories.map(c => c.id) : [];
                 renderCategories(selectedCategories);
 
-                // Update preview
+                // Load Translations
+                // Backend return translations object { en: {...}, sk: {...} } OR just flat fields if no translations
+                // Check if translations exist
+                // Check if translations exist
+                const translations = post.translations || {};
+
+                // Populate fields
+                ['en', 'sk'].forEach(lang => {
+                    let trans = translations[lang];
+
+                    // Fallback to legacy
+                    if (!trans && lang === 'en') {
+                        trans = {
+                            title: post.title,
+                            content: post.content,
+                            excerpt: post.excerpt,
+                            meta_description: post.meta_description
+                        };
+                    }
+
+                    trans = trans || {};
+
+                    const titleEl = document.getElementById(`title-${lang}`);
+                    const contentEl = document.getElementById(`content-${lang}`);
+                    const excerptEl = document.getElementById(`excerpt-${lang}`);
+                    const metaEl = document.getElementById(`meta-description-${lang}`);
+
+                    if (titleEl) titleEl.value = trans.title || '';
+                    if (contentEl) contentEl.value = trans.content || '';
+                    if (excerptEl) excerptEl.value = trans.excerpt || '';
+                    if (metaEl) metaEl.value = trans.meta_description || '';
+                });
+                console.log('Post data loaded into form.');
+
                 updatePreview();
             } catch (error) {
-                showMessage('error', `Chyba pri načítaní príspevku: ${error.message}`);
+                showMessage('error', error.message);
             }
         }
 
-        // Update preview
         function updatePreview() {
-            const content = document.getElementById('content').value;
+            // Get content based on active tab
+            const content = document.getElementById(`content-${currentTab}`).value;
             const previewContent = document.getElementById('preview-content');
 
             if (content.trim()) {
@@ -564,124 +692,60 @@ Text článku...
             }
         }
 
-        // Update thumbnail preview
         function updateThumbnailPreview(path) {
             const preview = document.getElementById('thumbnail-preview');
-
             if (!path) {
                 preview.innerHTML = '<i class="fas fa-image" style="font-size: 2rem;"></i>';
                 return;
             }
-
-            let src = path;
-            const originalFilename = path.split('/').pop();
-
-            // Logic to determine optimized path vs youtube vs legacy
-            if (path.includes('img.youtube.com')) {
-                src = path;
-            } else {
-                // It's a local file. Use optimized version for preview
-                // Remove extension and append .webp
-                const baseName = originalFilename.replace(/\.[^/.]+$/, "");
-                src = `/images/300/${baseName}.webp`;
-            }
-
-            // Fallback for local files (if optimization fails)
-            const fallback = `/thumbnails/originals/${originalFilename}`;
-            const onerror = path.includes('img.youtube.com') ? "" : `this.onerror=null;this.src='${fallback}'`;
-
-            preview.innerHTML = `<img src="${src}" alt="Thumbnail" onerror="${onerror}">`;
+            const filename = path.split('/').pop();
+            // Try to show optimized webp
+            const src = `/images/300/${filename.replace(/\.[^/.]+$/, "")}.webp`;
+            preview.innerHTML = `<img src="${src}" onerror="this.src='/thumbnails/originals/${filename}'">`;
         }
 
-        // Upload thumbnail
-        document.getElementById('thumbnail-file').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        // --- Event Listeners and Save ---
 
-            if (!postId) {
-                showMessage('error', 'Najprv uložte príspevok pred nahraním obrázka');
-                return;
-            }
+        document.getElementById('content-en').addEventListener('input', () => { if (currentTab === 'en') updatePreview(); });
+        document.getElementById('content-sk').addEventListener('input', () => { if (currentTab === 'sk') updatePreview(); });
 
-            const formData = new FormData();
-            formData.append('thumbnail', file);
-
-            try {
-                const response = await fetch(`/api/posts/${postId}/upload-thumbnail`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error);
-                }
-
-                currentThumbnailPath = data.data.thumbnail_path;
-                updateThumbnailPreview(currentThumbnailPath);
-                showMessage('success', 'Obrázok bol úspešne nahraný');
-            } catch (error) {
-                showMessage('error', `Chyba pri nahrávaní obrázka: ${error.message}`);
-            }
-        });
-
-        // Fetch YouTube thumbnail
-        document.getElementById('fetch-youtube-thumb-btn').addEventListener('click', async () => {
-            const youtubeId = document.getElementById('youtube-id').value;
-
-            if (!youtubeId) {
-                showMessage('error', 'Najprv zadajte YouTube ID');
-                return;
-            }
-
-            if (!postId) {
-                showMessage('error', 'Najprv uložte príspevok pred stiahnutím obrázka');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/posts/${postId}/thumbnail-from-youtube`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ youtube_id: youtubeId })
-                });
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error);
-                }
-
-                currentThumbnailPath = data.data.thumbnail_path;
-                updateThumbnailPreview(currentThumbnailPath);
-                showMessage('success', 'Obrázok bol úspešne stiahnutý z YouTube');
-            } catch (error) {
-                showMessage('error', `Chyba pri sťahovaní obrázka: ${error.message}`);
-            }
-        });
-
-        // Save post
         async function savePost(status) {
-            const title = document.getElementById('title').value;
+            // Gather data
+            const titleEn = document.getElementById('title-en').value;
+            const titleSk = document.getElementById('title-sk').value;
 
-            if (!title) {
-                showMessage('error', 'Názov je povinný');
+            if (!titleEn && !titleSk) {
+                showMessage('error', 'Title is required (at least in one language)');
                 return;
+            }
+
+            const translations = {};
+            if (document.getElementById('title-en').value) {
+                translations.en = {
+                    title: document.getElementById('title-en').value,
+                    content: document.getElementById('content-en').value,
+                    excerpt: document.getElementById('excerpt-en').value,
+                    meta_description: document.getElementById('meta-description-en').value
+                };
+            }
+            if (document.getElementById('title-sk').value) {
+                translations.sk = {
+                    title: document.getElementById('title-sk').value,
+                    content: document.getElementById('content-sk').value,
+                    excerpt: document.getElementById('excerpt-sk').value,
+                    meta_description: document.getElementById('meta-description-sk').value
+                };
             }
 
             const selectedCategories = Array.from(document.querySelectorAll('#categories-container input:checked'))
                 .map(input => parseInt(input.value));
 
             const postData = {
-                title,
+                translations,
                 slug: document.getElementById('slug').value || null,
-                content: document.getElementById('content').value,
-                excerpt: document.getElementById('excerpt').value,
                 youtube_id: document.getElementById('youtube-id').value || null,
                 soundcloud_url: document.getElementById('soundcloud-url').value || null,
                 is_featured: document.getElementById('is-featured').checked,
-                meta_description: document.getElementById('meta-description').value,
                 status,
                 categories: selectedCategories
             };
@@ -696,72 +760,72 @@ Text článku...
 
                 const response = await fetch(url, {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(postData)
                 });
-
                 const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error);
-                }
+                if (!data.success) throw new Error(data.error);
 
                 if (!postId) {
                     postId = data.data.id;
                     window.history.replaceState({}, '', `?id=${postId}`);
                 }
-
-                showMessage('success', status === 'published' ? 'Príspevok bol publikovaný' : 'Príspevok bol uložený ako koncept');
-
-                // Redirect after 1 second
-                setTimeout(() => {
-                    window.location.href = '/admin/posts';
-                }, 1000);
+                showMessage('success', 'Uložené!');
+                setTimeout(() => window.location.href = '/admin/posts', 1000);
             } catch (error) {
-                showMessage('error', `Chyba pri ukladaní: ${error.message}`);
+                showMessage('error', error.message);
             }
         }
 
-        // Show message
-        // Show message
+        document.getElementById('save-draft-btn').addEventListener('click', () => savePost('draft'));
+        document.getElementById('publish-btn').addEventListener('click', () => savePost('published'));
+
+        // Thumbnail Upload
+        document.getElementById('thumbnail-file').addEventListener('change', async (e) => {
+            if (!postId) { showMessage('error', 'Save post first'); return; }
+            const file = e.target.files[0];
+            const formData = new FormData();
+            formData.append('thumbnail', file);
+            try {
+                const res = await fetch(`/api/posts/${postId}/upload-thumbnail`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    currentThumbnailPath = data.data.thumbnail_path;
+                    updateThumbnailPreview(currentThumbnailPath);
+                    showMessage('success', 'Uploaded');
+                } else throw new Error(data.error);
+            } catch (e) { showMessage('error', e.message); }
+        });
+
+        // YouTube Thumbnail
+        document.getElementById('fetch-youtube-thumb-btn').addEventListener('click', async () => {
+            if (!postId) { showMessage('error', 'Save post first'); return; }
+            const ytid = document.getElementById('youtube-id').value;
+            try {
+                const res = await fetch(`/api/posts/${postId}/thumbnail-from-youtube`, {
+                    method: 'POST', body: JSON.stringify({ youtube_id: ytid }), headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentThumbnailPath = data.data.thumbnail_path;
+                    updateThumbnailPreview(currentThumbnailPath);
+                    showMessage('success', 'Fetched');
+                } else throw new Error(data.error);
+            } catch (e) { showMessage('error', e.message); }
+        })
+
         function showMessage(type, message) {
             const container = document.getElementById('message-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-
-            const icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
-
-            toast.innerHTML = `
-                <i class="fas ${icon}"></i> 
-                <span>${message}</span>
-            `;
-
+            toast.innerText = message;
             container.appendChild(toast);
-
-            // Remove after 5 seconds
-            setTimeout(() => {
-                toast.style.animation = 'slideOutFade 0.4s forwards';
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.remove();
-                    }
-                }, 400); // Wait for animation
-            }, 5000);
+            setTimeout(() => toast.remove(), 4000);
         }
 
-        // Event listeners
-        document.getElementById('content').addEventListener('input', updatePreview);
-        document.getElementById('save-draft-btn').addEventListener('click', () => savePost('draft'));
-        document.getElementById('publish-btn').addEventListener('click', () => savePost('published'));
+        // Init
+        loadCategories().then(() => { if (postId) loadPost(); });
 
-        // Initialize
-        loadCategories().then(() => {
-            if (postId) {
-                loadPost();
-            }
-        });
     </script>
 </body>
 

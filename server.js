@@ -199,6 +199,11 @@ function startServer() {
         res.sendFile(path.join(__dirname, 'post.html'));
     });
 
+    // Serve category page
+    app.get('/category/:slug', (req, res) => {
+        res.sendFile(path.join(__dirname, 'category.html'));
+    });
+
     // Serve index.html for the root route
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'index.html'));

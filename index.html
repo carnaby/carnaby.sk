@@ -4,206 +4,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dodo – Songs for the Journey</title>
-    <meta name="description"
-        content="Piesne z ticha, spomienok a prítomného momentu. Akustický folk, storyteller balady a retro synth-pop.">
+    <title>Jozef Sokol / Dev & Music</title>
+    <meta name="description" content="Portfolio of Jozef Sokol (Dodo) - Full-Stack Developer & AI Music Artist.">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.min.css">
-    <script src="script.js" defer></script>
 
-    <!-- Umami Analytics -->
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css?v=2">
+
+    <!-- Scripts -->
+    <script src="script.js?v=2" defer></script>
     <script defer src="https://analytics.carnaby.sk/script.js"
         data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
 </head>
 
-<body>
-    <!-- Hero Section -->
-    <header class="hero">
-        <img src="images/baner.webp" alt="Dodo - Songs for the Journey" class="hero-banner" fetchpriority="high">
-        <div class="hero-overlay">
-            <!-- Authentication in top right corner -->
-            <div id="auth-section" class="auth-section-header">
-                <!-- Loading state -->
-                <div id="auth-loading" class="auth-loading" style="display: none;">
-                    <span class="loading-spinner"></span>
+<body class="theme-dark"> <!-- Defaulting to dark theme to match inspiration vibe -->
+
+    <!-- Background Ambient Effects -->
+    <div class="ambient-bg">
+        <div class="blob blob-purple"></div>
+        <div class="blob blob-emerald"></div>
+        <div class="blob blob-amber"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <div class="logo-icon">
+                    <iconify-icon icon="lucide:code-2"></iconify-icon>
+                </div>
+                <span>JS / DODO</span>
+            </a>
+
+            <div class="nav-items">
+                <div class="nav-links hidden-mobile">
+                    <a href="#about" data-i18n="navAbout">O mne</a>
+                    <a href="/category/devlog">DevLog</a>
+                    <a href="/category/dodo">Dodo</a>
+                    <a href="/category/carnaby">Carnaby</a>
                 </div>
 
-                <!-- Not authenticated - User silhouette icon -->
-                <a href="/auth/google" id="auth-login" class="auth-avatar-circle" style="display: none;"
-                    title="Prihlásiť sa cez Google">
-                    <svg class="user-silhouette" viewBox="0 0 24 24">
-                        <path fill="currentColor"
-                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-                    </svg>
-                </a>
+                <div class="nav-divider hidden-mobile"></div>
 
-                <!-- Authenticated - Avatar with dropdown -->
-                <div id="auth-user" class="auth-user-header" style="display: none;">
-                    <div class="auth-avatar-wrapper">
-                        <img id="user-avatar" class="user-avatar-header" src="" alt="User">
-                        <!-- Dropdown menu -->
-                        <div id="user-dropdown" class="user-dropdown">
-                            <div class="dropdown-header">
-                                <span id="user-name-dropdown" class="user-name-dropdown"></span>
-                            </div>
-                            <div class="dropdown-divider"></div>
+                <!-- Controls -->
+                <div class="nav-controls">
+                    <button id="theme-toggle" class="control-btn" aria-label="Toggle Theme">
+                        <iconify-icon icon="lucide:moon" class="icon-moon"></iconify-icon>
+                        <iconify-icon icon="lucide:sun" class="icon-sun"></iconify-icon>
+                    </button>
 
-                            <!-- Admin menu item (only for admins) -->
-                            <a href="/admin" id="admin-menu-item" class="dropdown-item" style="display: none;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                                    <path
-                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                                </svg>
-                                <span data-i18n="adminPanel">Administrácia</span>
-                            </a>
-
-                            <button id="logout-btn" class="dropdown-item">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                    <polyline points="16 17 21 12 16 7" />
-                                    <line x1="21" y1="12" x2="9" y2="12" />
-                                </svg>
-                                <span data-i18n="logout">Odhlásiť sa</span>
-                            </button>
+                    <div class="lang-dropdown">
+                        <button class="control-btn lang-btn">
+                            <span id="current-lang">SK</span>
+                            <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                        </button>
+                        <div class="lang-menu">
+                            <button onclick="switchLanguage('sk')">Slovenčina</button>
+                            <button onclick="switchLanguage('en')">English</button>
                         </div>
+                    </div>
+
+                    <!-- User Auth (Profile) -->
+                    <div id="auth-section" class="auth-section">
+                        <!-- Injected by JS -->
+                        <a href="/auth/google" id="auth-login" class="control-btn" title="Login">
+                            <iconify-icon icon="lucide:user"></iconify-icon>
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-links">
-            <a href="#about" data-i18n="navAbout">O mne</a>
-            <a href="#songs" data-i18n="navSongs">Príspevky</a>
-            <a href="https://www.youtube.com/@jozefsokol3820" target="_blank">YouTube</a>
-            <a href="https://soundcloud.com/jozef-sokol" target="_blank">SoundCloud</a>
-            <a href="https://www.facebook.com/jozef.sokol" target="_blank">Facebook</a>
-            <a href="https://x.com/jozef_sokol" target="_blank">X</a>
-        </div>
-
-        <div class="lang-switcher">
-            <button class="lang-btn" data-lang="en">EN</button>
-            <button class="lang-btn" data-lang="sk">SK</button>
         </div>
     </nav>
 
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="container">
-            <div class="about-content">
-                <div class="about-image">
-                    <img src="images/photo.webp" alt="Jozef Sokol">
+    <main class="main-content">
+
+        <!-- Header / Hero -->
+        <header class="profile-header animate-slide-up">
+            <!-- Cover Image -->
+            <div class="cover-image-container">
+                <div class="cover-gradient"></div>
+                <!-- Using original banner or new one? User said "images... ponechame tie co su teraz" -->
+                <img src="images/baner.webp" alt="Cover" class="cover-image" fetchpriority="high">
+                <div class="cover-title">
+                    <h1 class="visually-hidden">Jozef Sokol / Dev & Music</h1>
                 </div>
-                <div class="about-text">
-                    <h2 data-i18n="aboutTitle">O mne</h2>
-                    <p data-i18n="aboutP1">Tento priestor je o piesňach, ktoré vznikajú z ticha, spomienok a prítomného
-                        momentu. Moja cesta
-                        k hudbe viedla cez rockové rádio Rebeca, roky za mixpultom ako DJ. Dnes,
-                        ako programátor, spájam túto ľudskú skúsenosť s možnosťami technológií.</p>
+            </div>
 
-                    <p data-i18n="aboutP2">Nájdete tu dve tváre mojej tvorby:</p>
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <div class="profile-layout">
+                    <!-- Avatar -->
+                    <div class="profile-avatar-container">
+                        <div class="avatar-glow"></div>
+                        <img src="images/photo.webp" alt="Profile" class="profile-avatar">
+                    </div>
 
-                    <div class="music-styles">
-                        <div class="style">
-                            <span class="icon">🎸</span>
-                            <div>
-                                <strong data-i18n="stylesDodoTitle">Dodo</strong> – <span
-                                    data-i18n="stylesDodoDesc">Akustický folk, storyteller balady a južanský rock
-                                    (Americana).
-                                    Hudba pre pokojné rána a cesty domov.</span>
-                            </div>
-                        </div>
-                        <div class="style">
-                            <span class="icon">🎹</span>
-                            <div>
-                                <strong data-i18n="stylesCarnabyTitle">Carnaby</strong> – <span
-                                    data-i18n="stylesCarnabyDesc">Návrat k mojim DJ koreňom, retro synth-pop a
-                                    bezstarostné
-                                    euro-disco inšpirované zvukom 80. a 90. rokov.</span>
-                            </div>
+                    <!-- Info -->
+                    <div class="profile-info">
+                        <h2 class="profile-name">Jozef Sokol <span class="profile-nickname">/ Dodo</span></h2>
+                        <div class="profile-tags">
+                            <span class="tag tag-emerald">
+                                <iconify-icon icon="lucide:code-2"></iconify-icon> Full-Stack Dev
+                            </span>
+                            <span class="tag tag-amber">
+                                <iconify-icon icon="lucide:music"></iconify-icon> AI Music Artist
+                            </span>
+                            <span class="tag-text">Slovakia</span>
                         </div>
                     </div>
 
-                    <p data-i18n="aboutP3">Hudba tu nie je o trendoch ani o dokonalosti. Je o ceste, pokoji a chvíľach
-                        medzi tým. Všetky
-                        skladby vznikajú bez tlaku a ambícií niečo dokazovať – sú robené pre radosť z tvorby.</p>
+                    <!-- Contact -->
+                    <div class="profile-contact hidden-mobile">
+                        <a href="mailto:dodusik@gmail.com" class="btn-pill">
+                            <iconify-icon icon="lucide:mail"></iconify-icon>
+                            Kontakt
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-                    <p class="note"><span data-i18n="noteAI">🎶 Vytvorené s pomocou AI (Suno), ale vedené osobným
-                            príbehom.</span><br>
-                        <span data-i18n="noteLyrics">✍️ Všetky texty sú originálne a napísané pre tieto skladby.</span>
+        <!-- About Section (The 3 Pillars) -->
+        <section id="about" class="about-section glass-panel animate-slide-up delay-1">
+            <div class="section-label">
+                <iconify-icon icon="lucide:sparkles" class="text-emerald"></iconify-icon>
+                <span data-i18n="aboutLabel">O MNE</span>
+            </div>
+
+            <div class="about-text">
+                <p data-i18n="aboutIntro">
+                    Svet kódovania a svet hudby majú k sebe bližšie, než sa na prvý pohľad zdá. Obe sú o hľadaní
+                    harmónie, logiky a rytmu. Moja cesta začala za mixpultom a v rockovom rádiu Rebeca, no dnes ju
+                    definujú riadky kódu a možnosti umelej inteligencie.
+                </p>
+                <p data-i18n="aboutIntro2">
+                    Ako full-stack vývojár staviam digitálne riešenia, zatiaľ čo ako nadšenec do hudby hľadám v
+                    technológiách priestor pre skutočnú ľudskú emóciu.
+                </p>
+            </div>
+
+            <!-- 3 Pillars Grid -->
+            <div class="pillars-grid">
+
+                <!-- 1. DevLog (Dominant/New) -->
+                <a href="/category/devlog" class="pillar-card pillar-emerald">
+                    <div class="pillar-glow"></div>
+                    <div class="pillar-icon">
+                        <iconify-icon icon="lucide:terminal"></iconify-icon>
+                    </div>
+                    <h4>DevLog <span class="dot-emerald"></span></h4>
+                    <p data-i18n="descDevLog">
+                        Tu vystupujem civilne ako Jozef. Píšem o tom, ako vyvíjam v Reacte a TypeScripte, ako krotím AI
+                        modely a čo všetko obnáša 'making of' tohto webu. Priestor pre experimenty a pohľad do zákulisia
+                        mojej práce s technológiou Antigravity.
                     </p>
+                </a>
+
+                <!-- 2. Dodo (Music) -->
+                <a href="/category/dodo" class="pillar-card pillar-amber">
+                    <div class="pillar-glow"></div>
+                    <div class="pillar-icon">
+                        <iconify-icon icon="lucide:guitar"></iconify-icon>
+                    </div>
+                    <h4>Dodo <span class="dot-amber"></span></h4>
+                    <p data-i18n="descDodo">
+                        Dodo je moja tichšia, rozvážnejšia stránka. Hudba pre pokojné rána a dlhé cesty autom. Akustický
+                        folk, balady a storytellingová Americana o nádeji, zmeškaných vlakoch a nečakanej radosti.
+                    </p>
+                </a>
+
+                <!-- 3. Carnaby (Retro) -->
+                <a href="/category/carnaby" class="pillar-card pillar-purple">
+                    <div class="pillar-glow"></div>
+                    <div class="pillar-icon">
+                        <iconify-icon icon="lucide:music-2"></iconify-icon>
+                    </div>
+                    <h4>Carnaby <span class="dot-purple"></span></h4>
+                    <p data-i18n="descCarnaby">
+                        Návrat k DJ koreňom. Čistá energia, bezstarostné euro-disco a neónová atmosféra 80. rokov. Kým
+                        Dodo rozpráva príbehy, Carnaby vytvára vibe. Tanečný rytmus a retro nostalgia.
+                    </p>
+                </a>
+
+            </div>
+
+            <div class="ai-disclaimer">
+                <div>
+                    <iconify-icon icon="lucide:cpu" class="text-emerald"></iconify-icon>
+                    <span data-i18n="aiMusicNote">Hudba: AI (Suno)</span>
+                </div>
+                <div>
+                    <iconify-icon icon="lucide:pen-tool" class="text-emerald"></iconify-icon>
+                    <span data-i18n="humanLyricsNote">Texty & Príbehy: Human (Original)</span>
                 </div>
             </div>
+        </section>
+
+        <!-- Feed Divider -->
+        <div class="feed-divider">
+            <span class="line"></span>
+            <span class="text">FEED</span>
+            <span class="line"></span>
         </div>
-    </section>
 
-    <!-- Songs Section -->
-    <section id="songs" class="songs">
-        <div class="container">
-            <h2 data-i18n="songsTitle">Príspevky</h2>
-            <p class="section-subtitle" data-i18n="songsSubtitle">Ak hľadáš hudbu, ktorá nikam netlačí a dovolí ti byť
-                ticho, si na správnom
-                mieste.</p>
-
-            <!-- Category Tabs -->
-            <div class="category-tabs">
-                <button class="tab-btn active" data-category="all">
-                    <span data-i18n="tabAll">Všetky</span>
-                </button>
-                <button class="tab-btn" data-category="Dodo">Dodo</button>
-                <button class="tab-btn" data-category="Carnaby">Carnaby</button>
-            </div>
-
-            <div class="songs-grid" id="songsGrid">
-                <!-- Videos will be loaded dynamically from API -->
-                <div class="loading-message">
-                    <p>⏳ <span data-i18n="loadingVideos">Načítavam videá...</span></p>
-                </div>
-            </div>
-
-            <div class="cta">
-                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank" class="btn"
-                    data-i18n="ctaButton">Pozri viac na YouTube</a>
+        <!-- Posts Grid -->
+        <div id="posts-container" class="posts-grid">
+            <!-- Javascript will populate this -->
+            <div class="loading-state">
+                <iconify-icon icon="lucide:loader-2" class="spin"></iconify-icon>
             </div>
         </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>
-                <span data-i18n="footerCopyright">&copy;</span>
-                <span id="copyrightYear"></span>
-                <span data-i18n="footerCopyrightText">Dodo – Songs for the Journey</span>
-            </p>
-            <div class="social-links">
-                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank">YouTube</a>
-                <a href="https://soundcloud.com/jozef-sokol" target="_blank">SoundCloud</a>
-                <a href="https://www.facebook.com/jozef.sokol" target="_blank">Facebook</a>
-                <a href="https://x.com/jozef_sokol" target="_blank">X</a>
-            </div>
-            <p class="ai-experiment">
-                <span data-i18n="aiExperiment">🤖 Tento web je AI experiment vytvorený pomocou</span>
-                <a href="https://deepmind.google/technologies/gemini/antigravity/" target="_blank">Antigravity</a>
-                <span data-i18n="aiAnd">&</span>
-                <a href="https://www.anthropic.com/claude" target="_blank">Claude 4.5 Sonnet</a> +
-                <a href="https://deepmind.google/technologies/gemini/" target="_blank">Gemini 3 Pro</a>.
-                <span data-i18n="aiJourney">Dokumentácia našej spoločnej cesty je na</span>
-                <a href="https://github.com/carnaby/carnaby.sk" target="_blank">GitHub</a>.
-            </p>
-            <div class="theme-toggle">
-                <button class="theme-toggle-btn" id="themeToggle">
-                    <span class="icon">🌙</span>
-                    <span data-i18n="themeToggle">Prepnúť tému</span>
-                </button>
-            </div>
+        <div class="feed-footer">
+            <a href="https://www.youtube.com/@jozefsokol3820" target="_blank" class="btn-pill outline">
+                YouTube Channel <iconify-icon icon="lucide:external-link"></iconify-icon>
+            </a>
         </div>
-    </footer>
+
+        <!-- Site Footer -->
+        <footer class="site-footer animate-slide-up delay-3">
+            <div class="social-row">
+                <a href="https://github.com/carnaby/carnaby.sk" target="_blank"
+                    class="social-link hover-emerald">GitHub</a>
+                <a href="https://x.com/jozef_sokol" target="_blank" class="social-link hover-amber">Twitter/X</a>
+                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank"
+                    class="social-link hover-rose">YouTube</a>
+                <a href="https://soundcloud.com/jozef-sokol" target="_blank" class="social-link hover-green">Spotify</a>
+            </div>
+            <p>&copy; <span id="year">2024</span> Jozef Sokol. Code & Music.</p>
+        </footer>
+
+    </main>
+
 </body>
 
 </html>

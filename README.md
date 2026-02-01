@@ -2462,6 +2462,81 @@ Created `scripts/migrate-videos.js`:
 
 ---
 
+### Commit 43: Synology Permissions & Hub Redesign (Day 9)
+
+**Prompt (Slovak):** "dnes ako sme zacali riesit tie prava na synology a nasledne cely ten redizajn celej stranky... chcem aby to vyzeralo ako HUB. 3 piliere: DevLog, Dodo, Carnaby. Cierne, sklo, moderne."
+
+**Translation:** "today as we started solving the permissions on synology and subsequently the whole redesign of the entire site... i want it to look like a HUB. 3 pillars: DevLog, Dodo, Carnaby. Black, glass, modern."
+
+**Result:** 🏗️ Major Pivot & Infrastructure Fixes
+
+**1. Synology Permissions Fix:**
+- **Issue:** Container couldn't write optimized images/CSS because the volume mount had root permissions.
+- **Fix:** Corrected Docker volume mappings (`/volume1/docker/carnaby-sk/cache`) and ensured UID `1026` ownership.
+- **Outcome:** Dynamic image optimization and CSS minification now works reliably in production.
+
+**2. The New "Hub" Design:**
+- **Concept:** Replaced the generic blog feed with 3 distinct pillars representing the user's identities.
+- **Visuals:** Implemented "Ambient Blobs" background, Glassmorphism panels, and "Glow Effects" for each pillar (Emerald/Amber/Rose).
+- **Navigation:** New Glass Navbar with Auth profile, Theme Toggle, and Language Switcher.
+
+**3. Internationalization (UI):**
+- **Feature:** Full SK/EN language switching via `post_translations` table.
+- **Implementation:** Frontend selects content based on `localStorage` language preference.
+
+**Time:** ~3 hours
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 44: Category Pages (Day 9)
+
+**Prompt (Slovak):** "Ked kliknem na pilier, chcem vidiet len prispevky z tej kategorie... vytvor samostatne stranky."
+
+**Translation:** "when i click on a pillar i want to see only posts from that category... create separate pages."
+
+**Result:** 📂 Dedicated Category Views
+
+**Features:**
+- **Routes:** Implemented `/category/:slug` (e.g., `/category/devlog`).
+- **Template:** Created `category.html` matching the new Hub design.
+- **Layout:** Designed a specific **Horizontal Card Layout** (Image Right, Text Left) for category lists to differentiate from the main feed.
+- **Data:** `category.js` fetches filtered posts from the generic API.
+
+**Time:** ~1 hour
+**Manual work:** 0 lines of code
+
+---
+
+### Commit 45: Final Frontend Polish (Day 9)
+
+**Prompt (Slovak):** "opravit zobrazenie featured postov na HP... zobrazenie samotneho prispevku je uplne rozbite... vyriesit problem s cache... si fakt partak. dobru noc!"
+
+**Translation:** "fix display of featured posts on HP... post detail display is completely broken... solve cache problem... you are a real partner. good night!"
+
+**Result:** ✨ Stability & Detail Perfection
+
+**1. Homepage Fixes:**
+- **Bug Hunt:** Discovered and deleted a **duplicate `renderPosts` function** in `script.js` that was silently overriding new code (the "Ghost in the Machine").
+- **Layout:** Fixed Featured Cards on Homepage to correctly display images on the right and show full text.
+
+**2. Post Detail Overhaul:**
+- **Redesign:** Ported the "Ambient Glass" aesthetic to `post.html`.
+- **Typography:** Added professional styling for Markdown content (Headings, Code, Blockquotes).
+- **Navigation:** Smart "Back Buttons" that remember which category you came from.
+- **Media:** Enforced `16:9` aspect ratio for featured images to match video players.
+
+**3. Reliability:**
+- **Cache Busting:** Added `?v=2` to assets to force immediate visual updates for all users.
+- **Deployment:** Verified production readiness.
+
+**Time:** ~2 hours
+**Manual work:** 0 lines of code
+**AI-generated code:** 100% of functionality
+**Final Sentiment:** "uzasna jazda" (amazing ride) 🚀
+
+---
+
 ## 🏆 Achievements Unlocked
 - ✅ Full-stack web application built from scratch
 - ✅ **Infrastructure & DevOps:**
@@ -2497,9 +2572,7 @@ Created `scripts/migrate-videos.js`:
   - ✅ **Dynamic Blog System** implemented
   - ✅ **Admin Content Management System** (CMS) built
   - ✅ **Markdown support** with live preview
-  - ✅ **Automated Media Handling** (YouTube thumbnail scraper)
-  - ✅ **Legacy Data Migration** (Videos -> Posts)
-  - ✅ **Multi-language Architecture** (SK/EN support)
+
 
 - ✅ **Analytics:**
   - ✅ **Umami Analytics with PostgreSQL** (self-hosted, privacy-focused)

@@ -1,10 +1,18 @@
 /* Admin Section Styles */
+:root {
+    /* Map legacy admin variables to new style.css variables */
+    --bg-card: rgba(30, 30, 30, 0.6);
+    --border-color: var(--glass-border);
+    --accent-gold: var(--amber);
+    --bg-dark: var(--bg-main);
+}
 
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
-    padding: 2rem;
+    padding-top: 8rem;
+    /* Account for fixed nav */
     min-height: 100vh;
 }
 

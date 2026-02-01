@@ -43,7 +43,8 @@ router.get('/user', (req, res) => {
                 id: req.user.id,
                 email: req.user.email,
                 displayName: req.user.display_name,
-                avatarUrl: req.user.avatar_url
+                avatarUrl: req.user.avatar_url,
+                role: req.user.role
             }
         });
     } else {

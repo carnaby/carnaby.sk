@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config(); // Load environment variables
 
 /**
  * Migration Runner for PostgreSQL
@@ -11,7 +12,7 @@ const MIGRATIONS_DIR = path.join(__dirname);
 
 async function runMigrations() {
     console.log('🔄 Starting database migrations...');
-    
+
     // Database connection from environment variables
     const client = new Client({
         host: process.env.DB_HOST || 'localhost',
@@ -70,7 +71,7 @@ async function runMigrations() {
                     [file]
                 );
                 await client.query('COMMIT');
-                
+
                 console.log(`✅ Applied ${file}`);
                 executedCount++;
             } catch (error) {
