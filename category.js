@@ -86,6 +86,14 @@ function setupCategory() {
     iconBox.style.background = `color-mix(in srgb, ${meta.color} 10%, transparent)`;
 
     document.getElementById('cat-title').textContent = meta.title;
+    // Apply gradient text for title
+    const titleEl = document.getElementById('cat-title');
+    titleEl.style.background = `linear-gradient(to right, ${meta.color}, var(--text-primary))`;
+    titleEl.style.webkitBackgroundClip = 'text';
+    titleEl.style.backgroundClip = 'text';
+    titleEl.style.color = 'transparent'; // Fallback needs check if supported, but usually fine
+    // Or just simple color: titleEl.style.color = meta.color;
+
     document.getElementById('cat-desc').textContent = meta.desc[currentLang] || '';
 }
 
@@ -210,7 +218,6 @@ function renderPosts(posts) {
                 </div>
             `;
         } else {
-            // Placeholder or no image? "vedla toho obrazok" implies image exists.
             imageHtml = `
                 <div class="pch-image" style="background:var(--bg-secondary); display:flex; align-items:center; justify-content:center;">
                     <iconify-icon icon="lucide:image-off" style="font-size:2rem; opacity:0.3"></iconify-icon>
@@ -218,10 +225,15 @@ function renderPosts(posts) {
             `;
         }
 
-        // Categories
-        let catText = '';
+        // Categories with Color
+        let catHtml = '';
         if (post.categories && post.categories.length > 0) {
-            catText = post.categories.map(c => c.name).join(', ');
+            catHtml = post.categories.map(c => {
+                const cSlug = c.slug || c.name.toLowerCase();
+                // Lookup color in global categoryMeta or default
+                const meta = categoryMeta[cSlug] || { color: 'var(--text-primary)' };
+                return `<span style="color: ${meta.color}; font-weight:600;">${c.name}</span>`;
+            }).join(', ');
         }
 
         const date = new Date(post.published_at || post.created_at).toLocaleDateString(currentLang);
@@ -229,7 +241,7 @@ function renderPosts(posts) {
         card.innerHTML = `
             <div class="pch-content">
                 <div class="pch-header">
-                     <span class="pch-category">${catText}</span>
+                     <span class="pch-category">${catHtml}</span>
                      <span class="pch-date">${date}</span>
                 </div>
                 <h3 class="pch-title">${post.title}</h3>

@@ -13,10 +13,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
     <!-- Icons -->
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <!-- Theme Init (Prevent Flash) -->
+    <script>
+        (function () {
+            var savedTheme = localStorage.getItem('preferredTheme') || 'dark';
+            if (savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
     <!-- Styles -->
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.css?v=12">
     <!-- Scripts -->
-    <script src="/category.js" defer></script>
+    <script src="/category.js?v=12" defer></script>
     <script defer src="https://analytics.carnaby.sk/script.js"
         data-website-id="0733e169-1bc1-4990-a65f-2442fbb00237"></script>
     <style>
@@ -78,7 +88,7 @@
             </a>
             <div class="nav-items">
                 <div class="nav-links hidden-mobile">
-                    <a href="/#about" data-i18n="navAbout">O mne</a>
+                    <a href="/" data-i18n="navAbout">O mne</a>
                     <a href="/category/devlog">DevLog</a>
                     <a href="/category/dodo">Dodo</a>
                     <a href="/category/carnaby">Carnaby</a>
