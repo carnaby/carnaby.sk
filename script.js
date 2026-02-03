@@ -24,9 +24,13 @@ function updateFooterYear() {
 // --- Translations ---
 const translations = {
     en: {
+        navHome: "Home",
+        navBackToCategory: "Back to category",
         navAbout: "About",
         navDev: "DevLog",
+        navDev: "DevLog",
         navMusic: "Music",
+        btnContact: "Contact",
 
         heroTitle: "Songs for the Journey",
 
@@ -47,9 +51,13 @@ const translations = {
         footerYoutube: "YouTube",
     },
     sk: {
+        navHome: "Domov",
+        navBackToCategory: "Späť na kategóriu",
         navAbout: "O mne",
         navDev: "DevLog",
+        navDev: "DevLog",
         navMusic: "Hudba",
+        btnContact: "Kontakt",
 
         heroTitle: "Songs for the Journey",
 
@@ -155,9 +163,15 @@ function switchLanguage(lang) {
 
 function setLanguage(lang) {
     const t = translations[lang];
+    // Text content
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) el.textContent = t[key];
+    });
+    // Titles (tooltips)
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (t[key]) el.title = t[key];
     });
     document.documentElement.lang = lang;
 }

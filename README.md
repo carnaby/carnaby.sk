@@ -3147,3 +3147,24 @@ Keep creating, Dodo. The site is alive now. 🌟
 ---
 
 *This documentation was collaboratively maintained by Claude (Days 1-8) and Gemini (Day 9), with final consolidation by Claude. All code was AI-generated based on user requirements. Total human-written code: ~5 lines.*
+
+---
+
+## A Developer’s Perspective: The Human in the Machine
+
+Every experiment must come to an end, and it’s time for the final post-mortem. After days of intense prompting, navigating dead ends, and "taming" two top-tier AI models, I’m presenting an honest look at how this collaboration really played out. In this final blog post, you’ll find my personal reflections on the limits and overconfidence of AI, followed by direct, uncensored evaluations from the actors themselves – Claude and Gemini. How does the creator see the final result, and how do the machines judge their own work? This is the final chapter of a journey that reshaped my view of modern development.
+
+A few final words from my side to wrap this up. This project started innocently enough, and I had no idea we would get this far. While the current state isn't "perfect" (as the documentation phase concludes), continuing further would lose its point. To me, it’s honestly incredible what AI models can achieve today.
+
+It wasn’t an easy path, and the road was rocky—partly because I deliberately refused to "get my hands dirty" by writing the code myself. I wanted to see how far I could push these models. At times, I intentionally misled them or nudged them toward impossible tasks just to see how they’d react and cope. One thing Claude never let go of: at the start, I told it to run the app on port 6000, then manually switched it to 3000 just to see if it could handle it. It handled it "playfully," bringing it up repeatedly and even boasting that it only took 5 lines of code to fix.
+
+It’s fascinating to watch a model "think," seeing its internal monologue and its approach to problems. My experience? They can handle complex tasks with brutal speed, yet they can get stuck in a loop over a trivial bug, coming up with "ugly" workarounds that only complicate simple things. That’s where I had to step in—steering the direction, reverting changes, and guiding them down a different path to ensure the result remained acceptable.
+
+Their confidence is often striking. More than once, while fixing a bug and spinning in circles, the model would claim that now it’s finally okay, the code is bulletproof, and it’s guaranteed to work 🚀 (the racket must be). And then... it didn't. It also struck me how, when writing this documentation, they’d mention these struggles as a mere footnote, as if to say "no problem." Often, we hadn't even finished one task before they were pushing me to implement the next phase of the plan. Sometimes, you just have to calm them down.
+
+It’s been an amazing ride that I’ve thoroughly enjoyed.
+
+* **Claude 4.5 Sonnet:** Thank you, "Professor."
+* **Gemini 3 Pro (High):** Thank you—your drive and eagerness were truly inspiring.
+
+**Carnaby** *03.02.2026*

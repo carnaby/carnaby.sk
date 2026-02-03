@@ -2,6 +2,9 @@
  * Post Detail Page Logic
  */
 
+// Make loadPostDetail available globally for language switcher
+window.loadPosts = loadPostDetail;
+
 document.addEventListener('DOMContentLoaded', () => {
     loadPostDetail();
 });
@@ -16,8 +19,11 @@ async function loadPostDetail() {
         return;
     }
 
+    // Get current language
+    const currentLang = localStorage.getItem('preferredLanguage') || 'sk';
+
     try {
-        const response = await fetch(`/api/posts/${slug}`);
+        const response = await fetch(`/api/posts/${slug}?language=${currentLang}`);
         const result = await response.json();
 
         if (!result.success || !result.data) {
@@ -39,38 +45,71 @@ function renderPost(post) {
     // Update Page Title
     document.title = `${post.title} - Dodo`;
 
-    // Update Meta Description
-    if (post.meta_description || post.excerpt) {
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-            metaDesc = document.createElement('meta');
-            metaDesc.name = 'description';
-            document.head.appendChild(metaDesc);
-        }
-        metaDesc.content = post.meta_description || post.excerpt;
-    }
-
-    // Set Content
-    document.getElementById('post-title').textContent = post.title;
-
     // Date
+    const currentLang = localStorage.getItem('preferredLanguage') || 'sk';
     const date = new Date(post.published_at || post.created_at);
-    document.getElementById('post-date').textContent = date.toLocaleDateString('sk-SK', {
+    document.getElementById('post-date').textContent = date.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
     });
 
-    // Category
-    const categorySpan = document.getElementById('post-category'); // The HTML ID remained post-category, only class changed?
-    // Let's check post.html from step 2477: <span id="post-category" class="post-category-badge"></span>
-    // So ID is still 'post-category'. Logic is fine.
+    // Category & Header Logic
+    const categoryBadge = document.getElementById('category-badge');
+    const backToCatBtn = document.getElementById('back-to-category');
+    const footerBackBtn = document.getElementById('footer-back-to-category');
+
+    // Default icons map
+    const catIcons = {
+        'devlog': 'lucide:code-2',
+        'dodo': 'lucide:music',
+        'carnaby': 'lucide:disc-2'
+    };
+
+    // Default colors map (for inline styles or classes)
+    const catColors = {
+        'devlog': 'var(--emerald)',
+        'dodo': 'var(--amber)',
+        'carnaby': 'var(--purple)'
+    };
+
     if (post.categories && post.categories.length > 0) {
-        categorySpan.textContent = post.categories[0].name;
-        categorySpan.style.display = 'inline-block';
+        const cat = post.categories[0];
+        const slug = (cat.slug || cat.name).toLowerCase();
+
+        // Setup Category Badge
+        const icon = catIcons[slug] || 'lucide:folder';
+        const color = catColors[slug] || 'var(--text-primary)';
+
+        categoryBadge.innerHTML = `<iconify-icon icon="${icon}"></iconify-icon> ${cat.name}`;
+        categoryBadge.href = `/category/${slug}`;
+        categoryBadge.style.borderColor = color;
+        categoryBadge.style.color = color;
+        // Add subtle background tint
+        categoryBadge.style.background = `color-mix(in srgb, ${color} 10%, transparent)`;
+
+        // Setup Back to Category Button (Top)
+        backToCatBtn.href = `/category/${slug}`;
+        backToCatBtn.style.display = 'flex'; // show it
+        backToCatBtn.style.color = color;
+        backToCatBtn.style.borderColor = `color-mix(in srgb, ${color} 30%, transparent)`;
+
+        // Setup Back to Category Button (Footer)
+        if (footerBackBtn) {
+            footerBackBtn.href = `/category/${slug}`;
+            footerBackBtn.style.display = 'flex';
+            footerBackBtn.style.color = color;
+            footerBackBtn.style.borderColor = `color-mix(in srgb, ${color} 30%, transparent)`;
+        }
+
     } else {
-        categorySpan.style.display = 'none';
+        categoryBadge.style.display = 'none';
+        backToCatBtn.style.display = 'none';
+        if (footerBackBtn) footerBackBtn.style.display = 'none';
     }
+
+    // Post Title (now separate h1)
+    document.getElementById('post-title').textContent = post.title;
 
     // Media (YouTube or Image)
     const mediaContainer = document.getElementById('post-media');
@@ -108,16 +147,7 @@ function renderPost(post) {
         contentDiv.innerHTML = '<p><em>Tento príspevok zatiaľ nemá text.</em></p>';
     }
 
-    // Update "More Posts" button
-    const moreBtn = document.getElementById('more-posts-btn');
-    if (moreBtn && post.categories && post.categories.length > 0) {
-        // Assume first category is primary
-        const primaryCat = post.categories[0];
-        // Ensure slug is lowercase for consistency
-        const slug = primaryCat.slug || primaryCat.name.toLowerCase();
-        moreBtn.href = `/category/${slug}`;
-        moreBtn.innerHTML = `<iconify-icon icon="lucide:arrow-left"></iconify-icon> Viac z ${primaryCat.name}`;
-    }
+
 }
 
 function showError() {
