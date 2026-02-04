@@ -69,8 +69,16 @@ const slug = window.location.pathname.split('/').pop();
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initLanguage();
-    setupCategory();
-    loadPosts();
+
+    // SSR Hydration Check
+    if (window.initialPosts) {
+        // SSR already rendered Title, Icon, Posts
+        console.log('⚡ SSR Content active (Category)');
+    } else {
+        setupCategory();
+        loadPosts();
+    }
+
     checkAuth();
 });
 

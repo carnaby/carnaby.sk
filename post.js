@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadPostDetail() {
+    // SSR Hydration Check
+    if (window.initialPost) {
+        console.log('⚡ SSR Content active (Post)');
+        return;
+    }
+
     // Get slug from URL
     const pathname = window.location.pathname;
     const slug = pathname.split('/').pop();
@@ -19,7 +25,7 @@ async function loadPostDetail() {
         return;
     }
 
-    // Get current language
+    // ... rest of logic
     const currentLang = localStorage.getItem('preferredLanguage') || 'sk';
 
     try {

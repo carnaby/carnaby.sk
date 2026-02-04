@@ -187,7 +187,7 @@ These files must be updated **manually** on the Synology NAS via SSH or File Sta
   - Health checks
   - Network configuration
 - **.dockerignore**: Optimized build context (excludes node_modules, logs, IDE files)
-- **DEPLOYMENT.md**: Comprehensive guide
+- **[DEPLOYMENT.md](doc/DEPLOYMENT.md)**: Comprehensive guide
   - Step-by-step Synology NAS deployment
   - SSH commands for build & run
   - Monitoring via Container Manager
@@ -205,7 +205,7 @@ These files must be updated **manually** on the Synology NAS via SSH or File Sta
 
 Úlohy pre teba:
 - Oprava Dockerfile: Uprav Dockerfile tak, aby používal npm install namiesto npm ci (a --omit=dev namiesto --only=production), pretože momentálne lockfile nepoužívame.
-- Aktualizácia dokumentácie: Do DEPLOYMENT.md alebo README.md doplň poznámku o tom, že ak používateľ nemá lockfile, musí použiť klasický install, alebo odporuč vygenerovanie lockfilu pred buildom.
+- Aktualizácia dokumentácie: Do [DEPLOYMENT.md](doc/DEPLOYMENT.md) alebo README.md doplň poznámku o tom, že ak používateľ nemá lockfile, musí použiť klasický install, alebo odporuč vygenerovanie lockfilu pred buildom.
 - Optimalizácia: Skontroluj, či sú všetky potrebné súbory pre npm install správne skopírované v rámci Docker layers.
 - Zápis: Zapíš tento incident a jeho riešenie do logu v README.md ako súčasť tvojho experimentálneho učenia."
 
@@ -221,7 +221,7 @@ These files must be updated **manually** on the Synology NAS via SSH or File Sta
   - Stage 1 (deps): `npm ci --only=production` → `npm install --omit=dev`
   - Stage 2 (builder): `npm ci` → `npm install`
   - Added explanatory comments about why npm install is used
-- **DEPLOYMENT.md updates:**
+- **[DEPLOYMENT.md](doc/DEPLOYMENT.md) updates:**
   - Added troubleshooting section for npm ci error
   - Included step-by-step resolution guide
   - Added recommendation to generate lockfile for production
@@ -260,7 +260,7 @@ Aktualizuj docker-compose.yml tak, aby používal image z ghcr.io/${{ github.rep
 
 Do docker-compose.yml pridaj službu Watchtower, ktorá bude automaticky sledovať zmeny v registry a reštartovať kontajner na mojom NAS.
 
-Aktualizuj DEPLOYMENT.md a pridaj tam návod, ako sa na NAS jednorazovo prihlásiť do ghcr.io (cez docker login) a ako nastaviť GitHub Secrets, ak sú potrebné.
+Aktualizuj [DEPLOYMENT.md](doc/DEPLOYMENT.md) a pridaj tam návod, ako sa na NAS jednorazovo prihlásiť do ghcr.io (cez docker login) a ako nastaviť GitHub Secrets, ak sú potrebné.
 
 Zapíš túto zmenu do logu v README.md ako 'Prechod na automatizovaný CI/CD pipeline'.\"
 
@@ -283,7 +283,7 @@ Zapíš túto zmenu do logu v README.md ako 'Prechod na automatizovaný CI/CD pi
     - Label-based container selection
     - Automatic cleanup of old images
     - Optional notification support (Slack, Discord, etc.)
-- **DEPLOYMENT.md comprehensive update**:
+- **[DEPLOYMENT.md](doc/DEPLOYMENT.md) comprehensive update**:
   - Added CI/CD pipeline overview section
   - GitHub Container Registry authentication guide
   - Personal Access Token (PAT) creation steps
@@ -902,7 +902,7 @@ chmod +x /volume1/docker/carnaby-sk/scripts/backup-db.sh
 - **Database:** Migration `002_create_users_table.sql` with JIT provisioning (automatic user creation on first login)
 - **Frontend:** Google-style "Sign in" button, user avatar display (32px circular with gold border), logout button, loading states, SK/EN translations
 - **Security:** Environment variables for credentials, httpOnly cookies, sameSite: lax, secure in production, 7-day session expiry
-- **Documentation:** `GOOGLE_OAUTH_SETUP.md` (Google Cloud Console guide), `PRODUCTION_ENV.md` (production config), `COMMIT_13_OAUTH.md` (full implementation details)
+- **Documentation:** [`GOOGLE_OAUTH_SETUP.md`](doc/GOOGLE_OAUTH_SETUP.md) (Google Cloud Console guide), [`PRODUCTION_ENV.md`](doc/PRODUCTION_ENV.md) (production config), [`COMMIT_13_OAUTH.md`](doc/COMMIT_13_OAUTH.md) (full implementation details)
 
 **Files Created:** 6 (passport config, auth routes, middleware, migration, documentation)  
 **Files Modified:** 6 (package.json, server.js, index.html, style.css, script.js, .env.example)  
@@ -924,7 +924,7 @@ chmod +x /volume1/docker/carnaby-sk/scripts/backup-db.sh
 **Complexity:** High (authentication, sessions, security)  
 **Production Ready:** YES (pending deployment)
 
-**See:** [`COMMIT_13_OAUTH.md`](COMMIT_13_OAUTH.md) for full implementation details.
+**See:** [`COMMIT_13_OAUTH.md`](doc/COMMIT_13_OAUTH.md) for full implementation details.
 
 ---
 
@@ -1445,13 +1445,13 @@ Ak je môj návrh v niečom zlý kľudne protestuj."
 
 **6. Documentation Created**
 
-- **UMAMI_QUICK_START.md** (Slovak):
+- **[UMAMI_QUICK_START.md](doc/UMAMI_QUICK_START.md)** (Slovak):
   - Step-by-step deployment guide
   - Secret generation (hex vs base64)
   - Synology Task Scheduler setup
   - Troubleshooting section
 
-- **UMAMI_SETUP.md** (English):
+- **[UMAMI_SETUP.md](doc/UMAMI_SETUP.md)** (English):
   - Comprehensive setup guide
   - Architecture overview
   - Backup strategies
@@ -2042,7 +2042,7 @@ Created `scripts/migrate-videos.js`:
 
 ### 🔄 AI Model Switch (Day 8)
 
-**Event:** Session limit reached with Claude 3.5 Sonnet.
+**Event:** Session limit reached with Claude 4.5 Sonnet.
 **Action:** Switched to **Gemini 3 Pro**.
 **Context:** Continuity of the project preserved across AI models. Starting Phase 3 (Frontend Detail Pages).
 

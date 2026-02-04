@@ -97,6 +97,154 @@ function startServer() {
     app.use(passport.session());
     console.log('✅ Passport initialized');
 
+    // --- EJS Setup ---
+    app.set('view engine', 'ejs');
+    app.set('views', path.join(__dirname, 'views'));
+    const marked = require('marked');
+    const { translations, categoryMeta } = require('./config/view-helpers');
+
+    // --- SSR Routes ---
+
+    // 1. Homepage
+    app.get('/', async (req, res) => {
+        try {
+            const lang = req.query.language || req.session.language || 'sk';
+            // Store language preference if query param provided
+            if (req.query.language) req.session.language = lang;
+
+            // Fetch Featured Posts
+            // Reuse logic similar to /api/posts but direct DB query for speed
+            const result = await pool.query(`
+                SELECT 
+                    p.*,
+                    COALESCE(
+                        json_agg(json_build_object('name', c.name, 'slug', c.slug)) 
+                        FILTER (WHERE c.id IS NOT NULL), '[]'
+                    ) as categories,
+                    (SELECT json_object_agg(language, json_build_object('title', title, 'excerpt', excerpt)) 
+                     FROM post_translations WHERE post_id = p.id) as translations
+                FROM posts p
+                LEFT JOIN post_categories pc ON p.id = pc.post_id
+                LEFT JOIN categories c ON pc.category_id = c.id
+                WHERE p.status = 'published' AND p.is_featured = true
+                GROUP BY p.id
+                ORDER BY p.published_at DESC
+            `);
+
+            res.render('index', {
+                language: lang,
+                translations: translations[lang],
+                posts: result.rows,
+                categoryColors: categoryMeta, // Pass meta for colors
+                user: req.user // Pass user for Auth UI
+            });
+        } catch (err) {
+            console.error('Homepage SSR Error:', err);
+            res.status(500).send('Server Error');
+        }
+    });
+
+    // 2. Category Page
+    app.get('/category/:slug', async (req, res) => {
+        try {
+            const lang = req.query.language || req.session.language || 'sk';
+            const { slug } = req.params;
+
+            // Normalize slug (dev -> devlog)
+            let querySlug = slug.toLowerCase();
+            if (querySlug === 'dev') querySlug = 'devlog';
+
+            // Get Category ID first (or filter by slug join)
+            // Need posts for this category
+            const result = await pool.query(`
+                SELECT 
+                    p.*,
+                    COALESCE(
+                        json_agg(json_build_object('name', c.name, 'slug', c.slug)) 
+                        FILTER (WHERE c.id IS NOT NULL), '[]'
+                    ) as categories,
+                     (SELECT json_object_agg(language, json_build_object('title', title, 'excerpt', excerpt)) 
+                     FROM post_translations WHERE post_id = p.id) as translations
+                FROM posts p
+                JOIN post_categories pc ON p.id = pc.post_id
+                JOIN categories c ON pc.category_id = c.id
+                WHERE p.status = 'published' AND (c.slug = $1 OR c.slug = $2)
+                GROUP BY p.id
+                ORDER BY p.published_at DESC
+            `, [querySlug, slug]);
+
+            // Get Category Meta for Header
+            const meta = categoryMeta[querySlug] || categoryMeta['uncategorized'];
+
+            res.render('category', {
+                language: lang,
+                translations: translations[lang],
+                posts: result.rows,
+                categoryMeta: meta,
+                categoryColors: categoryMeta, // Pass all for badges
+                user: req.user
+            });
+
+        } catch (err) {
+            console.error('Category SSR Error:', err);
+            res.status(500).send('Server Error');
+        }
+    });
+
+    // 3. Post Detail Page
+    app.get('/posts/:slug', async (req, res) => {
+        try {
+            const lang = req.query.language || req.session.language || 'sk';
+            const { slug } = req.params;
+
+            const result = await pool.query(`
+                 SELECT 
+                    p.*,
+                    COALESCE(
+                        json_agg(json_build_object('name', c.name, 'slug', c.slug)) 
+                        FILTER (WHERE c.id IS NOT NULL), '[]'
+                    ) as categories,
+                    (SELECT json_object_agg(language, json_build_object('title', title, 'content', content, 'meta_description', meta_description)) 
+                     FROM post_translations WHERE post_id = p.id) as translations
+                FROM posts p
+                LEFT JOIN post_categories pc ON p.id = pc.post_id
+                LEFT JOIN categories c ON pc.category_id = c.id
+                WHERE p.slug = $1 AND p.status = 'published'
+                GROUP BY p.id
+            `, [slug]);
+
+            if (result.rows.length === 0) {
+                return res.status(404).send('Post not found');
+            }
+
+            const post = result.rows[0];
+
+            // Prepare Content (Markdown -> HTML)
+            // Use translation if available, else default
+            const translated = post.translations?.[lang] || {};
+            const contentMarkdown = translated.content || post.content || '';
+            const contentHtml = marked.parse(contentMarkdown);
+
+            // Inject rendered HTML into post object
+            post.contentHtml = contentHtml;
+
+            res.render('post', {
+                language: lang,
+                translations: translations[lang],
+                post: post,
+                categoryColors: categoryMeta,
+                user: req.user,
+                title: translated.title || post.title,
+                description: translated.meta_description || post.excerpt
+            });
+
+        } catch (err) {
+            console.error('Post SSR Error:', err);
+            res.status(500).send('Server Error');
+        }
+    });
+
+
     // Serve static files from public directory (for thumbnails, etc.)
     app.use(express.static(path.join(__dirname, 'public')));
 

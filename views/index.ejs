@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="<%= language || 'sk' %>"> <!-- SSR Language -->
+
+<head>
+    <%- include('partials/head') %>
+</head>
+
+<body class="theme-dark">
+    <!-- Background Ambient Effects -->
+    <div class="ambient-bg">
+        <div class="blob blob-purple"></div>
+        <div class="blob blob-emerald"></div>
+        <div class="blob blob-amber"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <%- include('partials/header') %>
+
+        <main class="main-content">
+
+            <!-- Header / Hero -->
+            <header class="profile-header animate-slide-up">
+                <!-- Cover Image -->
+                <div class="cover-image-container">
+                    <div class="cover-gradient"></div>
+                    <img src="/images/baner.webp" alt="Cover" class="cover-image" fetchpriority="high">
+                    <div class="cover-title">
+                        <h1 class="visually-hidden">Jozef Sokol / Dev & Music</h1>
+                    </div>
+                </div>
+
+                <!-- Profile Card -->
+                <div class="profile-card">
+                    <div class="profile-layout">
+                        <!-- Avatar -->
+                        <div class="profile-avatar-container">
+                            <div class="avatar-glow"></div>
+                            <img src="/images/photo.webp" alt="Profile" class="profile-avatar">
+                        </div>
+
+                        <!-- Info -->
+                        <div class="profile-info">
+                            <h2 class="profile-name">Jozef Sokol <span class="profile-nickname">/ Dodo</span></h2>
+                            <div class="profile-tags">
+                                <span class="tag tag-emerald">
+                                    <iconify-icon icon="lucide:code-2"></iconify-icon> Full-Stack Dev
+                                </span>
+                                <span class="tag tag-amber">
+                                    <iconify-icon icon="lucide:music"></iconify-icon> AI Music Artist
+                                </span>
+                                <span class="tag-text">Slovakia</span>
+                            </div>
+                        </div>
+
+                        <!-- Contact -->
+                        <div class="profile-contact hidden-mobile">
+                            <a href="mailto:dodusik@gmail.com" class="btn-pill">
+                                <iconify-icon icon="lucide:mail"></iconify-icon>
+                                <span data-i18n="btnContact">
+                                    <%= translations.btnContact %>
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- About Section (The 3 Pillars) -->
+            <section id="about" class="about-section glass-panel animate-slide-up delay-1">
+                <div class="section-label">
+                    <iconify-icon icon="lucide:sparkles" class="text-emerald"></iconify-icon>
+                    <span data-i18n="aboutLabel">
+                        <%= translations.aboutLabel %>
+                    </span>
+                </div>
+
+                <div class="about-text">
+                    <p data-i18n="aboutIntro">
+                        <%= translations.aboutIntro %>
+                    </p>
+                    <p data-i18n="aboutIntro2">
+                        <%= translations.aboutIntro2 %>
+                    </p>
+                </div>
+
+                <!-- 3 Pillars Grid -->
+                <div class="pillars-grid">
+                    <!-- 1. DevLog (Dominant/New) -->
+                    <a href="/category/devlog" class="pillar-card pillar-emerald">
+                        <div class="pillar-glow"></div>
+                        <div class="pillar-icon"><iconify-icon icon="lucide:terminal"></iconify-icon></div>
+                        <h4>DevLog <span class="dot-emerald"></span></h4>
+                        <p data-i18n="descDevLog">
+                            <%= translations.descDevLog %>
+                        </p>
+                    </a>
+
+                    <!-- 2. Dodo (Music) -->
+                    <a href="/category/dodo" class="pillar-card pillar-amber">
+                        <div class="pillar-glow"></div>
+                        <div class="pillar-icon"><iconify-icon icon="lucide:guitar"></iconify-icon></div>
+                        <h4>Dodo <span class="dot-amber"></span></h4>
+                        <p data-i18n="descDodo">
+                            <%= translations.descDodo %>
+                        </p>
+                    </a>
+
+                    <!-- 3. Carnaby (Retro) -->
+                    <a href="/category/carnaby" class="pillar-card pillar-purple">
+                        <div class="pillar-glow"></div>
+                        <div class="pillar-icon"><iconify-icon icon="lucide:music-2"></iconify-icon></div>
+                        <h4>Carnaby <span class="dot-purple"></span></h4>
+                        <p data-i18n="descCarnaby">
+                            <%= translations.descCarnaby %>
+                        </p>
+                    </a>
+                </div>
+
+                <div class="ai-disclaimer">
+                    <div>
+                        <iconify-icon icon="lucide:cpu" class="text-emerald"></iconify-icon>
+                        <span data-i18n="aiMusicNote">
+                            <%= translations.aiMusicNote %>
+                        </span>
+                    </div>
+                    <div>
+                        <iconify-icon icon="lucide:pen-tool" class="text-emerald"></iconify-icon>
+                        <span data-i18n="humanLyricsNote">
+                            <%= translations.humanLyricsNote %>
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Feed Divider -->
+            <div class="feed-divider">
+                <span class="line"></span>
+                <span class="text">FEED</span>
+                <span class="line"></span>
+            </div>
+
+            <!-- Posts Grid (SSR) -->
+            <div id="posts-container" class="posts-grid">
+                <% if (posts && posts.length> 0) { %>
+                    <% posts.forEach(function(post) { %>
+                        <%- include('partials/card', { post: post, categoryColors: categoryColors, language: language,
+                            extraStyle: 'min-height: 180px;' }) %>
+                            <% }); %>
+                                <% } else { %>
+                                    <div class="loading-state" style="opacity:0.6">No posts found.</div>
+                                    <% } %>
+            </div>
+
+            <div class="feed-footer">
+                <a href="https://www.youtube.com/@jozefsokol3820" target="_blank" class="btn-pill outline">
+                    YouTube Channel <iconify-icon icon="lucide:external-link"></iconify-icon>
+                </a>
+            </div>
+
+            <!-- Site Footer -->
+            <%- include('partials/footer') %>
+
+        </main>
+
+        <!-- Pass server data to Client JS if needed for hydration -->
+        <script>
+            window.initialPosts = <% - JSON.stringify(posts || []) %>;
+            window.currentLang = "<%= language || 'sk' %>";
+        </script>
+</body>
+
+</html>

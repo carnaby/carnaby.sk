@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="<%= language || 'sk' %>">
+
+<head>
+    <%- include('partials/head') %>
+        <!-- Playfair Display (Specific to Post) -->
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
+            rel="stylesheet">
+
+        <!-- Marked (still kept if we use client-side hydration, but we aim for SSR) -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="/post.js?v=2" defer></script>
+</head>
+
+<body class="theme-dark">
+    <!-- Background Ambient Effects -->
+    <div class="ambient-bg">
+        <div class="blob blob-purple"></div>
+        <div class="blob blob-emerald"></div>
+        <div class="blob blob-amber"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <%- include('partials/header') %>
+
+        <% /* Logic Block */ const lang=language || 'sk' ; const p=post; /* 1. Title (Localized) */ const
+            title=p.translations?.[lang]?.title || p.title; /* 2. Date (Localized - Long Format) */ const date=new
+            Date(p.published_at || p.created_at).toLocaleDateString( lang==='en' ? 'en-US' : 'sk-SK' , { day: 'numeric'
+            , month: 'long' , year: 'numeric' } ); /* 3. Category & Colors */ const category=p.categories?.[0] || {
+            name: 'Uncategorized' , slug: 'uncategorized' }; /* categoryColors passed from server (contains full meta
+            including icon) */ const colors=(typeof categoryColors !=='undefined' ? categoryColors : {})[category.slug]
+            || { color: 'var(--text-primary)' , icon: 'lucide:folder' }; const catColor=colors.color; const
+            catIcon=colors.icon || 'lucide:folder' ; %>
+
+            <main class="main-content">
+                <div class="post-container" id="post-container">
+                    <!-- SSR Content -->
+                    <div id="post-content-wrapper">
+
+                        <header class="post-top-bar animate-slide-up">
+                            <!-- Left: Navigation -->
+                            <div class="top-nav-group">
+                                <a href="/" class="nav-icon-btn" title="Domov" data-i18n-title="navHome">
+                                    <iconify-icon icon="lucide:home"></iconify-icon>
+                                </a>
+                                <a href="/category/<%= category.slug %>" class="nav-icon-btn"
+                                    title="<%= category.name %>"
+                                    style="color: <%= catColor %>; border-color: <%= catColor %>;">
+                                    <iconify-icon icon="lucide:arrow-left"></iconify-icon>
+                                </a>
+                            </div>
+
+                            <!-- Right: Meta -->
+                            <div class="top-meta-group">
+                                <span class="meta-date">
+                                    <%= date %>
+                                </span>
+                                <a href="/category/<%= category.slug %>" class="category-pill"
+                                    style="color: <%= catColor %>; border-color: <%= catColor %>; background: color-mix(in srgb, <%= catColor %> 10%, transparent);">
+                                    <iconify-icon icon="<%= catIcon %>"></iconify-icon>
+                                    <%= category.name %>
+                                </a>
+                            </div>
+                        </header>
+
+                        <h1 class="post-main-title animate-slide-up delay-1">
+                            <%= title %>
+                        </h1>
+
+                        <div class="post-media animate-slide-up delay-1">
+                            <% if (post.thumbnail_path) { const filename=post.thumbnail_path.split('/').pop(); %>
+                                <img src="/images/1200/<%= filename %>" alt="<%= title %>" class="cover-img"
+                                    style="width:100%; border-radius:12px;">
+                                <% } else if (post.youtube_id) { %>
+                                    <iframe width="100%" height="400"
+                                        src="https://www.youtube.com/embed/<%= post.youtube_id %>" frameborder="0"
+                                        allowfullscreen style="border-radius:12px;"></iframe>
+                                    <% } %>
+                        </div>
+
+                        <div class="post-body glass-panel animate-slide-up delay-2">
+                            <%- post.contentHtml %>
+                        </div>
+
+                        <div class="post-footer animate-slide-up delay-3">
+                            <div class="footer-nav-group">
+                                <a href="/" class="nav-icon-btn large" title="Domov">
+                                    <iconify-icon icon="lucide:home"></iconify-icon>
+                                </a>
+                                <a href="/category/<%= category.slug %>" class="nav-icon-btn large"
+                                    title="<%= category.name %>"
+                                    style="color: <%= catColor %>; border-color: <%= catColor %>;">
+                                    <iconify-icon icon="lucide:arrow-left"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Site Footer -->
+                <%- include('partials/footer') %>
+            </main>
+
+            <script>
+                window.currentLang = "<%= language || 'sk' %>";
+                window.initialPost = true; // Signal for hydration
+            </script>
+</body>
+
+</html>
