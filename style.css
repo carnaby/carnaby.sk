@@ -221,6 +221,11 @@ button {
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 130px;
+}
+
+.nav-controls button#theme-toggle {
+    width: 27px;
 }
 
 .auth-section {
@@ -287,6 +292,7 @@ button {
 /* Lang Dropdown (Simplified) */
 .lang-dropdown {
     position: relative;
+    width: 50px;
 }
 
 .lang-btn {
@@ -1228,6 +1234,7 @@ button {
 
 .post-footer {
     margin-top: 60px;
+    margin-bottom: 60px;
     padding-top: 40px;
     border-top: 1px solid var(--glass-border);
     display: flex;

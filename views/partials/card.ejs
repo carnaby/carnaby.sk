@@ -1,0 +1,74 @@
+<% /* Helpers */ const getCategoryColor=(cat)=> {
+    let slug = (cat.slug || cat.name).toLowerCase();
+    if (slug === 'dev') slug = 'devlog'; // Normalize legacy slug
+    /* Access categoryColors safely, fallback to explicit pass or locals */
+    const colors = (typeof categoryColors !== 'undefined' ? categoryColors : locals.categoryColors) || {};
+    const meta = colors[slug] || { color: 'var(--text-primary)' };
+    return meta.color;
+    };
+
+    const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    /* Use Long Format: 4. februára 2024 */
+    return date.toLocaleDateString(typeof language !== 'undefined' ? language : 'sk', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+    });
+    };
+
+    /* Safe access to post properties */
+    const p = typeof post !== 'undefined' ? post : {};
+    const lang = typeof language !== 'undefined' ? language : 'sk';
+    const title = p.translations?.[lang]?.title || p.title || 'Untitled';
+    const excerpt = p.translations?.[lang]?.excerpt || p.excerpt || '';
+
+    /* Sticky Language Logic */
+    const langQ = (typeof language !== 'undefined' && language !== 'sk') ? '?language=' + language : '';
+    %>
+
+    <a href="/posts/<%= p.slug %><%= langQ %>" class="post-card-horizontal animate-slide-up"
+        style="<%= typeof extraStyle !== 'undefined' ? extraStyle : '' %>">
+        <div class="pch-content">
+            <div class="pch-header">
+                <span class="pch-category">
+                    <% if (p.categories && p.categories.length> 0) { %>
+                        <% p.categories.forEach((cat, index)=> { %>
+                            <span style="color: <%= getCategoryColor(cat) %>; font-weight:600;">
+                                <%= cat.name %>
+                                    <%= index < p.categories.length - 1 ? ', ' : '' %>
+                            </span>
+                            <% }); %>
+                                <% } %>
+                </span>
+                <span class="pch-date">
+                    <%= formatDate(p.published_at || p.created_at) %>
+                </span>
+            </div>
+
+            <h3 class="pch-title">
+                <%= title %>
+            </h3>
+            <p class="pch-excerpt">
+                <%= excerpt %>
+            </p>
+        </div>
+
+        <div class="pch-image">
+            <% if (p.thumbnail_path) { const filename=p.thumbnail_path.split('/').pop(); const
+                imageUrl=`/images/600/${filename}`; const originUrl=`/thumbnails/originals/${filename}`; %>
+                <img src="<%= imageUrl %>" alt="<%= title %>" loading="lazy" onerror="this.src='<%= originUrl %>'">
+
+                <% } else if (p.youtube_id) { %>
+                    <img src="https://img.youtube.com/vi/<%= p.youtube_id %>/hqdefault.jpg" alt="<%= title %>"
+                        loading="lazy">
+                    <div class="play-icon-overlay">▶</div>
+
+                    <% } else { %>
+                        <div
+                            style="width:100%; height:100%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center;">
+                            <iconify-icon icon="lucide:image-off" style="font-size:2rem; opacity:0.3"></iconify-icon>
+                        </div>
+                        <% } %>
+        </div>
+    </a>

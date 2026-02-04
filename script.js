@@ -81,28 +81,36 @@ const translations = {
 
 // ... (existing state and i18n/theme functions unchanged) ...
 
+const categoryMeta = {
+    'devlog': { color: "var(--emerald)" },
+    'dodo': { color: "var(--amber)" },
+    'carnaby': { color: "var(--purple)" },
+    'uncategorized': { color: "var(--text-primary)" }
+};
+
 function renderPosts(posts) {
     const container = document.getElementById('posts-container');
     container.innerHTML = '';
 
     if (posts.length === 0) {
-        container.innerHTML = `<div class="loading-state" style="opacity:0.6">No posts found for this category.</div>`;
+        container.innerHTML = `<div class="loading-state" style="opacity:0.6">No posts found.</div>`;
         return;
     }
 
+    // Sticky Language Logic
+    const langQ = (typeof currentLang !== 'undefined' && currentLang !== 'sk') ? '?language=' + currentLang : '';
+
     posts.forEach(post => {
         const card = document.createElement('a');
-        card.href = `/posts/${post.slug}`;
-        // Using horizontal card class but with injected style for height/layout
+        card.href = `/posts/${post.slug}${langQ}`;
         card.className = 'post-card-horizontal animate-slide-up';
-        card.style.minHeight = '180px'; // Taller as requested
+        card.style.minHeight = '180px';
 
         // Image logic
         let imageHtml = '';
         if (post.thumbnail_path) {
             const filename = post.thumbnail_path.split('/').pop();
             const imageUrl = `/images/600/${filename}`;
-
             imageHtml = `
                 <div class="pch-image">
                     <img src="${imageUrl}" alt="${post.title}" loading="lazy" 
@@ -112,24 +120,45 @@ function renderPosts(posts) {
         } else if (post.youtube_id) {
             imageHtml = `
                 <div class="pch-image">
-                    <img src="https://img.youtube.com/vi/${post.youtube_id}/hqdefault.jpg" alt="${post.title}" loading="lazy">
-                    <div class="play-icon-overlay">▶</div>
+                     <img src="https://img.youtube.com/vi/${post.youtube_id}/hqdefault.jpg" alt="${post.title}" loading="lazy">
+                     <div class="play-icon-overlay">▶</div>
+                </div>
+            `;
+        } else {
+            imageHtml = `
+                <div class="pch-image">
+                     <div style="width:100%; height:100%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center;">
+                        <iconify-icon icon="lucide:image-off" style="font-size:2rem; opacity:0.3"></iconify-icon>
+                    </div>
                 </div>
             `;
         }
 
-        // Categories logic
-        let catText = '';
+        // Categories logic (with Color lookup)
+        let catHtml = '';
         if (post.categories && post.categories.length > 0) {
-            catText = post.categories.map(c => c.name).join(', ');
+            catHtml = post.categories.map((c, index) => {
+                let slug = (c.slug || c.name).toLowerCase();
+                if (slug === 'dev') slug = 'devlog'; // Normalize
+                const color = (categoryMeta[slug] || { color: 'var(--text-primary)' }).color;
+
+                return `<span style="color:${color}; font-weight:600;">
+                            ${c.name}${index < post.categories.length - 1 ? ', ' : ''}
+                        </span>`;
+            }).join('');
         }
 
-        const date = new Date(post.published_at || post.created_at).toLocaleDateString(currentLang);
+        // Date (Long Format)
+        const date = new Date(post.published_at || post.created_at).toLocaleDateString(currentLang === 'en' ? 'en-US' : 'sk-SK', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
 
         card.innerHTML = `
             <div class="pch-content">
                 <div class="pch-header">
-                     <span class="pch-category" style="color:var(--emerald); opacity:0.8;">${catText}</span>
+                     <span class="pch-category">${catHtml}</span>
                      <span class="pch-date">${date}</span>
                 </div>
                 
@@ -154,11 +183,14 @@ function initLanguage() {
 
 function switchLanguage(lang) {
     if (currentLang === lang) return;
-    currentLang = lang;
+
+    // Save preference
     localStorage.setItem('preferredLanguage', lang);
-    setLanguage(lang);
-    loadPosts(); // Reload posts to get translated content
-    updateLangButton();
+
+    // SSR approach: Reload page with language param to re-render everything (including dynamic descriptions)
+    const url = new URL(window.location.href);
+    url.searchParams.set('language', lang);
+    window.location.href = url.toString();
 }
 
 function setLanguage(lang) {
@@ -207,6 +239,12 @@ function applyTheme(theme) {
 
 // --- Posts ---
 async function loadPosts() {
+    // SSR Hydration Check: If server already rendered posts, don't fetch again
+    if (window.initialPosts) {
+        console.log('⚡ SSR Content active (Script)');
+        return;
+    }
+
     const container = document.getElementById('posts-container');
     container.innerHTML = `
         <div class="loading-state">

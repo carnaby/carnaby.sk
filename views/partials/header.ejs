@@ -1,0 +1,50 @@
+<nav class="glass-nav">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <div class="logo-icon">
+                <iconify-icon icon="lucide:code-2"></iconify-icon>
+            </div>
+            <span>JS / DODO</span>
+        </a>
+
+        <div class="nav-items">
+            <div class="nav-links hidden-mobile">
+                <% const langParam=(typeof language !=='undefined' && language !=='sk' ) ? '?language=' + language : ''
+                    ; %>
+                    <a href="/<%= langParam %>" data-i18n="navAbout">O mne</a>
+                    <a href="/category/devlog<%= langParam %>">DevLog</a>
+                    <a href="/category/dodo<%= langParam %>">Dodo</a>
+                    <a href="/category/carnaby<%= langParam %>">Carnaby</a>
+            </div>
+
+            <div class="nav-divider hidden-mobile"></div>
+
+            <!-- Controls -->
+            <div class="nav-controls">
+                <button id="theme-toggle" class="control-btn" aria-label="Toggle Theme">
+                    <iconify-icon icon="lucide:moon" class="icon-moon"></iconify-icon>
+                    <iconify-icon icon="lucide:sun" class="icon-sun"></iconify-icon>
+                </button>
+
+                <div class="lang-dropdown">
+                    <button class="control-btn lang-btn">
+                        <span id="current-lang">SK</span>
+                        <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                    </button>
+                    <div class="lang-menu">
+                        <button onclick="switchLanguage('sk')">Slovenčina</button>
+                        <button onclick="switchLanguage('en')">English</button>
+                    </div>
+                </div>
+
+                <!-- User Auth (Profile) -->
+                <div id="auth-section" class="auth-section">
+                    <!-- Injected by JS (Client Side) for now, can be SSR later -->
+                    <a href="/auth/google" id="auth-login" class="control-btn" title="Login">
+                        <iconify-icon icon="lucide:user"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
