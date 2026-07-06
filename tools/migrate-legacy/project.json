@@ -1,0 +1,17 @@
+{
+  "name": "migrate-legacy",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools/migrate-legacy/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project migrate-legacy --web",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --build tsconfig.json --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}
