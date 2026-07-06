@@ -68,18 +68,11 @@
       }
     },
     {
-      "plugin": "@nx/jest/plugin",
-      "options": {
-        "targetName": "test"
-      },
-      "exclude": ["apps/api-e2e/**/*"]
-    },
-    {
       "plugin": "@nx/vitest",
       "options": {
         "testTargetName": "test",
         "ciTargetName": "test-ci",
-        "testMode": "watch"
+        "testMode": "run"
       }
     }
   ],
