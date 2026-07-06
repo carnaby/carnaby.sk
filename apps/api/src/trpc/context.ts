@@ -12,7 +12,14 @@ export function buildUserFromSession(s: { user: { id: string; email: string; nam
 }
 
 export async function createContext(opts: { req: Request; db: Db; auth: Auth }) {
-  const session = await opts.auth.api.getSession({ headers: fromNodeHeaders(opts.req.headers) });
+  let session;
+  try {
+    session = await opts.auth.api.getSession({ headers: fromNodeHeaders(opts.req.headers) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('session resolution failed', message);
+    session = null;
+  }
   return { db: opts.db, user: buildUserFromSession(session) };
 }
 export type Context = Awaited<ReturnType<typeof createContext>>;
