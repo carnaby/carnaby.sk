@@ -1,0 +1,17 @@
+{
+  "name": "@carnaby/shared",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/shared/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project @carnaby/shared --web",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --build tsconfig.json --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

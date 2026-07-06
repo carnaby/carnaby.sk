@@ -3,13 +3,92 @@
   "defaultBase": "v2",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default", "!{projectRoot}/**/*.spec.ts", "!{projectRoot}/**/*.test.ts"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/eslint.config.mjs",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/test-setup.[jt]s"
+    ],
     "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json"]
   },
   "targetDefaults": {
-    "build": { "dependsOn": ["^build"], "cache": true },
-    "test": { "cache": true },
-    "lint": { "cache": true },
-    "typecheck": { "cache": true }
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "test": {
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    },
+    "typecheck": {
+      "cache": true
+    }
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/next/plugin",
+      "options": {
+        "startTargetName": "start",
+        "buildTargetName": "build",
+        "devTargetName": "dev",
+        "serveStaticTargetName": "serve-static",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps"
+      }
+    },
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    },
+    {
+      "plugin": "@nx/playwright/plugin",
+      "options": {
+        "targetName": "e2e"
+      }
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "serveTargetName": "serve",
+        "previewTargetName": "preview",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps",
+        "serveStaticTargetName": "serve-static"
+      }
+    },
+    {
+      "plugin": "@nx/jest/plugin",
+      "options": {
+        "targetName": "test"
+      },
+      "exclude": ["apps/api-e2e/**/*"]
+    },
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testTargetName": "test",
+        "ciTargetName": "test-ci",
+        "testMode": "watch"
+      }
+    }
+  ],
+  "generators": {
+    "@nx/next": {
+      "application": {
+        "style": "css",
+        "linter": "eslint"
+      }
+    }
   }
 }
