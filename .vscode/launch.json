@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Debug @carnaby/api with Nx",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@carnaby/api"],
+      "runtimeArgs": ["exec", "nx", "dev", "@carnaby/api"],
       "env": {
         "NODE_OPTIONS": "--inspect=9229"
       },
