@@ -45,11 +45,11 @@ describe('getOrCreate', () => {
     await fs.rm(cacheDir, { recursive: true, force: true });
   });
 
-  it('resizes to the requested width and encodes webp, cached under CACHE_DIR/<width>/<basename>.webp', async () => {
+  it('resizes to the requested width and encodes webp, cached under CACHE_DIR/<width>/<filename>.webp', async () => {
     const resultPath = await getOrCreate(300, 'photo.png');
 
     expect(path.isAbsolute(resultPath)).toBe(true);
-    expect(resultPath).toBe(path.resolve(cacheDir, '300', 'photo.webp'));
+    expect(resultPath).toBe(path.resolve(cacheDir, '300', 'photo.png.webp'));
 
     // Read into a buffer rather than handing sharp the path directly: on Windows, sharp/libvips
     // can keep the file handle open past this call, which makes the temp-dir cleanup in
@@ -90,6 +90,45 @@ describe('getOrCreate', () => {
 
   it('throws NotFoundException when the source file does not exist', async () => {
     await expect(getOrCreate(300, 'missing.png')).rejects.toThrow(NotFoundException);
+  });
+
+  it('returns different cached paths and content for files with same basename but different extensions', async () => {
+    // Same basename (same.png and same.jpg) but different content
+    const redPng = await sharp({
+      create: { width: 2000, height: 1000, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const bluePng = await sharp({
+      create: { width: 2000, height: 1000, channels: 3, background: { r: 0, g: 0, b: 255 } },
+    })
+      .png()
+      .toBuffer();
+
+    await fs.writeFile(path.join(uploadsDir, 'same.png'), redPng);
+    await fs.writeFile(path.join(uploadsDir, 'same.jpg'), bluePng);
+
+    const pngPath = await getOrCreate(300, 'same.png');
+    const jpgPath = await getOrCreate(300, 'same.jpg');
+
+    // Paths must be different
+    expect(pngPath).not.toBe(jpgPath);
+
+    // Files must exist
+    await expect(fs.access(pngPath)).resolves.toBeUndefined();
+    await expect(fs.access(jpgPath)).resolves.toBeUndefined();
+
+    // Content must be different (compare file sizes or buffers)
+    const pngBuffer = await fs.readFile(pngPath);
+    const jpgBuffer = await fs.readFile(jpgPath);
+    expect(pngBuffer).not.toEqual(jpgBuffer);
+  });
+
+  it('rejects with BadRequestException when source image is invalid or corrupt', async () => {
+    // Write a text file with .png extension
+    await fs.writeFile(path.join(uploadsDir, 'broken.png'), 'this is not a real image');
+
+    await expect(getOrCreate(300, 'broken.png')).rejects.toThrow(BadRequestException);
   });
 });
 

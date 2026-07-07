@@ -42,7 +42,7 @@ export async function getOrCreate(width: number, filename: string): Promise<stri
     throw new BadRequestException('invalid filename');
   }
 
-  const basename = `${path.parse(filename).name}.webp`;
+  const basename = `${filename}.webp`;
   const cacheDir = path.resolve(cacheBaseDir(), String(width));
   const cachedPath = path.join(cacheDir, basename);
 
@@ -55,15 +55,29 @@ export async function getOrCreate(width: number, filename: string): Promise<stri
 
   const sourcePath = await resolveSource(filename);
 
-  const buffer = await sharp(sourcePath)
-    .resize({ width, withoutEnlargement: true })
-    .webp({ quality: WEBP_QUALITY })
-    .toBuffer();
+  let buffer: Buffer;
+  try {
+    buffer = await sharp(sourcePath)
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  } catch (error) {
+    throw new BadRequestException('invalid or unsupported image');
+  }
 
   await fs.mkdir(cacheDir, { recursive: true });
   const tempPath = path.join(cacheDir, `.${basename}.${randomBytes(4).toString('hex')}.tmp`);
-  await fs.writeFile(tempPath, buffer);
-  await fs.rename(tempPath, cachedPath);
+  try {
+    await fs.writeFile(tempPath, buffer);
+    await fs.rename(tempPath, cachedPath);
+  } catch (error) {
+    try {
+      await fs.unlink(tempPath);
+    } catch {
+      // best-effort cleanup; ignore errors
+    }
+    throw error;
+  }
 
   return cachedPath;
 }
