@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { fontVars } from '../../lib/fonts';
 import { getServerSession } from '../../lib/session';
+import { TRPCProvider } from '../../lib/trpc-react';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -69,7 +70,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </Link>
             </nav>
           </aside>
-          <main className="min-w-0 flex-1">{children}</main>
+          <main className="min-w-0 flex-1">
+            <TRPCProvider>{children}</TRPCProvider>
+          </main>
         </div>
       </body>
     </html>
