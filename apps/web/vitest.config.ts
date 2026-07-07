@@ -7,5 +7,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['app/**/*.spec.ts'],
+    // No app-route spec files exist yet (Task 12 removed the generator's demo
+    // /api/hello route); design-system components are verified visually per
+    // the task brief rather than via unit tests.
+    passWithNoTests: true,
   },
 });
