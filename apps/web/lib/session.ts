@@ -31,15 +31,21 @@ export async function getServerSession(): Promise<ServerSession | null> {
   const requestHeaders = await headers();
   const cookie = requestHeaders.get('cookie') ?? '';
 
-  const response = await fetch(`${API_INTERNAL_URL}/api/auth/get-session`, {
-    headers: { cookie },
-    cache: 'no-store',
-  });
+  try {
+    const response = await fetch(`${API_INTERNAL_URL}/api/auth/get-session`, {
+      headers: { cookie },
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json().catch(() => null)) as ServerSession | null;
+    return data?.user ? data : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('session fetch failed', message);
     return null;
   }
-
-  const data = (await response.json().catch(() => null)) as ServerSession | null;
-  return data?.user ? data : null;
 }
