@@ -12,6 +12,14 @@
         "command": "tsc -p tsconfig.json --noEmit",
         "cwd": "{projectRoot}"
       }
+    },
+    "dev": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/web",
+        "command": "next dev -p 3000"
+      }
     }
   }
 }
