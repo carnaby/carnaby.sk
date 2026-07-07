@@ -18,12 +18,21 @@
     "humanLyricsNote": "Lyrics & Stories: Human (Original)"
   },
   "post": {
-    "readMore": "Read More"
+    "readMore": "Read More",
+    "viewsAria": "{count, plural, one {# view} other {# views}}",
+    "fallbackNote": "Not yet available in this language — shown in {lang}.",
+    "soundcloudCta": "Listen on SoundCloud",
+    "backToCategory": "More from {category}"
   },
   "category": {
     "empty": "No posts here yet — check back soon.",
     "newer": "Newer posts",
     "older": "Older posts"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "backHome": "Back to homepage"
   },
   "languageSwitcher": {
     "label": "Switch language",

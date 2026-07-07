@@ -18,12 +18,21 @@
     "humanLyricsNote": "Texty & Príbehy: Human (Original)"
   },
   "post": {
-    "readMore": "Čítať viac"
+    "readMore": "Čítať viac",
+    "viewsAria": "{count, plural, one {# zobrazenie} few {# zobrazenia} other {# zobrazení}}",
+    "fallbackNote": "Zatiaľ nie je dostupné v tomto jazyku — zobrazené v {lang}.",
+    "soundcloudCta": "Vypočuť na SoundCloud",
+    "backToCategory": "Ďalšie z kategórie {category}"
   },
   "category": {
     "empty": "Zatiaľ tu nie sú žiadne príspevky — pozrite sa neskôr.",
     "newer": "Novšie príspevky",
     "older": "Staršie príspevky"
+  },
+  "notFound": {
+    "title": "Stránka nenájdená",
+    "description": "Stránka, ktorú hľadáte, neexistuje alebo bola presunutá.",
+    "backHome": "Späť na domovskú stránku"
   },
   "languageSwitcher": {
     "label": "Prepnúť jazyk",

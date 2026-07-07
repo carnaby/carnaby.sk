@@ -22,7 +22,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ['app/**/*.spec.ts', 'lib/**/*.spec.ts', 'components/**/*.spec.tsx'],
+    include: ['app/**/*.spec.ts', 'lib/**/*.spec.ts', 'components/**/*.spec.tsx', 'specs/**/*.spec.ts'],
     environment: 'node',
     setupFiles: ['vitest.setup.ts'],
     // Component tests use jsdom environment via // @vitest-environment jsdom pragma.
