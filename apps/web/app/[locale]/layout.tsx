@@ -3,6 +3,7 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+import { MotionProvider } from '../../components/site/motion-provider';
 import { SiteFooter } from '../../components/site/footer';
 import { SiteHeader } from '../../components/site/header';
 import { routing } from '../../i18n/routing';
@@ -38,9 +39,11 @@ export default async function LocaleLayout({
     <html lang={locale} className={fontVars}>
       <body className="site-bg min-h-dvh antialiased">
         <NextIntlClientProvider>
-          <SiteHeader />
-          <main className="pt-20">{children}</main>
-          <SiteFooter />
+          <MotionProvider>
+            <SiteHeader />
+            <main className="pt-20">{children}</main>
+            <SiteFooter />
+          </MotionProvider>
         </NextIntlClientProvider>
       </body>
     </html>
