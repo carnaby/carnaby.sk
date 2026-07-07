@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { Toaster } from '../../components/ui/sonner';
 import { fontVars } from '../../lib/fonts';
 import { getServerSession } from '../../lib/session';
 import { TRPCProvider } from '../../lib/trpc-react';
@@ -25,6 +26,8 @@ const NAV_ITEMS = [
  * middleware matcher already excludes `/admin` from next-intl routing.
  * Deliberately NOT mounted here: `<Umami/>` (analytics must not count admin
  * traffic) and `MotionProvider` (no motion animations in the admin shell).
+ * `<Toaster/>` (sonner) IS mounted here, once, for every admin page's mutation
+ * feedback (e.g. Task 20's delete flow) to render into.
  *
  * The gate runs server-side on every admin request: anonymous visitors go to
  * `/login`, signed-in non-admins to the homepage. Pages under /admin can
@@ -74,6 +77,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <TRPCProvider>{children}</TRPCProvider>
           </main>
         </div>
+        <Toaster theme="dark" />
       </body>
     </html>
   );
