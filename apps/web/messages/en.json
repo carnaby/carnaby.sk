@@ -20,6 +20,11 @@
   "post": {
     "readMore": "Read More"
   },
+  "category": {
+    "empty": "No posts here yet — check back soon.",
+    "newer": "Newer posts",
+    "older": "Older posts"
+  },
   "languageSwitcher": {
     "label": "Switch language",
     "switchToSk": "Switch to Slovak",
