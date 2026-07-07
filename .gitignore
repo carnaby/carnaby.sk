@@ -12,3 +12,4 @@ test-results
 playwright-report
 tools/migrate-legacy/data
 vitest.config.*.timestamp*
+.data
