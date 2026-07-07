@@ -38,5 +38,16 @@
     "label": "Switch language",
     "switchToSk": "Switch to Slovak",
     "switchToEn": "Switch to English"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Continue with your Google account.",
+    "googleCta": "Sign in with Google"
+  },
+  "userMenu": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "adminPanel": "Admin panel",
+    "openMenu": "Open user menu"
   }
 }

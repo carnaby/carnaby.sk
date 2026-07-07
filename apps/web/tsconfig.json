@@ -15,7 +15,18 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [{ "name": "next" }],
+    // "paths" REPLACES (not merges with) tsconfig.base.json's map, so the
+    // workspace aliases are restated here alongside "@/*" — the shadcn/ui
+    // convention its generated components/ui files import through
+    // ("@/lib/utils"). "@/*" is deliberately app-local; the base config
+    // knows nothing about it.
+    "paths": {
+      "@/*": ["./*"],
+      "@carnaby/api": ["../../apps/api/src/trpc/index.ts"],
+      "@carnaby/shared": ["../../packages/shared/src/index.ts"],
+      "@carnaby/db": ["../../packages/db/src/index.ts"]
+    }
   },
   "include": [
     "**/*.ts",

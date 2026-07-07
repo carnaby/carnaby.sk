@@ -38,5 +38,16 @@
     "label": "Prepnúť jazyk",
     "switchToSk": "Prepnúť na slovenčinu",
     "switchToEn": "Prepnúť na angličtinu"
+  },
+  "login": {
+    "title": "Prihlásenie",
+    "subtitle": "Prihláste sa účtom Google a pokračujte.",
+    "googleCta": "Prihlásiť sa cez Google"
+  },
+  "userMenu": {
+    "signIn": "Prihlásiť",
+    "signOut": "Odhlásiť",
+    "adminPanel": "Admin panel",
+    "openMenu": "Otvoriť menu používateľa"
   }
 }
