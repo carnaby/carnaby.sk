@@ -1,10 +1,9 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { and, eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import type { Db } from '@carnaby/db';
 import { categories, postCategories, posts, postTranslations } from '@carnaby/db';
 import type { Language, PostUpsertInput, TranslationInput } from '@carnaby/shared';
+import { deleteOriginal } from '../uploads/uploads.service';
 import { pickTranslation, type PostListItem, type PostStatus } from './posts.read';
 
 export type AdminSortBy = 'createdAt' | 'publishedAt' | 'title' | 'status' | 'viewCount';
@@ -159,12 +158,6 @@ export async function getPostById(db: Db, id: number): Promise<PostById> {
   };
 }
 
-export function isSafeThumbnailPath(path: string): boolean {
-  // Reject paths that could escape the uploads directory: no slashes (path separators),
-  // no leading dots (relative paths), no absolute paths.
-  return !/[/\\]/.test(path) && !path.startsWith('.') && !path.startsWith('/') && !path.match(/^[a-zA-Z]:/);
-}
-
 interface PostgresError {
   code?: string;
   constraint?: string;
@@ -245,20 +238,11 @@ export async function removePost(db: Db, id: number): Promise<void> {
   // — no manual cleanup needed for those.
   await db.delete(posts).where(eq(posts.id, id));
 
-  // Best-effort thumbnail cleanup: Task 10 owns the real UploadsService (validation, storage
-  // abstraction, etc.) — this inline unlink is a placeholder Task 10 can absorb/replace. Guarded
-  // by `UPLOADS_DIR` being set and swallows all errors so a missing file, missing env var, or
-  // filesystem hiccup never turns a successful DB delete into a failed `remove` call.
-  if (post.thumbnailPath && process.env['UPLOADS_DIR'] && isSafeThumbnailPath(post.thumbnailPath)) {
-    try {
-      const base = path.resolve(process.env['UPLOADS_DIR'], 'originals');
-      const target = path.resolve(base, post.thumbnailPath);
-      // Verify the resolved target stays within the base directory to prevent path traversal
-      if (target.startsWith(base + path.sep) || target === base) {
-        await fs.unlink(target);
-      }
-    } catch {
-      // ignore — best-effort only
-    }
+  // Best-effort thumbnail cleanup, delegated to the Task 10 UploadsService's shared
+  // implementation (validation/containment guard + swallowing all errors so a missing file,
+  // missing env var, or filesystem hiccup never turns a successful DB delete into a failed
+  // `remove` call).
+  if (post.thumbnailPath) {
+    await deleteOriginal(post.thumbnailPath);
   }
 }
