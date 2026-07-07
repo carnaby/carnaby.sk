@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "about": "About",
+    "contact": "Contact"
+  },
+  "home": {
+    "aboutLabel": "ABOUT ME",
+    "aboutIntro": "The world of coding and the world of music are closer than they seem. Both are about finding harmony, logic, and rhythm. My journey began behind a mixing console and at rock radio Rebeca, but today it is defined by lines of code and the possibilities of artificial intelligence.",
+    "aboutIntro2": "As a full-stack developer, I build digital solutions, while as a music enthusiast, I seek space for true human emotion within technology.",
+    "pillars": {
+      "devlog": "Here I step out civilly as Jozef. I write about developing in React and TypeScript, taming AI models, and the 'making of' this web. A space for experiments and a peek behind the scenes of my work with Antigravity technology.",
+      "dodo": "Dodo is my quieter, more deliberate side. Music for peaceful mornings and long car rides. Acoustic folk, ballads, and storytelling Americana about hope, missed trains, and unexpected joy.",
+      "carnaby": "A return to DJ roots. Pure energy, carefree euro-disco, and the neon atmosphere of the 80s. While Dodo tells stories, Carnaby creates a vibe. Dance rhythm and retro nostalgia."
+    },
+    "aiMusicNote": "Music: AI (Suno)",
+    "humanLyricsNote": "Lyrics & Stories: Human (Original)"
+  },
+  "post": {
+    "readMore": "Read More"
+  },
+  "languageSwitcher": {
+    "label": "Switch language",
+    "switchToSk": "Switch to Slovak",
+    "switchToEn": "Switch to English"
+  }
+}

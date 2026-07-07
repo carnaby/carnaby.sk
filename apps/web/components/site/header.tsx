@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { useLocale } from 'next-intl';
 
-import { CATEGORIES, DEFAULT_LANGUAGE, type CategorySlug } from '@carnaby/shared';
+import { CATEGORIES, type CategorySlug, type Language } from '@carnaby/shared';
 
+import { Link } from '../../i18n/navigation';
 import { LanguageSwitcher } from './language-switcher';
 import { UserMenu } from './user-menu';
 
@@ -17,6 +18,8 @@ const NAV_HOVER_CLASS: Record<CategorySlug, string> = {
 const NAV_CATEGORIES = Object.values(CATEGORIES);
 
 export function SiteHeader() {
+  const locale = useLocale() as Language;
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 glass-strong">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -31,7 +34,7 @@ export function SiteHeader() {
               href={`/category/${category.slug}`}
               className={`text-sm font-medium text-white/80 transition-colors ${NAV_HOVER_CLASS[category.slug]}`}
             >
-              {category.name[DEFAULT_LANGUAGE]}
+              {category.name[locale]}
             </Link>
           ))}
         </nav>
