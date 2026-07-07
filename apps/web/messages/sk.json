@@ -20,6 +20,11 @@
   "post": {
     "readMore": "Čítať viac"
   },
+  "category": {
+    "empty": "Zatiaľ tu nie sú žiadne príspevky — pozrite sa neskôr.",
+    "newer": "Novšie príspevky",
+    "older": "Staršie príspevky"
+  },
   "languageSwitcher": {
     "label": "Prepnúť jazyk",
     "switchToSk": "Prepnúť na slovenčinu",
