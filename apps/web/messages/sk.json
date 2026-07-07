@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "about": "O mne",
+    "contact": "Kontakt"
+  },
+  "home": {
+    "aboutLabel": "O MNE",
+    "aboutIntro": "Svet kódovania a svet hudby majú k sebe bližšie, než sa na prvý pohľad zdá. Obe sú o hľadaní harmónie, logiky a rytmu. Moja cesta začala za mixpultom a v rockovom rádiu Rebeca, no dnes ju definujú riadky kódu a možnosti umelej inteligencie.",
+    "aboutIntro2": "Ako full-stack vývojár staviam digitálne riešenia, zatiaľ čo ako nadšenec do hudby hľadám v technológiách priestor pre skutočnú ľudskú emóciu.",
+    "pillars": {
+      "devlog": "Tu vystupujem civilne ako Jozef. Píšem o tom, ako vyvíjam v Reacte a TypeScripte, ako krotím AI modely a čo všetko obnáša 'making of' tohto webu. Priestor pre experimenty a pohľad do zákulisia mojej práce s technológiou Antigravity.",
+      "dodo": "Dodo je moja tichšia, rozvážnejšia stránka. Hudba pre pokojné rána a dlhé cesty autom. Akustický folk, balady a storytellingová Americana o nádeji, zmeškaných vlakoch a nečakanej radosti.",
+      "carnaby": "Návrat k DJ koreňom. Čistá energia, bezstarostné euro-disco a neónová atmosféra 80. rokov. Kým Dodo rozpráva príbehy, Carnaby vytvára vibe. Tanečný rytmus a retro nostalgia."
+    },
+    "aiMusicNote": "Hudba: AI (Suno)",
+    "humanLyricsNote": "Texty & Príbehy: Human (Original)"
+  },
+  "post": {
+    "readMore": "Čítať viac"
+  },
+  "languageSwitcher": {
+    "label": "Prepnúť jazyk",
+    "switchToSk": "Prepnúť na slovenčinu",
+    "switchToEn": "Prepnúť na angličtinu"
+  }
+}

@@ -1,5 +1,7 @@
 //@ts-check
 
+const createNextIntlPlugin = require('next-intl/plugin');
+
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? 'http://localhost:3001';
 
 /** @type {import('next').NextConfig} */
@@ -14,4 +16,6 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+module.exports = withNextIntl(nextConfig);
