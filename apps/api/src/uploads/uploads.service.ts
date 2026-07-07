@@ -15,6 +15,10 @@ const ALLOWED_MIME_EXTENSIONS: Record<string, string> = {
 
 export class UnsupportedMimeTypeError extends Error {}
 
+export class UpstreamNotFoundError extends Error {}
+
+export class UpstreamUnavailableError extends Error {}
+
 /** Maps an image mimetype to its on-disk extension; throws for anything outside the allowlist
  * (including a mimetype-shaped string mangled with path separators — it simply won't match). */
 export function safeName(mimetype: string): string {
@@ -33,6 +37,10 @@ export function isSafeUploadFilename(filename: string): boolean {
   return !/[/\\]/.test(filename) && !filename.startsWith('.') && !filename.startsWith('/') && !/^[a-zA-Z]:/.test(filename);
 }
 
+function uploadsBaseDir(): string {
+  return process.env['UPLOADS_DIR'] ?? './.data/uploads';
+}
+
 function originalsDir(uploadsDir: string): string {
   return path.resolve(uploadsDir, 'originals');
 }
@@ -49,7 +57,7 @@ function resolveContained(uploadsDir: string, filename: string): string | null {
 
 export async function saveThumbnail(buffer: Buffer, mimetype: string): Promise<string> {
   const ext = safeName(mimetype);
-  const uploadsDir = process.env['UPLOADS_DIR'] ?? './.data/uploads';
+  const uploadsDir = uploadsBaseDir();
   const base = originalsDir(uploadsDir);
   await fs.mkdir(base, { recursive: true });
   const filename = `thumb-${Date.now()}-${randomBytes(3).toString('hex')}.${ext}`;
@@ -59,11 +67,26 @@ export async function saveThumbnail(buffer: Buffer, mimetype: string): Promise<s
 
 export async function fetchYoutubeThumbnail(youtubeId: string): Promise<string> {
   const url = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`youtube thumbnail download failed with status ${res.status}`);
+  let res;
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  } catch (error) {
+    // Network error or timeout (AbortError)
+    throw new UpstreamUnavailableError(
+      error instanceof Error ? error.message : 'youtube fetch failed',
+    );
+  }
+
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new UpstreamNotFoundError('youtube thumbnail not found');
+    }
+    throw new UpstreamUnavailableError(`youtube fetch failed with status ${res.status}`);
+  }
+
   const buffer = Buffer.from(await res.arrayBuffer());
 
-  const uploadsDir = process.env['UPLOADS_DIR'] ?? './.data/uploads';
+  const uploadsDir = uploadsBaseDir();
   const base = originalsDir(uploadsDir);
   await fs.mkdir(base, { recursive: true });
   const filename = youtubeThumbFilename(youtubeId);
@@ -77,8 +100,8 @@ export async function fetchYoutubeThumbnail(youtubeId: string): Promise<string> 
  * successful record delete into a failed caller-side operation. Standalone (not a class method)
  * so both the tRPC `posts.remove` router and the Nest `UploadsService` share one implementation. */
 export async function deleteOriginal(filename: string): Promise<void> {
-  const uploadsDir = process.env['UPLOADS_DIR'];
-  if (!uploadsDir || !isSafeUploadFilename(filename)) return;
+  if (!isSafeUploadFilename(filename)) return;
+  const uploadsDir = uploadsBaseDir();
   const target = resolveContained(uploadsDir, filename);
   if (!target) return;
   try {
