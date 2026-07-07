@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { MotionProvider } from '../../components/site/motion-provider';
 import { SiteFooter } from '../../components/site/footer';
 import { SiteHeader } from '../../components/site/header';
+import { Umami } from '../../components/site/umami';
 import { routing } from '../../i18n/routing';
 import { fontVars } from '../../lib/fonts';
 import '../globals.css';
@@ -45,6 +46,7 @@ export default async function LocaleLayout({
             <SiteFooter />
           </MotionProvider>
         </NextIntlClientProvider>
+        <Umami />
       </body>
     </html>
   );

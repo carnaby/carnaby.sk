@@ -41,10 +41,16 @@ export const postsRouter = router({
       // draft/archived post's view count via this public endpoint; still always returns
       // `{ ok: true }` (no NOT_FOUND) for a nonexistent id, matching an analytics-counter's
       // fire-and-forget contract rather than treating a miss as a client error.
-      await ctx.db.update(posts)
+      //
+      // Returns the updated count (`viewCount: undefined` for a no-op id) so callers can show it
+      // immediately: the post detail page (`apps/web/.../posts/[slug]/page.tsx`) caches its
+      // `bySlug` read for 5 minutes (Next Data Cache, tagged for admin-edit invalidation only),
+      // so re-reading via `bySlug` after this mutation would still show the pre-increment count.
+      const [row] = await ctx.db.update(posts)
         .set({ viewCount: sql`${posts.viewCount} + 1` })
-        .where(and(eq(posts.id, input.id), eq(posts.status, 'published')));
-      return { ok: true };
+        .where(and(eq(posts.id, input.id), eq(posts.status, 'published')))
+        .returning({ viewCount: posts.viewCount });
+      return { ok: true, viewCount: row?.viewCount };
     }),
 
   adminList: adminProcedure.input(z.object({
