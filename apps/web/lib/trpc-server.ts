@@ -11,8 +11,13 @@ import 'server-only';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import type { AppRouter } from '@carnaby/api';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import type { inferRouterOutputs } from '@trpc/server';
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? 'http://localhost:3001';
+
+/** Inferred from the tRPC router's return type rather than duplicated by hand — stays in sync
+ * with `apps/api/src/posts/posts.read.ts`'s `PostListItem` without importing api runtime code. */
+export type PostListItem = inferRouterOutputs<AppRouter>['posts']['list']['items'][number];
 
 /**
  * Cache-tag convention shared by every consumer of `serverTrpc`/Next's Data

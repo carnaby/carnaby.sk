@@ -23,17 +23,23 @@ const baseURL = process.env['BASE_URL'] || 'http://localhost:3000';
  */
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
+  /* Seeds a featured published post (fixtures/seed-posts.ts) into the dev DB before any test
+   * runs — home.spec.ts's featured grid needs at least one to assert against. */
+  globalSetup: './src/global-setup.ts',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-  /* Run your local dev server before starting the tests */
+  /* Starts both the web app (asserted on directly) and the api it calls server-side over
+   * `serverTrpc` — reusing an already-running pair (e.g. from `pnpm dev`) instead of relaunching.
+   * Next's cold compile on first request can take a while, hence the generous timeout. */
   webServer: {
-    command: 'pnpm exec nx run @carnaby/web:dev',
+    command: 'pnpm nx run-many -t dev -p @carnaby/web @carnaby/api',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
+    timeout: 180_000,
     cwd: workspaceRoot,
   },
   projects: [
