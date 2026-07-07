@@ -19,14 +19,17 @@ d('posts admin', () => {
   // failing the post insert with a foreign-key violation. A run-unique email closes that gap.
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const adminUser = { id: randomBytes(16).toString('hex'), email: `admin-${runId}@a.sk`, name: 'A', image: null, role: 'admin' };
+  const nonAdminUser = { id: randomBytes(16).toString('hex'), email: `user-${runId}@a.sk`, name: 'U', image: null, role: 'user' };
   const admin = appRouter.createCaller({ db, user: adminUser });
   const anon = appRouter.createCaller({ db, user: null });
+  const nonAdmin = appRouter.createCaller({ db, user: nonAdminUser });
   const categorySlug = `adm-${runId}`;
   let catId = 0;
 
   beforeAll(async () => {
     await migrate(db, { migrationsFolder: __dirname + '/../../../../packages/db/migrations' });
     await db.insert(user).values({ id: adminUser.id, email: adminUser.email, name: 'A' }).onConflictDoNothing();
+    await db.insert(user).values({ id: nonAdminUser.id, email: nonAdminUser.email, name: 'U' }).onConflictDoNothing();
     const [c] = await db.insert(categories).values({ slug: categorySlug, name: 'Adm' }).returning();
     catId = c!.id;
   });
@@ -34,6 +37,10 @@ d('posts admin', () => {
 
   it('rejects non-admin', async () => {
     await expect(anon.posts.adminList({})).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('rejects user role with FORBIDDEN', async () => {
+    await expect(nonAdmin.posts.adminList({})).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('create → byId → update (drops EN) → adminList → remove', async () => {
