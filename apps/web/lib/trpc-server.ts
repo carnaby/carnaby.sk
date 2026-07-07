@@ -1,7 +1,4 @@
-// Note: 'server-only' guard is enforced at build-time by Next.js and Nx module boundaries,
-// not at runtime. For testing purposes, we comment this out to allow imports from both
-// server and client contexts. In production, Next.js's bundler prevents client imports.
-// import 'server-only';
+import 'server-only';
 
 // `@carnaby/api` resolves to a type-only barrel (apps/api/src/trpc/index.ts
 // re-exports only `type AppRouter`); combined with the `import type` here,
