@@ -37,7 +37,7 @@ export function isSafeUploadFilename(filename: string): boolean {
   return !/[/\\]/.test(filename) && !filename.startsWith('.') && !filename.startsWith('/') && !/^[a-zA-Z]:/.test(filename);
 }
 
-function uploadsBaseDir(): string {
+export function uploadsBaseDir(): string {
   return process.env['UPLOADS_DIR'] ?? './.data/uploads';
 }
 
@@ -95,10 +95,11 @@ export async function fetchYoutubeThumbnail(youtubeId: string): Promise<string> 
 }
 
 /** Best-effort delete of a previously-saved original (thumbnail upload or YouTube fetch).
- * Guarded by `UPLOADS_DIR` being set and by the filename staying within the originals dir;
- * swallows all errors (missing file, missing env var, fs hiccup) so cleanup never turns a
- * successful record delete into a failed caller-side operation. Standalone (not a class method)
- * so both the tRPC `posts.remove` router and the Nest `UploadsService` share one implementation. */
+ * Uses uploadsBaseDir() for the base directory, validates the filename as a bare filename
+ * (no path separators or relative traversal), checks containment within the originals directory,
+ * and swallows all errors (missing file, fs hiccup) so cleanup never turns a successful record
+ * delete into a failed caller-side operation. Standalone (not a class method) so both the tRPC
+ * `posts.remove` router and the Nest `UploadsService` share one implementation. */
 export async function deleteOriginal(filename: string): Promise<void> {
   if (!isSafeUploadFilename(filename)) return;
   const uploadsDir = uploadsBaseDir();
@@ -114,7 +115,7 @@ export async function deleteOriginal(filename: string): Promise<void> {
 @Injectable()
 export class UploadsService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
-    const uploadsDir = process.env['UPLOADS_DIR'] ?? './.data/uploads';
+    const uploadsDir = uploadsBaseDir();
     const cacheDir = process.env['CACHE_DIR'];
     await fs.mkdir(originalsDir(uploadsDir), { recursive: true });
     if (cacheDir) await fs.mkdir(cacheDir, { recursive: true });
