@@ -159,11 +159,25 @@ export async function getPostById(db: Db, id: number): Promise<PostById> {
   };
 }
 
-function isUniqueViolation(error: unknown): boolean {
+export function isSafeThumbnailPath(path: string): boolean {
+  // Reject paths that could escape the uploads directory: no slashes (path separators),
+  // no leading dots (relative paths), no absolute paths.
+  return !/[/\\]/.test(path) && !path.startsWith('.') && !path.startsWith('/') && !path.match(/^[a-zA-Z]:/);
+}
+
+interface PostgresError {
+  code?: string;
+  constraint?: string;
+}
+
+function isUniqueViolation(error: unknown): { isViolation: boolean; constraintName?: string } {
   // node-postgres surfaces a Postgres error as a plain object (not a subclass we can
   // `instanceof`-check) with the driver's numeric SQLSTATE on `.code`; 23505 is
-  // unique_violation — the only constraint this insert/update path can trip (the slug column).
-  return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === '23505';
+  // unique_violation.
+  if (typeof error === 'object' && error !== null && (error as PostgresError).code === '23505') {
+    return { isViolation: true, constraintName: (error as PostgresError).constraint };
+  }
+  return { isViolation: false };
 }
 
 export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number }, authorId: string): Promise<{ id: number }> {
@@ -202,14 +216,23 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
         }
       }
       await tx.delete(postCategories).where(eq(postCategories.postId, id));
-      if (input.categoryIds.length) {
-        await tx.insert(postCategories).values(input.categoryIds.map((categoryId) => ({ postId: id!, categoryId })));
+      const uniqueCategoryIds = [...new Set(input.categoryIds)];
+      if (uniqueCategoryIds.length) {
+        await tx.insert(postCategories).values(uniqueCategoryIds.map((categoryId) => ({ postId: id!, categoryId })));
       }
       return { id };
     });
   } catch (error) {
     if (error instanceof TRPCError) throw error;
-    if (isUniqueViolation(error)) throw new TRPCError({ code: 'CONFLICT', message: 'slug already in use' });
+    const violation = isUniqueViolation(error);
+    if (violation.isViolation) {
+      // Only map to the slug message if the constraint is specifically the slug constraint
+      if (violation.constraintName?.includes('slug')) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'slug already in use' });
+      }
+      // For other unique violations, return a generic CONFLICT with the constraint name
+      throw new TRPCError({ code: 'CONFLICT', message: `constraint violation: ${violation.constraintName || 'unknown'}` });
+    }
     throw error;
   }
 }
@@ -226,9 +249,14 @@ export async function removePost(db: Db, id: number): Promise<void> {
   // abstraction, etc.) — this inline unlink is a placeholder Task 10 can absorb/replace. Guarded
   // by `UPLOADS_DIR` being set and swallows all errors so a missing file, missing env var, or
   // filesystem hiccup never turns a successful DB delete into a failed `remove` call.
-  if (post.thumbnailPath && process.env['UPLOADS_DIR']) {
+  if (post.thumbnailPath && process.env['UPLOADS_DIR'] && isSafeThumbnailPath(post.thumbnailPath)) {
     try {
-      await fs.unlink(path.join(process.env['UPLOADS_DIR'], 'originals', post.thumbnailPath));
+      const base = path.resolve(process.env['UPLOADS_DIR'], 'originals');
+      const target = path.resolve(base, post.thumbnailPath);
+      // Verify the resolved target stays within the base directory to prevent path traversal
+      if (target.startsWith(base + path.sep) || target === base) {
+        await fs.unlink(target);
+      }
     } catch {
       // ignore — best-effort only
     }
