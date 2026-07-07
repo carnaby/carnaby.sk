@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Enter/exit animations (animate-in/out, fade-*, zoom-*, slide-in-from-*) used by the
+   shadcn/ui overlay components (dialog, dropdown-menu, select). */
+@import 'tw-animate-css';
 
 @theme {
   --color-base: #030303;
@@ -10,9 +13,177 @@
   --color-carnaby: #a855f7;
   --color-rose: #f43f5e;
   --font-display: var(--font-space-grotesk), sans-serif;
+  --font-heading: var(--font-space-grotesk), sans-serif; /* shadcn's `font-heading` → display font */
   --font-sans: var(--font-inter), sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
   --radius-glass: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * shadcn/ui (Task 18)
+ *
+ * `shadcn init` was run against a scratch project and its output merged here by
+ * hand so it couldn't clobber the @theme block above. Three pieces were ported:
+ *
+ * 1. The custom variants below — inlined from the shadcn package's
+ *    `tailwind.css` (v4.13) instead of `@import "shadcn/tailwind.css"`, so the
+ *    CLI package isn't a runtime dependency. Only the variants the generated
+ *    components/ui/*.tsx actually reference are kept.
+ * 2. The `@theme inline` token mapping (unchanged from generated output; the
+ *    `--color-card: var(--card)` line intentionally shadows the plain
+ *    `--color-card` above for utility generation — both resolve to #111113).
+ * 3. The `:root` palette — restyled from shadcn's neutral oklch() defaults to
+ *    the black-glass theme: #0a0a0a/#111113 surfaces, rgb(255 255 255 / .08)
+ *    borders, category-emerald focus rings. The site is permanently dark, so
+ *    there is no `.dark` block; the `dark` variant is defined as always-on so
+ *    the components' `dark:` classes (their intended dark rendering) apply.
+ * ------------------------------------------------------------------------- */
+
+/* The site never renders a light theme — make `dark:` utilities unconditional. */
+@custom-variant dark (&);
+
+@custom-variant data-open {
+  &:where([data-state='open']),
+  &:where([data-open]:not([data-open='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state='closed']),
+  &:where([data-closed]:not([data-closed='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state='checked']),
+  &:where([data-checked]:not([data-checked='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state='unchecked']),
+  &:where([data-unchecked]:not([data-unchecked='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled='true']),
+  &:where([data-disabled]:not([data-disabled='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state='active']),
+  &:where([data-active]:not([data-active='false'])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation='horizontal']) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation='vertical']) {
+    @slot;
+  }
+}
+
+@theme inline {
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --card: #111113;
+  --card-foreground: #f5f5f5;
+  /* Translucent on purpose: paired with the backdrop-filter rule below, every
+     popover-surfaced component (dialog, dropdown, select) reads as black glass. */
+  --popover: rgb(17 17 19 / 0.85);
+  --popover-foreground: #f5f5f5;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: rgb(255 255 255 / 0.08);
+  --secondary-foreground: #f5f5f5;
+  --muted: rgb(255 255 255 / 0.06);
+  --muted-foreground: rgb(255 255 255 / 0.6);
+  --accent: rgb(255 255 255 / 0.08);
+  --accent-foreground: #ffffff;
+  --destructive: #f43f5e;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: #10b981; /* category emerald focus rings */
+  --radius: 0.75rem;
+  --chart-1: #10b981;
+  --chart-2: #f59e0b;
+  --chart-3: #a855f7;
+  --chart-4: #f43f5e;
+  --chart-5: rgb(255 255 255 / 0.5);
+  --sidebar: rgb(8 8 8 / 0.7);
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #10b981;
+}
+
+@layer base {
+  /* shadcn components rely on a themed default border color (`border-b` with no
+     color, etc.) and a themed outline color. Body/font base styles stay ours. */
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+/* Glass finish for shadcn overlay surfaces: `--popover` above is translucent;
+   the blur has to live here because backdrop-filter can't be expressed through
+   a color token. */
+[data-slot='dialog-content'],
+[data-slot='dropdown-menu-content'],
+[data-slot='dropdown-menu-sub-content'],
+[data-slot='select-content'] {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 @utility glass {
