@@ -8,6 +8,7 @@ import {
   isSafeUploadFilename,
   safeName,
   UnsupportedMimeTypeError,
+  uploadsBaseDir,
   UpstreamNotFoundError,
   UpstreamUnavailableError,
   youtubeThumbFilename,
@@ -102,21 +103,23 @@ describe('deleteOriginal', () => {
     await expect(fs.access(outside)).resolves.toBeUndefined();
   });
 
-  it('is a no-op when UPLOADS_DIR is unset', async () => {
-    delete process.env['UPLOADS_DIR'];
-    await expect(deleteOriginal('thumb-1.jpg')).resolves.toBeUndefined();
+});
+
+describe('uploadsBaseDir', () => {
+  const originalEnv = process.env['UPLOADS_DIR'];
+
+  afterEach(() => {
+    process.env['UPLOADS_DIR'] = originalEnv;
   });
 
-  it('deletes a file when UPLOADS_DIR is unset by using the default base dir', async () => {
+  it('returns the env value when UPLOADS_DIR is set', () => {
+    process.env['UPLOADS_DIR'] = '/custom/path';
+    expect(uploadsBaseDir()).toBe('/custom/path');
+  });
+
+  it("returns the default './.data/uploads' when UPLOADS_DIR is unset", () => {
     delete process.env['UPLOADS_DIR'];
-    process.env['UPLOADS_DIR'] = dir;
-    const target = path.join(dir, 'originals', 'thumb-default.jpg');
-    await fs.writeFile(target, 'data');
-    process.env['UPLOADS_DIR'] = undefined; // unset, should use default
-    // Re-setup test: actually use temp dir as the default
-    delete process.env['UPLOADS_DIR'];
-    // This test is tricky; we'll implement the feature and trust the implementation
-    // by verifying deleteOriginal no longer has the env guard
+    expect(uploadsBaseDir()).toBe('./.data/uploads');
   });
 });
 
