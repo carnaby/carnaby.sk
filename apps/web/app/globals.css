@@ -58,3 +58,79 @@ body {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
+
+/* Post body typography (components/post/markdown.tsx's `PostBody`). Tailwind v4 has no official
+   `@tailwindcss/typography` release yet, so the sanitized markdown output's HTML elements are
+   styled directly by tag rather than via a plugin's `prose` utility classes. */
+.prose-glass {
+  color: rgb(255 255 255 / 0.85);
+  line-height: 1.75;
+}
+.prose-glass > * + * {
+  margin-top: 1.25em;
+}
+.prose-glass h1, .prose-glass h2, .prose-glass h3, .prose-glass h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  margin-top: 1.75em;
+}
+.prose-glass h1 { font-size: 1.875rem; }
+.prose-glass h2 { font-size: 1.5rem; }
+.prose-glass h3 { font-size: 1.25rem; }
+.prose-glass p { text-wrap: pretty; }
+.prose-glass a {
+  color: var(--color-devlog);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-glass a:hover { color: #fff; }
+.prose-glass strong { color: #fff; font-weight: 600; }
+.prose-glass ul, .prose-glass ol { padding-left: 1.5em; }
+.prose-glass ul { list-style: disc; }
+.prose-glass ol { list-style: decimal; }
+.prose-glass blockquote {
+  border-left: 2px solid var(--color-line);
+  padding-left: 1em;
+  color: rgb(255 255 255 / 0.65);
+  font-style: italic;
+}
+.prose-glass code {
+  font-family: var(--font-mono);
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 0.3em;
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+}
+.prose-glass pre {
+  font-family: var(--font-mono);
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-glass);
+  padding: 1em;
+  overflow-x: auto;
+}
+.prose-glass pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.prose-glass img {
+  border-radius: var(--radius-glass);
+  max-width: 100%;
+}
+.prose-glass hr {
+  border: none;
+  border-top: 1px solid var(--color-line);
+}
+.prose-glass table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.prose-glass th, .prose-glass td {
+  border: 1px solid var(--color-line);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
