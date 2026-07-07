@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { DEFAULT_LANGUAGE, languageSchema } from '@carnaby/shared';
+import { DEFAULT_LANGUAGE, languageSchema, postStatusSchema, postUpsertInput } from '@carnaby/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { posts } from '@carnaby/db';
-import { publicProcedure, router } from '../trpc/trpc';
+import { adminProcedure, publicProcedure, router } from '../trpc/trpc';
+import { adminListPosts, getPostById, removePost, upsertPost } from './posts.admin';
 import { getPostBySlug, listPosts } from './posts.read';
 
 // Single source of truth for the `list` input defaults — fed into both the per-field
@@ -13,6 +14,9 @@ import { getPostBySlug, listPosts } from './posts.read';
 // two layers can silently drift if edited independently; naming the values once removes that risk.
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
+const ADMIN_DEFAULT_LIMIT = 20;
+const ADMIN_SORT_BY = ['createdAt', 'publishedAt', 'title', 'status', 'viewCount'] as const;
+const ADMIN_ORDER = ['asc', 'desc'] as const;
 
 export const postsRouter = router({
   list: publicProcedure.input(z.object({
@@ -40,6 +44,32 @@ export const postsRouter = router({
       await ctx.db.update(posts)
         .set({ viewCount: sql`${posts.viewCount} + 1` })
         .where(and(eq(posts.id, input.id), eq(posts.status, 'published')));
+      return { ok: true };
+    }),
+
+  adminList: adminProcedure.input(z.object({
+    status: postStatusSchema.optional(),
+    category: z.string().optional(),
+    featured: z.boolean().optional(),
+    page: z.number().int().min(1).default(DEFAULT_PAGE),
+    limit: z.number().int().min(1).max(100).default(ADMIN_DEFAULT_LIMIT),
+    sortBy: z.enum(ADMIN_SORT_BY).default('createdAt'),
+    order: z.enum(ADMIN_ORDER).default('desc'),
+  }).default({ page: DEFAULT_PAGE, limit: ADMIN_DEFAULT_LIMIT, sortBy: 'createdAt', order: 'desc' }))
+    .query(({ ctx, input }) => adminListPosts(ctx.db, input)),
+
+  byId: adminProcedure.input(z.object({ id: z.number().int() }))
+    .query(({ ctx, input }) => getPostById(ctx.db, input.id)),
+
+  create: adminProcedure.input(postUpsertInput)
+    .mutation(({ ctx, input }) => upsertPost(ctx.db, input, ctx.user.id)),
+
+  update: adminProcedure.input(z.object({ id: z.number().int() }).and(postUpsertInput))
+    .mutation(({ ctx, input }) => upsertPost(ctx.db, input, ctx.user.id)),
+
+  remove: adminProcedure.input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      await removePost(ctx.db, input.id);
       return { ok: true };
     }),
 });
