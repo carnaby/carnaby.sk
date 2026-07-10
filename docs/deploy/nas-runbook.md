@@ -27,7 +27,7 @@ The old v1 stack lives alongside this, untouched, at `/volume1/docker/carnaby-sk
 `carnaby-sk`, `carnaby-db`, plus Umami — `carnaby-db` also hosts the Umami database and must
 stay running even after v2 cutover). v1's own backup destination is
 `/volume1/private/clouds/GoogleDrive/carnaby_sk/backups` — v2 shares that same directory (see
-`backup-db-v2.sh`'s header comment) with a distinct `carnaby-v2-*` filename prefix so the two
+`backup-db-v2.sh`'s header comment) with a distinct `v2-carnaby-*` filename prefix so the two
 scripts' 30-day prunes never collide.
 
 Containers, ports, images:
@@ -165,7 +165,7 @@ Reverse Proxy) points at the OLD stack's port `3000`. The v2 stack is reachable 
 
 `backup-db-v2.sh` (deployed to `/volume1/docker/carnaby-sk-v2/backup-db-v2.sh`) dumps
 `carnaby-db-v2`'s `carnaby` database to
-`/volume1/private/clouds/GoogleDrive/carnaby_sk/backups/carnaby-v2-<timestamp>.sql.gz` and prunes
+`/volume1/private/clouds/GoogleDrive/carnaby_sk/backups/v2-carnaby-<timestamp>.sql.gz` and prunes
 files older than 30 days. Not scheduled automatically by this task — per the plan (Task 31, Step
 5), the owner schedules it in DSM Task Scheduler (daily, same cadence as v1's existing
 `backup-db.sh` job) once the v2 stack is the production stack. Until then it can be run manually
