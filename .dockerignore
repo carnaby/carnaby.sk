@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.next
+dist
+.nx
+.env*
+tools/migrate-legacy/data
+docs
+docker/.data
+coverage
+test-results
+playwright-report
+*.tsbuildinfo

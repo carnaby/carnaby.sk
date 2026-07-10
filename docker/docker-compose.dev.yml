@@ -1,3 +1,10 @@
+# Explicit project name so this file and docker-compose.local-prod.yml (same directory) can never
+# be inferred as the SAME compose project again. Without `name:`, compose derives the project name
+# from the directory ("docker") for BOTH files, so their `db` services collide -- `up` on one file
+# then recreates (removes!) the other's running db container. This actually happened on
+# 2026-07-10; the data survived only because it lives in the named volume below.
+name: carnaby-dev
+
 services:
   db:
     image: postgres:17-alpine
@@ -15,3 +22,8 @@ services:
       retries: 10
 volumes:
   carnaby-db-local:
+    # Pinned to the volume's original literal name, minted back when this project's inferred name
+    # was still "docker" (pre-`name:` above). Without this pin the new project name would make
+    # compose create a fresh empty `carnaby-dev_carnaby-db-local` and silently boot postgres with
+    # no data. Deliberately not `external: true` -- compose may still create it if truly absent.
+    name: docker_carnaby-db-local
