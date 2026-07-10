@@ -48,6 +48,13 @@ WORKDIR /app
 COPY --from=build /repo/apps/web/.next/standalone ./
 COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /repo/apps/web/public ./apps/web/public
+# The runner's files are owned by the build-stage user, but the NAS compose runs this container
+# as an arbitrary host uid:gid (`user: "1026:100"`) that doesn't match. Next's ISR/prerender disk
+# cache lazily mkdirs apps/web/.next/cache at request time; without write access that mkdir fails
+# with EACCES and the cache is silently disabled (serving still works off the prerendered pages).
+# Pre-create the dir and open up perms for arbitrary uids: a+rwX keeps dirs traversable/writable
+# without making regular files spuriously executable (unlike a blanket 777).
+RUN mkdir -p apps/web/.next/cache && chmod -R a+rwX apps/web/.next
 EXPOSE 3000
 ENV HOSTNAME=0.0.0.0 PORT=3000
 # 127.0.0.1, not localhost: alpine's wget tries ::1 first, but Next with HOSTNAME=0.0.0.0 binds
