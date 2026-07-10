@@ -3,9 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import type { AppRouter } from '@carnaby/api';
-
 import { useTRPC } from '../../lib/trpc-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -18,10 +15,10 @@ const ROLE_LABEL: Record<UserRole, string> = {
   user: 'Používateľ',
 };
 
-// Literal Tailwind classes for role badges
+// Literal Tailwind classes for role badges (using design tokens like posts-table.tsx)
 const ROLE_BADGE_CLASS: Record<UserRole, string> = {
-  admin: 'border-purple-500/30 bg-purple-500/15 text-purple-300',
-  user: 'border-gray-500/30 bg-gray-500/15 text-gray-300',
+  admin: 'border-carnaby/30 bg-carnaby/15 text-carnaby',
+  user: 'border-white/20 bg-white/10 text-white/60',
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('sk', { dateStyle: 'medium' });
@@ -48,22 +45,6 @@ export function UsersTable() {
       .slice(0, 2);
   };
 
-  const getColorForInitials = (name: string | null) => {
-    if (!name) return 'bg-gray-500';
-    // Consistent color based on name hash
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const colors = [
-      'bg-blue-500',
-      'bg-red-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-indigo-500',
-      'bg-pink-500',
-      'bg-purple-500',
-      'bg-orange-500',
-    ];
-    return colors[hash % colors.length];
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -115,13 +96,11 @@ export function UsersTable() {
                         {item.image ? (
                           <img
                             src={item.image}
-                            alt={item.name || 'User'}
+                            alt={item.name || 'Používateľ'}
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div
-                            className={`flex h-full w-full items-center justify-center text-xs font-semibold text-white ${getColorForInitials(item.name)}`}
-                          >
+                          <div className="flex h-full w-full items-center justify-center bg-white/10 text-xs font-semibold text-white/70">
                             {getInitials(item.name)}
                           </div>
                         )}
