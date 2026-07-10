@@ -8,8 +8,10 @@ import { join } from 'node:path';
 import { AppModule } from './app/app.module';
 import type { Auth } from './auth/auth';
 import { AUTH } from './auth/auth.module';
+import { assertProductionEnv } from './env-assert';
 
 async function bootstrap() {
+  assertProductionEnv(process.env);
   const migrationsFolder = process.env.MIGRATIONS_DIR ?? join(__dirname, '..', '..', '..', 'packages', 'db', 'migrations');
   const { db, pool } = createDb(process.env.DATABASE_URL!);
   await migrate(db, { migrationsFolder });
