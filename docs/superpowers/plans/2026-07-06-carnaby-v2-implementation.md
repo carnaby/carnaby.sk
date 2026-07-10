@@ -1984,7 +1984,10 @@ UMAMI_WEBSITE_ID=0733e169-1bc1-4990-a65f-2442fbb00237
           build-args: |
             APP_URL=https://carnaby.sk
             API_INTERNAL_URL=http://api:3001
+            NEXT_PUBLIC_UMAMI_WEBSITE_ID=0733e169-1bc1-4990-a65f-2442fbb00237
+            NEXT_PUBLIC_UMAMI_SRC=https://analytics.carnaby.sk/script.js
 ```
+**Also (Task 26 finding):** `NEXT_PUBLIC_*` vars are INLINED at build time by Next — `docker/web.Dockerfile` must declare `ARG`+`ENV` for `NEXT_PUBLIC_UMAMI_WEBSITE_ID` and `NEXT_PUBLIC_UMAMI_SRC` in the build stage (same pattern as APP_URL), and CI must pass them (values above). Without this, Umami analytics is silently dead in production images. Runtime env in the NAS compose does NOT work for these.
 **CRITICAL (Task 25 finding):** the web image FREEZES `APP_URL`/`API_INTERNAL_URL` at build time (Next rewrites + static robots.txt/sitemap.xml are baked into the build). The `build-args` above are mandatory — without them the published image ships localhost URLs. `API_INTERNAL_URL=http://api:3001` matches the NAS compose service name `api`. (The args are harmless no-ops for the api image.)
 
 - [ ] **Step 2: Push, watch run green, verify packages**
