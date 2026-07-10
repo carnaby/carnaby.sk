@@ -29,6 +29,14 @@ ARG API_INTERNAL_URL=http://api:3001
 ARG APP_URL=http://localhost:3100
 ENV API_INTERNAL_URL=$API_INTERNAL_URL
 ENV APP_URL=$APP_URL
+# NEXT_PUBLIC_* vars are inlined by Next into the client/server JS at build time (not read from
+# the running container's env, unlike API_INTERNAL_URL/APP_URL above) -- see
+# apps/web/components/site/umami.tsx. Must be passed as build-args by CI (docker/.env.nas.example
+# runtime env of the same name is a no-op; kept there only for parity, see docker-compose.nas.yml).
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
+ARG NEXT_PUBLIC_UMAMI_SRC=""
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ENV NEXT_PUBLIC_UMAMI_SRC=$NEXT_PUBLIC_UMAMI_SRC
 RUN pnpm nx build @carnaby/web
 
 FROM node:22-alpine AS runner
