@@ -4,6 +4,11 @@ Operational reference for running the v2 stack (`web` + `api` + `db`) on the Syn
 alongside the still-live v1 stack, until cutover (plan Task 31). Written during Task 26 (pure
 file authoring, no NAS access); the commands below are exercised for real in Tasks 28-31.
 
+> **Port note:** the staging host port changed from the plan's **3100 → 3200**. Task 28's
+> pre-flight found 3100 already occupied on the NAS by the unrelated `omnistra-cc` project's
+> web container (bound since 2026-07-02). 3200 was verified free and is now the staging port
+> everywhere below; the plan/spec documents still say 3100 and are historical.
+
 NAS access: `ssh -p 2222 carnaby@192.168.1.41`. **Non-interactive shells (ssh single-command,
 DSM Task Scheduler, cron) have `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, which excludes
 `/usr/local/bin`** — that's where Synology Container Manager symlinks `docker`. Every command
@@ -34,7 +39,7 @@ Containers, ports, images:
 
 | Container | Image | Port (host:container) | Notes |
 |---|---|---|---|
-| `carnaby-web` | `ghcr.io/carnaby/carnaby-web:${TAG}` | `3100:3000` | staging port; becomes the public port only after DSM reverse-proxy cutover |
+| `carnaby-web` | `ghcr.io/carnaby/carnaby-web:${TAG}` | `3200:3000` | staging port (was 3100 in the plan — see port note above); becomes the public port only after DSM reverse-proxy cutover |
 | `carnaby-api` | `ghcr.io/carnaby/carnaby-api:${TAG}` | internal only (`api:3001` on the `carnaby-v2` bridge network) | not published to the host |
 | `carnaby-db-v2` | `postgres:17-alpine` | internal only (`db:5432`) | not published to the host |
 
@@ -86,7 +91,7 @@ on api boot — confirm via the logs command below), `carnaby-web` reports healt
 (depends on api's healthcheck). Smoke-test from the NAS itself before touching DNS/proxy:
 
 ```bash
-ssh -p 2222 carnaby@192.168.1.41 "wget -qO- http://localhost:3100/api/health && wget -qO- http://localhost:3100 | head -c 300"
+ssh -p 2222 carnaby@192.168.1.41 "wget -qO- http://localhost:3200/api/health && wget -qO- http://localhost:3200 | head -c 300"
 ```
 
 At this point content/categories are still empty — real data arrives via the migration in Task
@@ -151,13 +156,13 @@ container, so pinning to a sha tag effectively opts that service out of automati
 ## DSM reverse-proxy cutover (owner action, Task 31 — STOP for explicit approval before this step)
 
 Until cutover, `carnaby.sk` in DSM's reverse proxy (Control Panel → Login Portal → Advanced →
-Reverse Proxy) points at the OLD stack's port `3000`. The v2 stack is reachable only on `3100`
+Reverse Proxy) points at the OLD stack's port `3000`. The v2 stack is reachable only on `3200`
 (LAN/staging) until this step.
 
-1. **Cutover:** in DSM, change the reverse-proxy rule's destination port from `3000` to `3100`.
+1. **Cutover:** in DSM, change the reverse-proxy rule's destination port from `3000` to `3200`.
    Immediately verify `https://carnaby.sk`: public pages load, Google login works, `/admin` is
    reachable and gated correctly, Umami events are arriving for the new site.
-2. **Rollback (if anything fails):** change the destination port back from `3100` to `3000`. The
+2. **Rollback (if anything fails):** change the destination port back from `3200` to `3000`. The
    old stack is untouched and still running the whole time — this is a pure proxy-config revert,
    no container changes needed on either stack.
 

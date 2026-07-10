@@ -19,7 +19,10 @@ services:
     container_name: carnaby-web
     restart: unless-stopped
     user: "1026:100"
-    ports: ['3100:3000']
+    # Staging host port changed from the plan's 3100 -> 3200: Task 28 pre-flight found 3100
+    # already bound by the unrelated omnistra-cc project's web container (occupied since
+    # 2026-07-02). 3200 verified free on the NAS at the time of this change.
+    ports: ['3200:3000']
     environment:
       - NODE_ENV=production
       # Runtime copy of API_INTERNAL_URL -- lib/trpc-server.ts and lib/session.ts read it from
