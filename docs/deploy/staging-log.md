@@ -217,4 +217,126 @@ with the Task 29 migration.
   throughout (verified v1 still HTTP 200 on :3000 after the deploy).
 - Watchtower will auto-update `carnaby-web`/`carnaby-api` on new `:dev`
   pushes (labels active; existing watchtower container, nothing added).
+
+## Data migration — 2026-07-10 (Task 29)
+
+Repeat of Task 24's rehearsal against **today's live** v1 data, loaded into the
+NAS staging db (`carnaby-db-v2`), plus the thumbnail file copy deferred from
+Task 24. v1 (`carnaby-db`, `carnaby-sk`) stayed read-only and running
+throughout — only `pg_dump` reads were ever issued against it.
+
+### 1. Fresh dump from NAS v1
+
+```bash
+ssh -p 2222 carnaby@192.168.1.41 "/usr/local/bin/docker exec carnaby-db pg_dump -U carnaby -d carnaby" > tools/migrate-legacy/data/carnaby-legacy.sql
+```
+
+Exit 0, no stderr. 201,727 bytes / 856 lines / 8 `COPY` blocks — byte-identical
+shape to the Task 24 rehearsal dump (same day, no new posts published since).
+
+### 2. Local restore + fresh v2 schema + migration
+
+- `carnaby_legacy` (local) dropped/recreated, dump restored: exit 0, zero
+  errors. Counts: **posts=21, users=2, post_translations=25, categories=3,
+  post_categories=21**.
+- Local `carnaby` (v2) db dropped/recreated via the `postgres` maintenance db
+  (a bare `psql -U carnaby -c "DROP DATABASE carnaby"` fails with "cannot drop
+  the currently open database" because `psql` with no `-d` connects to a
+  database named after the user, i.e. `carnaby` itself — worked around by
+  adding `-d postgres`). Also killed one leftover local `node` process found
+  listening on :3001 (stale api dev server from an earlier session; had no
+  open connection to the db, but cleared for process hygiene) before the drop.
+- `pnpm nx run @carnaby/db:migrate` — applied cleanly against the fresh db.
+- `pnpm nx run migrate-legacy:run` — **exit 0, RESULT: OK.** Exact matches on
+  all counts (users 2→2, categories 3→3, posts 21→21, post_translations
+  25→25, post_categories 21→21), zero posts without translations, zero audit
+  mismatches. 21 "missing thumbnail file" WARNs — expected noise (local
+  `UPLOADS_DIR` isn't pointed at real files; verified for real in step 4
+  below). Sample titles spot-checked correct (Dodo/Carnaby SK titles).
+
+### 3. Dump local v2 → import into NAS staging db
+
+```bash
+docker exec carnaby-db-local pg_dump -U carnaby -d carnaby > tools/migrate-legacy/data/carnaby-v2.sql   # 121,741 bytes, 9 COPY blocks incl. drizzle.__drizzle_migrations
+scp -O -P 2222 tools/migrate-legacy/data/carnaby-v2.sql carnaby@192.168.1.41:/volume1/docker/carnaby-sk-v2/import.sql   # landed at identical byte size
+```
+
+On the NAS (adapted per controller instruction — drop **both** schemas, since
+the drizzle migration journal lives in schema `drizzle`, to avoid duplicate
+in the imported dump which recreates it):
+
+```bash
+docker exec -i carnaby-db-v2 psql -U carnaby -d carnaby -c 'DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public;'
+docker exec -i carnaby-db-v2 psql -U carnaby -d carnaby < import.sql   # exit 0
+rm import.sql
+```
+
+Post-import row counts (queried directly on `carnaby-db-v2`): **posts=21,
+post_translations=25, categories=3, post_categories=21, user=2, account=2,
+drizzle.__drizzle_migrations=2** — all match the local source exactly.
+
+`docker compose restart api` → healthy within ~30s; boot log clean (no
+errors); `drizzle.__drizzle_migrations` count unchanged at 2 after the
+restart, confirming the migrate-on-boot step no-op'd against the imported
+journal as expected rather than duplicating it.
+
+### 4. Thumbnails
+
+```bash
+# read-only inspection of the old dir (allowed):
+ssh ... "find /volume1/docker/carnaby-sk/thumbnails -type f | wc -l"        # 39 (18 root + 21 under originals/)
+ssh ... "du -sh /volume1/docker/carnaby-sk/thumbnails/"                     # 6.0M
+# copy old -> new (allowed, read-old/write-new only):
+ssh ... "cp -a /volume1/docker/carnaby-sk/thumbnails/. /volume1/docker/carnaby-sk-v2/uploads/"
+```
+
+Post-copy: new `uploads/` has the identical 18 root + 21 `originals/` files,
+39 total, 6.0M — exact match to source.
+
+**Cross-check** (bare filenames, per the api's `images.service.ts` lookup
+order `${UPLOADS_DIR}/originals/<f>` then `${UPLOADS_DIR}/<f>`):
+
+```bash
+docker exec carnaby-db-v2 psql -U carnaby -d carnaby -tA -c "SELECT thumbnail_path FROM posts WHERE thumbnail_path IS NOT NULL ORDER BY thumbnail_path" > /tmp/db_thumbs.txt
+ls /volume1/docker/carnaby-sk-v2/uploads/originals/ | sort > /tmp/fs_thumbs.txt
+diff /tmp/db_thumbs.txt /tmp/fs_thumbs.txt   # empty diff, exit 0
+```
+
+**Result: zero missing, zero extra.** All 21 posts with a `thumbnail_path`
+have their file present under `uploads/originals/`, filenames matching
+exactly — this closes the thumbnail-file check Task 24 explicitly deferred to
+this task.
+
+### 5. Verification with real data (LAN)
+
+| Check | Result |
+|---|---|
+| Homepage `http://192.168.1.41:3200/` | Real content: all 3 featured-post titles found in HTML (`postavil web`, `Unbidden Joy`, `AI experiment`) |
+| Known post, SK: `/posts/the-ai-experiment-carnabysk-the-final-verdict-human-vs-machine` | 200; renders real title text "Človek vs. Stroj" |
+| Same post, EN: `/en/posts/...` | 200; renders "Final Verdict... Human vs. Machine" |
+| Category page `/category/devlog` | 200; lists the migrated devlog post ("Ako som... postavil web") |
+| Explicit `/sk/...` prefix | 307 (sk is the unprefixed default locale — expected, not a bug) |
+| Image `/images/600/thumb-1770113702078-636037996.png` | 200, `content-type: image/webp` |
+| View counts | 0 across the 3 spot-checked posts — matches the legacy source exactly (`view_count=0` there too; not a migration artifact) |
+| v1 `http://192.168.1.41:3000/` | 200 throughout — never restarted, never queried beyond the one `pg_dump` |
+| Container health post-migration | `carnaby-db-v2`/`carnaby-api`/`carnaby-web` all healthy; v1's `carnaby-sk`/`carnaby-db`/`carnaby-umami`/`carnaby-watchtower` unchanged, "Up 8 days" throughout |
+| Log scan (`error\|EACCES\|ECONNREFUSED`) | 0 hits on `carnaby-api` and `carnaby-web` over the post-restart window |
+
+### Process hygiene
+
+Local dev db (`carnaby-db-local`) now holds today's real prod data in both
+`carnaby_legacy` and `carnaby` (v2) — intended, matches the Task 24
+precedent, later tasks benefit. One stale local `node` dev-server process on
+:3001 was killed (see step 2); confirmed nothing listening on local
+3000/3001 at the end of this task.
+
+### Files (gitignored, not committed)
+
+`tools/migrate-legacy/data/carnaby-legacy.sql`, `carnaby-v2.sql`, and sibling
+`.log` files — regenerated fresh each run, same pattern as Task 24.
+
+### Next
+
+Task 30 (staging verification & pre-cutover gates) can now run against real
+data.
 - Next: Task 29 (data migration into `carnaby-db-v2`).
