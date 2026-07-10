@@ -33,6 +33,16 @@ export interface MigrationReport {
    * `UPLOADS_DIR` wasn't set (in which case `missingThumbnails` is always empty). */
   uploadsDirChecked: string | null;
   samples: SampleSlug[];
+  /**
+   * One entry per table where the migration's own in-memory tally (rows it believes it inserted)
+   * disagrees with a fresh `SELECT COUNT(*)` run against the target *after* the migration
+   * transaction committed -- e.g. `"posts: in-memory=3 queried=2"`. Any entry here is always a
+   * FAIL, independent of a `CountRow.strict` flag (strict/non-strict is about whether an
+   * old-vs-new *count* difference is expected; this is about whether the writer's own bookkeeping
+   * can be trusted at all). Optional/absent for callers that don't run this audit (e.g. hand-built
+   * reports in unit tests) -- treated the same as an empty array.
+   */
+  auditMismatches?: string[];
 }
 
 /**
@@ -46,10 +56,12 @@ export function findMissingThumbnails(uploadsDir: string | undefined, thumbnailF
   return thumbnailFilenames.filter((name) => !existsSync(join(originalsDir, name)));
 }
 
-/** The run should exit non-zero exactly when: any post ended up with zero translations, or a
- * "strict" (1:1 copy) table's old/new counts disagree. */
+/** The run should exit non-zero exactly when: any post ended up with zero translations, a
+ * "strict" (1:1 copy) table's old/new counts disagree, or the in-memory-vs-queried audit found a
+ * mismatch. */
 export function reportHasFailures(report: MigrationReport): boolean {
   if (report.postsWithoutTranslations.length > 0) return true;
+  if ((report.auditMismatches?.length ?? 0) > 0) return true;
   return report.counts.some((c) => c.strict && c.oldCount !== c.newCount);
 }
 
@@ -66,6 +78,15 @@ export function formatReport(report: MigrationReport): string {
   lines.push('');
   lines.push('-- counts (old -> new) --');
   lines.push(...report.counts.map(formatCountLine));
+
+  lines.push('');
+  lines.push('-- audit: in-memory tally vs DB-queried count after commit (FAIL) --');
+  const auditMismatches = report.auditMismatches ?? [];
+  if (auditMismatches.length === 0) {
+    lines.push('  none');
+  } else {
+    for (const m of auditMismatches) lines.push(`  FAIL ${m}`);
+  }
 
   lines.push('');
   lines.push('-- posts with zero translations (FAIL) --');
