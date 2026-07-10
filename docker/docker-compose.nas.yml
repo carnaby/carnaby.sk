@@ -1,0 +1,104 @@
+# Deployed verbatim to /volume1/docker/carnaby-sk-v2/docker-compose.yml on the Synology NAS
+# (Task 28 scp's this file to that exact destination filename). Do not add local `build:`
+# blocks here -- this stack only ever pulls prebuilt images from GHCR (published by CI, Task 27);
+# building on the NAS itself is not supported (no repo checkout there).
+#
+# Explicit project name -- same collision class documented in docker-compose.dev.yml and
+# docker-compose.local-prod.yml (Task 25 incident): without `name:`, compose infers the project
+# name from the compose file's directory. On the NAS the directory is already
+# `/volume1/docker/carnaby-sk-v2`, so inference would happen to be fine there, but pinning it
+# explicitly is now house style for every compose file in this repo, and it also makes this file
+# safe to run from any other directory (e.g. a local `docker compose -f docker/docker-compose.nas.yml
+# config` dry-run from the repo root) without colliding with docker-compose.dev.yml's
+# `carnaby-dev` or docker-compose.local-prod.yml's `carnaby-local-prod`.
+name: carnaby-sk-v2
+
+services:
+  web:
+    image: ghcr.io/carnaby/carnaby-web:${TAG:-dev}
+    container_name: carnaby-web
+    restart: unless-stopped
+    user: "1026:100"
+    ports: ['3100:3000']
+    environment:
+      - NODE_ENV=production
+      # Runtime copy of API_INTERNAL_URL -- lib/trpc-server.ts and lib/session.ts read it from
+      # process.env on every server-side fetch. It must match this compose file's `api` service
+      # name (it does: http://api:3001). This does NOT replace the build-time ARG of the same
+      # name baked into the image by CI (Task 27) -- next.config.js's rewrites() and the static
+      # robots.txt/sitemap.xml are frozen at build and ignore this runtime value; see
+      # docker/web.Dockerfile and docker/docker-compose.local-prod.yml for the full explanation.
+      # Both the build-time and runtime copies are required; this is the runtime half.
+      - API_INTERNAL_URL=http://api:3001
+      - APP_URL=${APP_URL}
+      # NOTE (unverified against a real GHCR-built image at the time this file was authored):
+      # NEXT_PUBLIC_-prefixed vars are inlined by Next.js at BUILD time, not read at container
+      # runtime -- confirmed locally by grepping a compiled server chunk for the literal
+      # analytics website-id value from .env, which appeared hardcoded rather than looked up.
+      # The current docker/web.Dockerfile only declares build ARGs for API_INTERNAL_URL/APP_URL,
+      # and the Task 27 CI plan only passes those two as `build-args`. Until a
+      # NEXT_PUBLIC_UMAMI_WEBSITE_ID (+ _SRC) build-arg/ARG is added to web.Dockerfile and wired
+      # into the Task 27 CI job, these two runtime env vars are inert and Umami analytics will not
+      # fire in the deployed image. Flagged for Task 27; kept here for parity with the brief and
+      # because they become live the moment that build-arg is added, with no compose change needed.
+      - NEXT_PUBLIC_UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
+      - NEXT_PUBLIC_UMAMI_SRC=https://analytics.carnaby.sk/script.js
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [carnaby-v2]
+    labels: ['com.centurylinklabs.watchtower.enable=true']
+    # No explicit healthcheck block: the image itself declares HEALTHCHECK (wget against
+    # 127.0.0.1:3000, see docker/web.Dockerfile) and compose/docker respect that image default
+    # when the service doesn't override it.
+
+  api:
+    image: ghcr.io/carnaby/carnaby-api:${TAG:-dev}
+    container_name: carnaby-api
+    restart: unless-stopped
+    user: "1026:100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgres://carnaby:${DB_PASSWORD}@db:5432/carnaby
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - ADMIN_EMAILS=${ADMIN_EMAILS}
+      - APP_URL=${APP_URL}
+      - UPLOADS_DIR=/data/uploads
+      - CACHE_DIR=/data/cache
+    volumes:
+      - /volume1/docker/carnaby-sk-v2/uploads:/data/uploads
+      - /volume1/docker/carnaby-sk-v2/cache:/data/cache
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [carnaby-v2]
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/health || exit 1']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    labels: ['com.centurylinklabs.watchtower.enable=true']
+
+  db:
+    image: postgres:17-alpine
+    container_name: carnaby-db-v2
+    restart: unless-stopped
+    user: "1026:100"
+    environment:
+      - POSTGRES_DB=carnaby
+      - POSTGRES_USER=carnaby
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - /volume1/docker/carnaby-sk-v2/db:/var/lib/postgresql/data
+    networks: [carnaby-v2]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U carnaby -d carnaby']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  carnaby-v2:
+    driver: bridge
