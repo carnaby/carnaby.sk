@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findMissingThumbnails, reportHasFailures } from './report';
+import { findMissingThumbnails, formatReport, reportHasFailures } from './report';
 import type { MigrationReport } from './report';
 
 function baseReport(overrides: Partial<MigrationReport> = {}): MigrationReport {
@@ -48,6 +48,35 @@ describe('reportHasFailures', () => {
       ],
     });
     expect(reportHasFailures(report)).toBe(false);
+  });
+
+  it('is true when the in-memory vs DB-queried audit finds a mismatch, even with clean counts', () => {
+    const report = baseReport({ auditMismatches: ['posts: in-memory=3 queried=2'] });
+    expect(reportHasFailures(report)).toBe(true);
+  });
+
+  it('is false when auditMismatches is an empty array', () => {
+    const report = baseReport({ auditMismatches: [] });
+    expect(reportHasFailures(report)).toBe(false);
+  });
+
+  it('is false when auditMismatches is omitted entirely (backward compatible)', () => {
+    const report = baseReport();
+    delete (report as { auditMismatches?: string[] }).auditMismatches;
+    expect(reportHasFailures(report)).toBe(false);
+  });
+});
+
+describe('formatReport', () => {
+  it('renders "none" in the audit section for a clean migration', () => {
+    const output = formatReport(baseReport());
+    expect(output).toContain('-- audit: in-memory tally vs DB-queried count after commit (FAIL) --\n  none');
+  });
+
+  it('renders each audit mismatch as a FAIL line and forces RESULT: FAIL', () => {
+    const output = formatReport(baseReport({ auditMismatches: ['posts: in-memory=3 queried=2'] }));
+    expect(output).toContain('FAIL posts: in-memory=3 queried=2');
+    expect(output).toContain('RESULT: FAIL');
   });
 });
 
