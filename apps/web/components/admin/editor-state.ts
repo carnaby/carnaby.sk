@@ -59,6 +59,18 @@ export function isTranslationPresent(t: TranslationFormState): boolean {
   return t.title.trim() !== '' && t.content.trim() !== '';
 }
 
+/** A language tab that has *some* field typed (title, excerpt, content, or meta description) but
+ * isn't `isTranslationPresent` yet — e.g. a title with no content, content with no title, or just
+ * an excerpt/meta description typed on their own. Distinct from a fully blank tab (nothing typed
+ * at all): `buildUpsertInput` silently drops a blank tab (nothing to lose) but must not silently
+ * drop a partial one (typed content would otherwise vanish on save without any warning) — see
+ * that function's own doc comment. */
+export function isTranslationPartial(t: TranslationFormState): boolean {
+  const anyFieldFilled =
+    t.title.trim() !== '' || t.excerpt.trim() !== '' || t.content.trim() !== '' || t.metaDescription.trim() !== '';
+  return anyFieldFilled && !isTranslationPresent(t);
+}
+
 /**
  * Updates a single field of a single language's translation. Editing the `title` field
  * auto-regenerates the shared `slug` (via `slugify`) as long as the slug hasn't been hand-edited
@@ -95,17 +107,34 @@ export function copyTranslation(state: EditorState, from: Language, to: Language
 
 export type BuildUpsertResult = { input: PostUpsertInput } | { errors: string[] };
 
+const LANGUAGE_LABEL: Record<Language, string> = { sk: 'SK', en: 'EN' };
+
 /**
  * Shapes the free-form `EditorState` into the api's `postUpsertInput` contract and validates it.
- * A language tab that isn't `isTranslationPresent` is dropped entirely — not sent as an
- * empty/partial translation — and `postUpsertInput`'s own `.refine` then enforces that at least
- * one of sk/en survived. Blank optional fields (excerpt, metaDescription, youtubeId,
- * soundcloudUrl, thumbnailPath) are sent as `undefined`, never as `""`.
+ *
+ * A language tab that's fully blank (`isTranslationPresent` false, `isTranslationPartial` false —
+ * nothing typed at all) is dropped entirely — not sent as an empty translation — and
+ * `postUpsertInput`'s own `.refine` then enforces that at least one of sk/en survived.
+ *
+ * A tab that's *partially* filled in (`isTranslationPartial` true — e.g. a title with no content)
+ * is a different story: silently dropping it would throw away whatever the user typed with no
+ * warning. So instead this returns a validation error for every partial tab, blocking the save
+ * entirely, before even attempting the zod parse below.
+ *
+ * Blank optional fields (excerpt, metaDescription, youtubeId, soundcloudUrl, thumbnailPath) on a
+ * present tab are sent as `undefined`, never as `""`.
  */
 export function buildUpsertInput(state: EditorState): BuildUpsertResult {
+  const partialErrors: string[] = [];
   const translations: NonNullable<PostUpsertInput['translations']> = {};
   for (const language of ['sk', 'en'] satisfies Language[]) {
     const t = state.translations[language];
+    if (isTranslationPartial(t)) {
+      partialErrors.push(
+        `Jazyk ${LANGUAGE_LABEL[language]} má rozpísaný obsah — doplň názov aj obsah, alebo polia vymaž.`,
+      );
+      continue;
+    }
     if (!isTranslationPresent(t)) continue;
     translations[language] = {
       title: t.title.trim(),
@@ -114,6 +143,7 @@ export function buildUpsertInput(state: EditorState): BuildUpsertResult {
       metaDescription: t.metaDescription.trim() || undefined,
     };
   }
+  if (partialErrors.length > 0) return { errors: partialErrors };
 
   const candidate = {
     slug: state.slug,
