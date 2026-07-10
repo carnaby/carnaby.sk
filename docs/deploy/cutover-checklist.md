@@ -146,3 +146,4 @@ a self-contained pre-flight to hand off:
 | NAS operational reference | `docs/deploy/nas-runbook.md` |
 | e2e-vs-staging config changes (Task 30) | `apps/web-e2e/playwright.config.mts`, `apps/web-e2e/src/global-setup.ts`, `apps/web-e2e/src/fixtures/env.ts`, and the `home.spec.ts`/`category.spec.ts`/`post.spec.ts`/`admin-*.spec.ts` doc comments |
 | This task's own e2e-vs-staging run, log scan, and DB backup | this file, § "Pre-cutover gates" above |
+| Sitemap runtime regeneration | VERIFIED 2026-07-10: first request after web-container recreate served 8-entry static fallback; background ISR regeneration kicked in; subsequent requests returned 50 URLs including real post slugs in both locales (SK + EN) |

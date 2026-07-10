@@ -34,16 +34,13 @@ services:
       # Both the build-time and runtime copies are required; this is the runtime half.
       - API_INTERNAL_URL=http://api:3001
       - APP_URL=${APP_URL}
-      # NOTE (unverified against a real GHCR-built image at the time this file was authored):
       # NEXT_PUBLIC_-prefixed vars are inlined by Next.js at BUILD time, not read at container
-      # runtime -- confirmed locally by grepping a compiled server chunk for the literal
-      # analytics website-id value from .env, which appeared hardcoded rather than looked up.
-      # The current docker/web.Dockerfile only declares build ARGs for API_INTERNAL_URL/APP_URL,
-      # and the Task 27 CI plan only passes those two as `build-args`. Until a
-      # NEXT_PUBLIC_UMAMI_WEBSITE_ID (+ _SRC) build-arg/ARG is added to web.Dockerfile and wired
-      # into the Task 27 CI job, these two runtime env vars are inert and Umami analytics will not
-      # fire in the deployed image. Flagged for Task 27; kept here for parity with the brief and
-      # because they become live the moment that build-arg is added, with no compose change needed.
+      # runtime. Task 27 CI passes NEXT_PUBLIC_UMAMI_WEBSITE_ID and NEXT_PUBLIC_UMAMI_SRC as
+      # build-args to docker/web.Dockerfile, so the values are baked into the image and Umami
+      # analytics fires correctly in the deployed CI-built image. These runtime env lines are
+      # informational/documentation only; the active values come from the build-time baked-in
+      # values (see docker/web.Dockerfile and docker/docker-compose.local-prod.yml for full
+      # explanation of build-time vs. runtime semantics).
       - NEXT_PUBLIC_UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
       - NEXT_PUBLIC_UMAMI_SRC=https://analytics.carnaby.sk/script.js
     depends_on:
