@@ -128,6 +128,27 @@ ssh -p 2222 carnaby@192.168.1.41 "/usr/local/bin/docker logs carnaby-db-v2"    #
 Add `-f` to follow, `--tail 200` to limit. `docker compose ps` (run from
 `/volume1/docker/carnaby-sk-v2`) shows each container's current health status at a glance.
 
+## Admin role
+
+`ADMIN_EMAILS` in `.env` grants the admin role **only on first sign-in** (triggered by the
+user-create hook in the auth system). Adding an email to `ADMIN_EMAILS` does **not** promote an
+existing user who has already signed in.
+
+To manually promote an existing user to admin after the fact (e.g. after sign-in has already
+created them with `role=user`):
+
+```bash
+ssh -p 2222 carnaby@192.168.1.41 "/usr/local/bin/docker exec carnaby-db-v2 psql -U carnaby -d carnaby -c \"UPDATE \\\"user\\\" SET role='admin' WHERE email='<email>';\""
+```
+
+Example: to promote `example@domain.com`:
+
+```bash
+ssh -p 2222 carnaby@192.168.1.41 "/usr/local/bin/docker exec carnaby-db-v2 psql -U carnaby -d carnaby -c \"UPDATE \\\"user\\\" SET role='admin' WHERE email='example@domain.com';\""
+```
+
+(The backslash escaping ensures the psql `\"` quoting is preserved through the ssh shell layer.)
+
 ## Healthchecks
 
 | Service | Where defined | Check |
