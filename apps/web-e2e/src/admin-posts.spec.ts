@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { createAdminSessionCookie } from './fixtures/admin-session';
 import { E2E_ADMIN_POST_TITLE, seedAdminFixturePost } from './fixtures/admin-post';
+import { EXTERNAL_BASE_URL } from './fixtures/env';
 
 /**
  * Task 20: `/admin/posts` table -- full authenticated admin flow (list + delete), not just the
@@ -21,10 +22,18 @@ import { E2E_ADMIN_POST_TITLE, seedAdminFixturePost } from './fixtures/admin-pos
  * from the *same* file in different parallel workers by default, and two workers both upserting
  * (or one upserting while another deletes) the same stable-slug row raced on the slug's unique
  * constraint when this was first written -- confirmed by actually running it, not assumed.
+ *
+ * Task 30: skipped entirely in external mode (`E2E_BASE_URL` set) -- there's no drizzle access to
+ * a staging DB from here to seed/authenticate against, and this is an admin-only internal tool
+ * exercised manually at staging per the task brief, not headlessly.
  */
 test.describe.configure({ mode: 'serial' });
 
 test.beforeEach(async ({ page, context, browserName }) => {
+  test.skip(
+    Boolean(EXTERNAL_BASE_URL),
+    'admin CRUD e2e needs the local dev stack (direct DB fixture access + signed session cookie) -- see playwright.config.mts E2E_BASE_URL doc',
+  );
   test.skip(browserName !== 'chromium', 'admin CRUD e2e runs on chromium only -- see file doc comment');
 
   await seedAdminFixturePost();

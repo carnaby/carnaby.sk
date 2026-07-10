@@ -1,3 +1,4 @@
+import { EXTERNAL_BASE_URL } from './fixtures/env';
 import { seedPosts } from './fixtures/seed-posts';
 
 const API_HEALTH_URL = 'http://localhost:3001/api/health';
@@ -33,6 +34,13 @@ async function waitForApi(): Promise<void> {
  * the dev Postgres database the `webServer`-started api/web processes read from, and waiting for
  * the api itself to be reachable (see `waitForApi` above). */
 export default async function globalSetup(): Promise<void> {
+  // Task 30: external mode (e.g. NAS staging) targets an already-running deployment with real
+  // production data -- there's no local dev DB to seed and no local api dev server to health-poll
+  // (the api isn't even reachable on localhost:3001 in that case; it's internal-only on the NAS,
+  // see docs/deploy/nas-runbook.md). See playwright.config.mts's doc comment for the other two
+  // places this same var gates behavior.
+  if (EXTERNAL_BASE_URL) return;
+
   await waitForApi();
   await seedPosts();
 }
