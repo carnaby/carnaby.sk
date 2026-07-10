@@ -28,6 +28,7 @@ import {
   copyTranslation,
   createEmptyState,
   emptyTranslation,
+  isTranslationPartial,
   isTranslationPresent,
   setSlug,
   setTranslationField,
@@ -101,16 +102,23 @@ export function PostEditor({ mode }: PostEditorProps) {
 
   // `manualState` is `null` until the first edit; until then, `state` is derived straight from
   // the loaded post (edit mode) or a blank slate (new mode) -- no `useEffect`/hydration-race
-  // needed to keep the form in sync with an async query.
+  // needed to keep the form in sync with an async query. `deriveHydratedState` names that
+  // fallback once so both the render-time `state` below and `updateState`'s functional
+  // `setManualState` updater (which needs the exact same fallback the moment `manualState` is
+  // still `null`) can't drift apart.
+  const deriveHydratedState = () => (isEdit && postQuery.data ? fromPostById(postQuery.data) : createEmptyState());
   const [manualState, setManualState] = useState<EditorState | null>(null);
-  const state: EditorState = manualState ?? (isEdit && postQuery.data ? fromPostById(postQuery.data) : createEmptyState());
+  const state: EditorState = manualState ?? deriveHydratedState();
 
   const [activeLanguage, setActiveLanguage] = useState<Language>('sk');
   const [errors, setErrors] = useState<string[]>([]);
   const [pendingStatus, setPendingStatus] = useState<PostStatus | null>(null);
 
+  // Functional `setState` form -- reads the *current* state at the moment React applies the
+  // update rather than closing over whatever `state` was in scope when the calling event handler
+  // was created, so this stays correct even if multiple updates land before a re-render.
   function updateState(updater: (prev: EditorState) => EditorState) {
-    setManualState(updater(state));
+    setManualState((prev) => updater(prev ?? deriveHydratedState()));
   }
 
   const createMutation = useMutation(trpc.posts.create.mutationOptions());
@@ -203,11 +211,12 @@ export function PostEditor({ mode }: PostEditorProps) {
               const translation = state.translations[language];
               const other = OTHER_LANGUAGE[language];
               const present = isTranslationPresent(translation);
+              const partial = isTranslationPartial(translation);
               const otherPresent = isTranslationPresent(state.translations[other]);
 
               return (
                 <TabsContent key={language} value={language} className="mt-4 flex flex-col gap-4">
-                  {!present ? (
+                  {!present && !partial ? (
                     <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-glass px-4 py-3 text-sm text-white/60">
                       <span>Táto jazyková verzia ešte nie je preložená.</span>
                       {otherPresent ? (
@@ -221,6 +230,12 @@ export function PostEditor({ mode }: PostEditorProps) {
                         </Button>
                       ) : null}
                     </div>
+                  ) : null}
+                  {partial ? (
+                    // No "Skopírovať z ..." button here on purpose: this tab already has typed
+                    // content, and that button unconditionally overwrites both fields -- offering
+                    // it here would make it a one-click way to lose whatever's already typed.
+                    <p className="text-sm text-amber-400">Rozpísaný preklad — doplň názov aj obsah.</p>
                   ) : null}
 
                   <div className="flex flex-col gap-1.5">

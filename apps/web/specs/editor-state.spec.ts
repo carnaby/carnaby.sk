@@ -4,6 +4,7 @@ import {
   buildUpsertInput,
   copyTranslation,
   createEmptyState,
+  isTranslationPartial,
   isTranslationPresent,
   setSlug,
   setTranslationField,
@@ -34,12 +35,32 @@ describe('buildUpsertInput', () => {
     });
   });
 
-  it('drops a tab with only a title and no content (still not "present")', () => {
+  it('returns a Slovak validation error for a partial EN tab (title only, no content) instead of silently dropping it', () => {
     let state = skOnlyState();
     state = setTranslationField(state, 'en', 'title', 'Hello world');
-    // no EN content set
+    // no EN content set -- this used to be silently dropped (data loss); it must now block save.
 
     const result = buildUpsertInput(state);
+    expect('errors' in result).toBe(true);
+    if (!('errors' in result)) throw new Error('expected errors');
+    expect(result.errors.join(' ')).toMatch(/EN/);
+    expect(result.errors.join(' ')).toMatch(/rozpísaný/i);
+  });
+
+  it('returns a Slovak validation error for a partial SK tab (content only, no title)', () => {
+    let state = createEmptyState();
+    state = setTranslationField(state, 'sk', 'content', 'Iba obsah, bez titulku.');
+
+    const result = buildUpsertInput(state);
+    expect('errors' in result).toBe(true);
+    if (!('errors' in result)) throw new Error('expected errors');
+    expect(result.errors.join(' ')).toMatch(/SK/);
+    expect(result.errors.join(' ')).toMatch(/rozpísaný/i);
+  });
+
+  it('still drops a fully empty EN tab silently (no error) when SK is complete', () => {
+    const result = buildUpsertInput(skOnlyState());
+
     expect('input' in result).toBe(true);
     if (!('input' in result)) throw new Error('expected input');
     expect(result.input.translations.en).toBeUndefined();
@@ -148,6 +169,36 @@ describe('isTranslationPresent', () => {
 
   it('is true once both title and content are non-blank', () => {
     expect(isTranslationPresent({ title: 'T', excerpt: '', content: 'C', metaDescription: '' })).toBe(true);
+  });
+});
+
+describe('isTranslationPartial', () => {
+  it('is false for a fully blank translation', () => {
+    expect(isTranslationPartial({ title: '', excerpt: '', content: '', metaDescription: '' })).toBe(false);
+  });
+
+  it('is false when only whitespace is present anywhere', () => {
+    expect(isTranslationPartial({ title: '   ', excerpt: '\t', content: '\n', metaDescription: '  ' })).toBe(false);
+  });
+
+  it('is false once both title and content are non-blank (present-complete, not partial)', () => {
+    expect(isTranslationPartial({ title: 'T', excerpt: '', content: 'C', metaDescription: '' })).toBe(false);
+  });
+
+  it('is true when only the title is filled in', () => {
+    expect(isTranslationPartial({ title: 'Iba titulok', excerpt: '', content: '', metaDescription: '' })).toBe(true);
+  });
+
+  it('is true when only the content is filled in', () => {
+    expect(isTranslationPartial({ title: '', excerpt: '', content: 'Iba obsah', metaDescription: '' })).toBe(true);
+  });
+
+  it('is true when only the excerpt is filled in (title/content still blank)', () => {
+    expect(isTranslationPartial({ title: '', excerpt: 'Iba krátky popis', content: '', metaDescription: '' })).toBe(true);
+  });
+
+  it('is true when only the meta description is filled in', () => {
+    expect(isTranslationPartial({ title: '', excerpt: '', content: '', metaDescription: 'Iba meta popis' })).toBe(true);
   });
 });
 
