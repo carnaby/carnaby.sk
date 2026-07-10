@@ -1,13 +1,22 @@
 import 'dotenv/config';
 import { resolve } from 'node:path';
+import { sql } from 'drizzle-orm';
 import { Client, type Pool } from 'pg';
-import { createDb, seed, account as accountTable, categories as categoriesTable, postCategories, postTranslations, posts as postsTable, user as userTable } from '@carnaby/db';
+import {
+  createDb,
+  seedCategories,
+  account as accountTable,
+  categories as categoriesTable,
+  postCategories,
+  postTranslations,
+  posts as postsTable,
+  user as userTable,
+} from '@carnaby/db';
+import type { Tx } from '@carnaby/db';
 import { buildTranslations, mapPost, mapUser } from './mapping';
 import type { LegacyPost, LegacyTranslation, LegacyUser } from './mapping';
 import { findMissingThumbnails, formatReport, reportHasFailures } from './report';
 import type { CountRow, MigrationReport, SampleSlug } from './report';
-
-type Db = ReturnType<typeof createDb>['db'];
 
 const LEGACY_DATABASE_URL = process.env['LEGACY_DATABASE_URL'] ?? 'postgres://carnaby:carnaby@localhost:5432/carnaby_legacy';
 const DATABASE_URL = process.env['DATABASE_URL'] ?? 'postgres://carnaby:carnaby@localhost:5432/carnaby';
@@ -28,18 +37,22 @@ function slugify(name: string): string {
  * anyone logged in locally gets signed out, and any dev seed/e2e fixture data in these tables is
  * gone after a run. That's the accepted cost of a disposable local rehearsal db; see the task
  * report for the post-run reseed step.
+ *
+ * Runs on `tx`, the same transaction as every insert below -- TRUNCATE is fully transactional in
+ * Postgres, so if any later step throws, this rollback undoes the truncate too and the target db
+ * ends up exactly as it was before the run started (see `main`'s `db.transaction(...)`).
  */
-async function truncateTarget(pool: Pool): Promise<void> {
-  await pool.query(
-    'TRUNCATE post_categories, post_translations, posts, categories, "verification", "account", "session", "user" RESTART IDENTITY CASCADE',
+async function truncateTarget(tx: Tx): Promise<void> {
+  await tx.execute(
+    sql`TRUNCATE post_categories, post_translations, posts, categories, "verification", "account", "session", "user" RESTART IDENTITY CASCADE`,
   );
 }
 
 async function migrateCategories(
   legacy: Client,
-  db: Db,
-): Promise<{ categorySlugToNewId: Map<string, number>; categoryOldIdToSlug: Map<number, string>; oldCount: number }> {
-  await seed(DATABASE_URL); // canonical devlog/dodo/carnaby rows
+  tx: Tx,
+): Promise<{ categorySlugToNewId: Map<string, number>; categoryOldIdToSlug: Map<number, string>; oldCount: number; newCount: number }> {
+  await seedCategories(tx); // canonical devlog/dodo/carnaby rows, in the same transaction
 
   const { rows: legacyCategories } = await legacy.query<{ id: number; name: string; slug: string | null; description: string | null }>(
     'SELECT id, name, slug, description FROM categories ORDER BY id',
@@ -48,28 +61,28 @@ async function migrateCategories(
   const categoryOldIdToSlug = new Map<number, string>();
   for (const cat of legacyCategories) categoryOldIdToSlug.set(cat.id, cat.slug ?? slugify(cat.name));
 
-  const seeded = await db.select().from(categoriesTable);
+  const seeded = await tx.select().from(categoriesTable);
   const knownSlugs = new Set(seeded.map((c) => c.slug));
   let nextSortOrder = seeded.length;
 
   for (const cat of legacyCategories) {
     const slug = categoryOldIdToSlug.get(cat.id)!;
     if (knownSlugs.has(slug)) continue;
-    await db
+    await tx
       .insert(categoriesTable)
       .values({ slug, name: cat.name, description: cat.description, sortOrder: nextSortOrder++ })
       .onConflictDoNothing({ target: categoriesTable.slug });
     knownSlugs.add(slug);
   }
 
-  const all = await db.select().from(categoriesTable);
+  const all = await tx.select().from(categoriesTable);
   const categorySlugToNewId = new Map(all.map((c) => [c.slug, c.id]));
-  return { categorySlugToNewId, categoryOldIdToSlug, oldCount: legacyCategories.length };
+  return { categorySlugToNewId, categoryOldIdToSlug, oldCount: legacyCategories.length, newCount: categorySlugToNewId.size };
 }
 
 async function migrateUsers(
   legacy: Client,
-  db: Db,
+  tx: Tx,
 ): Promise<{ authorIdMap: Map<number, string>; oldCount: number; newCount: number }> {
   const { rows } = await legacy.query<LegacyUser>(
     'SELECT id, google_id, email, display_name, avatar_url, role, created_at FROM users ORDER BY id',
@@ -78,8 +91,8 @@ async function migrateUsers(
   const authorIdMap = new Map<number, string>();
   for (const row of rows) {
     const { user, account, oldId } = mapUser(row);
-    await db.insert(userTable).values(user);
-    await db.insert(accountTable).values(account);
+    await tx.insert(userTable).values(user);
+    await tx.insert(accountTable).values(account);
     authorIdMap.set(oldId, user.id);
   }
 
@@ -88,7 +101,7 @@ async function migrateUsers(
 
 async function migratePosts(
   legacy: Client,
-  db: Db,
+  tx: Tx,
   authorIdMap: Map<number, string>,
 ): Promise<{ postIdMap: Map<number, number>; oldPosts: LegacyPost[] }> {
   const { rows } = await legacy.query<LegacyPost>('SELECT * FROM posts ORDER BY id');
@@ -96,7 +109,7 @@ async function migratePosts(
   const postIdMap = new Map<number, number>();
   for (const old of rows) {
     const newPost = mapPost(old, authorIdMap);
-    const [inserted] = await db.insert(postsTable).values(newPost).returning({ id: postsTable.id });
+    const [inserted] = await tx.insert(postsTable).values(newPost).returning({ id: postsTable.id });
     postIdMap.set(old.id, inserted!.id);
   }
 
@@ -105,7 +118,7 @@ async function migratePosts(
 
 async function migrateTranslations(
   legacy: Client,
-  db: Db,
+  tx: Tx,
   oldPosts: LegacyPost[],
   postIdMap: Map<number, number>,
 ): Promise<{ warnings: string[]; oldCount: number; newCount: number }> {
@@ -130,7 +143,7 @@ async function migrateTranslations(
     warnings.push(...rowWarnings);
 
     for (const t of translations) {
-      await db
+      await tx
         .insert(postTranslations)
         .values({
           postId: newPostId,
@@ -150,7 +163,7 @@ async function migrateTranslations(
 
 async function migratePostCategories(
   legacy: Client,
-  db: Db,
+  tx: Tx,
   postIdMap: Map<number, number>,
   categoryOldIdToSlug: Map<number, string>,
   categorySlugToNewId: Map<string, number>,
@@ -166,7 +179,7 @@ async function migratePostCategories(
     const newCategoryId = slug != null ? categorySlugToNewId.get(slug) : undefined;
     if (newPostId == null || newCategoryId == null) continue;
 
-    await db.insert(postCategories).values({ postId: newPostId, categoryId: newCategoryId }).onConflictDoNothing();
+    await tx.insert(postCategories).values({ postId: newPostId, categoryId: newCategoryId }).onConflictDoNothing();
     newCount++;
   }
 
@@ -188,10 +201,53 @@ interface SampleRow {
   title: string;
 }
 
+interface AuditedCounts {
+  users: number;
+  categories: number;
+  posts: number;
+  postTranslations: number;
+  postCategories: number;
+}
+
+/**
+ * Re-queries actual persisted row counts against `pool` -- called only *after* `main`'s
+ * `db.transaction(...)` has resolved (i.e. committed) -- so the report's "new" counts reflect what
+ * is really in the target db, not just what the in-memory tallies accumulated while inserting
+ * believe happened (Finding 2: in-memory counts alone can't catch a bug where a row silently
+ * didn't persist, e.g. a stray `onConflictDoNothing` skip or a trigger).
+ */
+async function queryAuditedCounts(pool: Pool): Promise<AuditedCounts> {
+  const count = async (fromClause: string): Promise<number> => {
+    const { rows } = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM ${fromClause}`);
+    return rows[0]!.count;
+  };
+  const [users, categories, posts, postTranslationsCount, postCategoriesCount] = await Promise.all([
+    count('"user"'),
+    count('categories'),
+    count('posts'),
+    count('post_translations'),
+    count('post_categories'),
+  ]);
+  return { users, categories, posts, postTranslations: postTranslationsCount, postCategories: postCategoriesCount };
+}
+
+/** Compares each in-memory tally against the corresponding post-commit queried count; returns a
+ * human-readable mismatch string per disagreement (empty when everything lines up). */
+function auditCounts(inMemory: AuditedCounts, queried: AuditedCounts): string[] {
+  const mismatches: string[] = [];
+  for (const table of Object.keys(inMemory) as (keyof AuditedCounts)[]) {
+    if (inMemory[table] !== queried[table]) {
+      mismatches.push(`${table}: in-memory=${inMemory[table]} queried=${queried[table]}`);
+    }
+  }
+  return mismatches;
+}
+
 async function buildReport(
   pool: Pool,
   counts: { users: CountRow; categories: CountRow; posts: CountRow; postTranslations: CountRow; postCategories: CountRow },
   warnings: string[],
+  auditMismatches: string[],
 ): Promise<MigrationReport> {
   const { rows: withoutTranslations } = await pool.query<PostRow>(
     `SELECT p.id, p.slug FROM posts p LEFT JOIN post_translations pt ON pt.post_id = p.id WHERE pt.id IS NULL ORDER BY p.id`,
@@ -224,6 +280,7 @@ async function buildReport(
     missingThumbnails,
     uploadsDirChecked: uploadsDir ? resolve(uploadsDir, 'originals') : null,
     samples: [...samplesBySlug.values()],
+    auditMismatches,
   };
 }
 
@@ -235,56 +292,106 @@ async function main(): Promise<number> {
   try {
     console.log(`migrate-legacy: ${LEGACY_DATABASE_URL} -> ${DATABASE_URL}`);
 
-    console.log('truncating target content + auth tables...');
-    await truncateTarget(pool);
+    // Finding 1: the whole write side -- truncate + categories + users/accounts + posts +
+    // translations + post_categories -- runs as ONE transaction. TRUNCATE is fully transactional
+    // in Postgres, so if any step throws (including the MIGRATE_FAIL_INJECT test hook below),
+    // Postgres rolls back to the target db's exact pre-run state instead of leaving it
+    // truncated-and-half-filled. Report/verification queries run against `pool` further below,
+    // strictly after this resolves (i.e. after commit).
+    const migrated = await db.transaction(async (tx) => {
+      console.log('truncating target content + auth tables...');
+      await truncateTarget(tx);
 
-    console.log('migrating categories...');
-    const { categorySlugToNewId, categoryOldIdToSlug, oldCount: oldCategoryCount } = await migrateCategories(legacy, db);
+      console.log('migrating categories...');
+      const {
+        categorySlugToNewId,
+        categoryOldIdToSlug,
+        oldCount: oldCategoryCount,
+        newCount: newCategoryCount,
+      } = await migrateCategories(legacy, tx);
 
-    console.log('migrating users + accounts...');
-    const { authorIdMap, oldCount: oldUserCount, newCount: newUserCount } = await migrateUsers(legacy, db);
+      console.log('migrating users + accounts...');
+      const { authorIdMap, oldCount: oldUserCount, newCount: newUserCount } = await migrateUsers(legacy, tx);
 
-    console.log('migrating posts...');
-    const { postIdMap, oldPosts } = await migratePosts(legacy, db, authorIdMap);
+      console.log('migrating posts...');
+      const { postIdMap, oldPosts } = await migratePosts(legacy, tx, authorIdMap);
 
-    console.log('migrating post_translations...');
-    const {
-      warnings,
-      oldCount: oldTranslationCount,
-      newCount: newTranslationCount,
-    } = await migrateTranslations(legacy, db, oldPosts, postIdMap);
+      // Test-only hook (documented here, not a real feature): forces a failure partway through
+      // the transaction so the rollback-safety fix above can be proven end-to-end against a real
+      // db -- see the task report for the "success run" + "injected-failure rollback proof" pair.
+      // Never set in normal/production use.
+      if (process.env['MIGRATE_FAIL_INJECT'] === 'after-posts') {
+        throw new Error('MIGRATE_FAIL_INJECT=after-posts: forced failure for rollback test, not a real error');
+      }
 
-    console.log('migrating post_categories...');
-    const { oldCount: oldPostCategoryCount, newCount: newPostCategoryCount } = await migratePostCategories(
-      legacy,
-      db,
-      postIdMap,
-      categoryOldIdToSlug,
-      categorySlugToNewId,
-    );
+      console.log('migrating post_translations...');
+      const {
+        warnings,
+        oldCount: oldTranslationCount,
+        newCount: newTranslationCount,
+      } = await migrateTranslations(legacy, tx, oldPosts, postIdMap);
 
-    const { rows: newCategoryRows } = await pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM categories');
+      console.log('migrating post_categories...');
+      const { oldCount: oldPostCategoryCount, newCount: newPostCategoryCount } = await migratePostCategories(
+        legacy,
+        tx,
+        postIdMap,
+        categoryOldIdToSlug,
+        categorySlugToNewId,
+      );
+
+      return {
+        oldCategoryCount,
+        newCategoryCount,
+        oldUserCount,
+        newUserCount,
+        oldPostCount: oldPosts.length,
+        newPostCount: postIdMap.size,
+        warnings,
+        oldTranslationCount,
+        newTranslationCount,
+        oldPostCategoryCount,
+        newPostCategoryCount,
+      };
+    });
+
+    console.log('committed.');
+
+    // Finding 2: re-query actual persisted counts now that the transaction has committed, and
+    // cross-check them against the in-memory tallies gathered above -- a mismatch here means the
+    // migration's own bookkeeping can't be trusted even if the counts happened to look fine, and
+    // is always a FAIL (see `report.ts`'s `auditMismatches`).
+    const inMemoryCounts: AuditedCounts = {
+      users: migrated.newUserCount,
+      categories: migrated.newCategoryCount,
+      posts: migrated.newPostCount,
+      postTranslations: migrated.newTranslationCount,
+      postCategories: migrated.newPostCategoryCount,
+    };
+    const queriedCounts = await queryAuditedCounts(pool);
+    const auditMismatches = auditCounts(inMemoryCounts, queriedCounts);
 
     const report = await buildReport(
       pool,
       {
-        users: { table: 'users', oldCount: oldUserCount, newCount: newUserCount, strict: true },
-        categories: { table: 'categories', oldCount: oldCategoryCount, newCount: newCategoryRows[0]!.count, strict: false },
-        posts: { table: 'posts', oldCount: oldPosts.length, newCount: postIdMap.size, strict: true },
+        users: { table: 'users', oldCount: migrated.oldUserCount, newCount: queriedCounts.users, strict: true },
+        categories: { table: 'categories', oldCount: migrated.oldCategoryCount, newCount: queriedCounts.categories, strict: false },
+        posts: { table: 'posts', oldCount: migrated.oldPostCount, newCount: queriedCounts.posts, strict: true },
         postTranslations: {
           table: 'post_translations',
-          oldCount: oldTranslationCount,
-          newCount: newTranslationCount,
+          oldCount: migrated.oldTranslationCount,
+          newCount: queriedCounts.postTranslations,
           strict: false,
         },
         postCategories: {
           table: 'post_categories',
-          oldCount: oldPostCategoryCount,
-          newCount: newPostCategoryCount,
+          oldCount: migrated.oldPostCategoryCount,
+          newCount: queriedCounts.postCategories,
           strict: true,
         },
       },
-      warnings,
+      migrated.warnings,
+      auditMismatches,
     );
 
     console.log('');
