@@ -1981,7 +1981,11 @@ UMAMI_WEBSITE_ID=0733e169-1bc1-4990-a65f-2442fbb00237
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            APP_URL=https://carnaby.sk
+            API_INTERNAL_URL=http://api:3001
 ```
+**CRITICAL (Task 25 finding):** the web image FREEZES `APP_URL`/`API_INTERNAL_URL` at build time (Next rewrites + static robots.txt/sitemap.xml are baked into the build). The `build-args` above are mandatory — without them the published image ships localhost URLs. `API_INTERNAL_URL=http://api:3001` matches the NAS compose service name `api`. (The args are harmless no-ops for the api image.)
 
 - [ ] **Step 2: Push, watch run green, verify packages**
 
