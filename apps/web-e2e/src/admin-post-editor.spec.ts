@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { createAdminSessionCookie } from './fixtures/admin-session';
+import { EXTERNAL_BASE_URL } from './fixtures/env';
 import {
   E2E_EDITOR_EDIT_POST_CATEGORY_NAME,
   E2E_EDITOR_EDIT_POST_CONTENT,
@@ -25,10 +26,18 @@ import {
  * file/network round-trip that's better covered manually at staging (per the task brief); their
  * client-side logic (dropping the request state to a toast) is otherwise untested here on
  * purpose, mirroring the brief's own scope call.
+ *
+ * Task 30: skipped entirely in external mode (`E2E_BASE_URL` set) -- same rationale as
+ * `admin-posts.spec.ts`: no drizzle access to a staging DB from here, and this is an admin-only
+ * internal tool exercised manually at staging, not headlessly.
  */
 test.describe.configure({ mode: 'serial' });
 
 test.beforeEach(async ({ page, context, browserName }) => {
+  test.skip(
+    Boolean(EXTERNAL_BASE_URL),
+    'admin editor e2e needs the local dev stack (direct DB fixture access + signed session cookie) -- see playwright.config.mts E2E_BASE_URL doc',
+  );
   test.skip(browserName !== 'chromium', 'admin editor e2e runs on chromium only -- see file doc comment');
 
   await resetEditorFixturePost();
