@@ -22,6 +22,13 @@ const ICON_SQUARE_CLASS: Record<CategorySlug, string> = {
   carnaby: 'border-carnaby/30 bg-carnaby/10 text-carnaby',
 };
 
+// Category title gradient — v1's linear-gradient(to right, var(--{color}), var(--text-primary))
+const TITLE_GRADIENT_CLASS: Record<CategorySlug, string> = {
+  devlog: 'bg-gradient-to-r from-devlog to-white bg-clip-text text-transparent',
+  dodo: 'bg-gradient-to-r from-dodo to-white bg-clip-text text-transparent',
+  carnaby: 'bg-gradient-to-r from-carnaby to-white bg-clip-text text-transparent',
+};
+
 // v1 used the slug `dev` for what v2 calls `devlog` — old links/bookmarks/search-engine
 // results must keep resolving, permanently, to the renamed category (see
 // `docs/superpowers/specs/2026-07-06-carnaby-v2-rewrite-design.md`).
@@ -101,8 +108,10 @@ export default async function CategoryPage({
             <Icon size={28} aria-hidden="true" />
           </span>
           <h1
-            className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-            style={{ color: category.color }}
+            className={cn(
+              'font-display text-3xl font-bold tracking-tight sm:text-4xl',
+              TITLE_GRADIENT_CLASS[category.slug],
+            )}
           >
             {category.name[language]}
           </h1>
