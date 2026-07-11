@@ -1,6 +1,5 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { LANGUAGES, type Language } from '@carnaby/shared';
@@ -32,12 +31,11 @@ export function LanguageSwitcher() {
             aria-pressed={active}
             aria-label={t(SWITCH_LABEL_KEY[lng])}
             onClick={() => router.replace(pathname, { locale: lng })}
-            className={`flex items-center gap-0.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
+            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
               active ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white/80'
             }`}
           >
             {lng}
-            {active ? <ChevronDown size={12} aria-hidden="true" /> : null}
           </button>
         );
       })}
