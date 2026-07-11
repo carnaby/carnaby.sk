@@ -31,6 +31,7 @@
     "backToCategory": "Ďalšie z kategórie {category}"
   },
   "category": {
+    "feedLabel": "FEED",
     "empty": "Zatiaľ tu nie sú žiadne príspevky — pozrite sa neskôr.",
     "newer": "Novšie príspevky",
     "older": "Staršie príspevky"
