@@ -12,10 +12,16 @@ test('homepage renders pillars and featured posts', async ({ page }) => {
   // name as a nav link (and a featured post card can belong to the "devlog" category too, so its
   // accessible name also contains "DevLog") — an unscoped `getByRole` would match more than one
   // element and fail Playwright's strict-mode check.
+  //
+  // Each pillar link's accessible name is now "<Title> <long description>" (the About section's
+  // mini-cards wrap the v1-ported long copy, see components/site/about.tsx + messages/*.json's
+  // home.pillars.*), and Carnaby's own copy name-drops "Dodo" ("Kým Dodo rozpráva príbehy..." /
+  // "While Dodo tells stories..."), so an unanchored /dodo/i would strict-mode-match both the
+  // Dodo card and the Carnaby card. Anchoring on `^` matches the leading title only.
   const pillars = page.locator('[data-testid="pillars"]');
-  await expect(pillars.getByRole('link', { name: /devlog/i })).toBeVisible();
-  await expect(pillars.getByRole('link', { name: /dodo/i })).toBeVisible();
-  await expect(pillars.getByRole('link', { name: /carnaby/i })).toBeVisible();
+  await expect(pillars.getByRole('link', { name: /^devlog/i })).toBeVisible();
+  await expect(pillars.getByRole('link', { name: /^dodo/i })).toBeVisible();
+  await expect(pillars.getByRole('link', { name: /^carnaby/i })).toBeVisible();
 
   await expect(page.locator('[data-testid="featured-grid"] article').first()).toBeVisible();
 });
@@ -31,6 +37,6 @@ test('language switcher toggles sk -> en on the same page', async ({ page }) => 
   await expect(page).toHaveURL(/\/en\/?$/);
   // Category names are identical strings in both locales (packages/shared/src/categories.ts), so
   // this doubles as proof the page actually re-rendered under the new locale, not just that the
-  // URL changed.
-  await expect(page.locator('[data-testid="pillars"]').getByRole('link', { name: /devlog/i })).toBeVisible();
+  // URL changed. Anchored for the same reason as above.
+  await expect(page.locator('[data-testid="pillars"]').getByRole('link', { name: /^devlog/i })).toBeVisible();
 });

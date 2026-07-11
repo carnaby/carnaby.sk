@@ -6,6 +6,12 @@
   "home": {
     "heroSubtitle": "A log at the crossing of code and music — DevLog, Dodo, and Carnaby in one place.",
     "featuredTitle": "Featured Posts",
+    "feedLabel": "FEED",
+    "name": "Jozef Sokol",
+    "nickname": "Dodo",
+    "badgeDev": "Full-Stack Dev",
+    "badgeMusic": "AI Music Artist",
+    "location": "Slovakia",
     "aboutLabel": "ABOUT ME",
     "aboutIntro": "The world of coding and the world of music are closer than they seem. Both are about finding harmony, logic, and rhythm. My journey began behind a mixing console and at rock radio Rebeca, but today it is defined by lines of code and the possibilities of artificial intelligence.",
     "aboutIntro2": "As a full-stack developer, I build digital solutions, while as a music enthusiast, I seek space for true human emotion within technology.",
