@@ -1,13 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 
-import { CATEGORIES, type Language } from '@carnaby/shared';
+import type { Language } from '@carnaby/shared';
 
 import { PostCard } from '../../../components/post/post-card';
+import { About } from '../../../components/site/about';
 import { Hero } from '../../../components/site/hero';
-import { PillarCard } from '../../../components/site/pillar-card';
 import { serverTrpc } from '../../../lib/trpc-server';
 
-const PILLARS = Object.values(CATEGORIES);
 const FEATURED_LIMIT = 6;
 
 // This page fetches live data from the api (`posts.list`), which isn't reachable during
@@ -34,15 +33,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <>
       <Hero />
+      <About />
 
-      <section
-        data-testid="pillars"
-        className="mx-auto grid max-w-5xl gap-6 px-4 py-12 sm:grid-cols-3"
-      >
-        {PILLARS.map((category) => (
-          <PillarCard key={category.slug} category={category} locale={language} />
-        ))}
-      </section>
+      <p className="mx-auto max-w-xl px-4 text-center text-sm text-white/50">{t('heroSubtitle')}</p>
+
+      <div className="mx-auto mt-6 flex max-w-5xl items-center gap-4 px-4 text-xs font-semibold uppercase tracking-widest text-white/40">
+        <span className="h-px flex-1 bg-line" />
+        <span>{t('feedLabel')}</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
 
       <section className="mx-auto max-w-5xl px-4 py-12">
         <h2 className="font-display text-2xl font-semibold text-white sm:text-3xl">

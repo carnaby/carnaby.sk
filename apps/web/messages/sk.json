@@ -6,6 +6,12 @@
   "home": {
     "heroSubtitle": "Denník na pomedzí kódu a hudby — DevLog, Dodo a Carnaby na jednom mieste.",
     "featuredTitle": "Vybrané príspevky",
+    "feedLabel": "FEED",
+    "name": "Jozef Sokol",
+    "nickname": "Dodo",
+    "badgeDev": "Full-Stack Dev",
+    "badgeMusic": "AI Music Artist",
+    "location": "Slovakia",
     "aboutLabel": "O MNE",
     "aboutIntro": "Svet kódovania a svet hudby majú k sebe bližšie, než sa na prvý pohľad zdá. Obe sú o hľadaní harmónie, logiky a rytmu. Moja cesta začala za mixpultom a v rockovom rádiu Rebeca, no dnes ju definujú riadky kódu a možnosti umelej inteligencie.",
     "aboutIntro2": "Ako full-stack vývojár staviam digitálne riešenia, zatiaľ čo ako nadšenec do hudby hľadám v technológiách priestor pre skutočnú ľudskú emóciu.",

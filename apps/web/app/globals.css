@@ -201,18 +201,25 @@
 
 body {
   background-color: var(--color-base);
+  /* Very subtle vertical lift so the page doesn't read as flat black — paired with
+     background-attachment: fixed so it stays locked to the viewport instead of stretching
+     (and banding) across the full scrollable page height. */
+  background-image: linear-gradient(to bottom, #0a0a0c, var(--color-base) 60%);
+  background-attachment: fixed;
   color: #f5f5f5;
   font-family: var(--font-sans);
 }
 
-/* layered ambient glow + noise */
+/* layered ambient glow + noise. Alphas are ~2x the original (0.09→0.18, 0.07→0.14) and the
+   purple/emerald blobs are oriented like v1's reference screenshots — purple top-left, green
+   bottom-right — so the glow actually reads against the black background instead of vanishing. */
 .site-bg::before {
   content: '';
   position: fixed; inset: 0; z-index: -2; pointer-events: none;
   background:
-    radial-gradient(600px 400px at 15% -10%, rgb(16 185 129 / 0.09), transparent 70%),
-    radial-gradient(700px 500px at 85% 0%, rgb(168 85 247 / 0.09), transparent 70%),
-    radial-gradient(700px 600px at 50% 110%, rgb(245 158 11 / 0.07), transparent 70%);
+    radial-gradient(700px 500px at 15% -10%, rgb(168 85 247 / 0.18), transparent 70%),
+    radial-gradient(700px 600px at 90% 100%, rgb(16 185 129 / 0.18), transparent 70%),
+    radial-gradient(700px 600px at 50% 110%, rgb(245 158 11 / 0.14), transparent 70%);
 }
 .site-bg::after {
   content: '';
@@ -222,12 +229,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-
-/* Slow left-right drift of the hero headline's gradient fill (see components/site/hero.tsx). */
-@keyframes hero-gradient {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 /* Post body typography (components/post/markdown.tsx's `PostBody`). Tailwind v4 has no official
