@@ -4,6 +4,7 @@ import type { Language } from '@carnaby/shared';
 
 import { PostCard } from '../../../components/post/post-card';
 import { About } from '../../../components/site/about';
+import { FeedDivider } from '../../../components/site/feed-divider';
 import { Hero } from '../../../components/site/hero';
 import { serverTrpc } from '../../../lib/trpc-server';
 
@@ -37,11 +38,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       <p className="mx-auto max-w-xl px-4 text-center text-sm text-white/50">{t('heroSubtitle')}</p>
 
-      <div className="mx-auto mt-6 flex max-w-5xl items-center gap-4 px-4 text-xs font-semibold uppercase tracking-widest text-white/40">
-        <span className="h-px flex-1 bg-line" />
-        <span>{t('feedLabel')}</span>
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      <FeedDivider label={t('feedLabel')} />
 
       <section className="mx-auto max-w-5xl px-4 py-12">
         <h2 className="font-display text-2xl font-semibold text-white sm:text-3xl">

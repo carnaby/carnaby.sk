@@ -6,11 +6,21 @@ import { notFound } from 'next/navigation';
 import { CATEGORIES, type CategorySlug, type Language } from '@carnaby/shared';
 
 import { PostCard } from '../../../../../components/post/post-card';
+import { FeedDivider } from '../../../../../components/site/feed-divider';
 import { Link, permanentRedirect } from '../../../../../i18n/navigation';
+import { cn } from '../../../../../lib/cn';
 import { serverTrpc } from '../../../../../lib/trpc-server';
 
 const ICONS = { terminal: Terminal, guitar: Guitar, 'music-2': Music2 } as const;
 const PAGE_LIMIT = 9;
+
+// Tailwind needs literal class names to detect them at build time — same pattern as
+// `post/post-card.tsx`'s `CHIP_CLASS`. Mirrors v1's icon-in-a-tinted-square category header.
+const ICON_SQUARE_CLASS: Record<CategorySlug, string> = {
+  devlog: 'border-devlog/30 bg-devlog/10 text-devlog',
+  dodo: 'border-dodo/30 bg-dodo/10 text-dodo',
+  carnaby: 'border-carnaby/30 bg-carnaby/10 text-carnaby',
+};
 
 // v1 used the slug `dev` for what v2 calls `devlog` — old links/bookmarks/search-engine
 // results must keep resolving, permanently, to the renamed category (see
@@ -80,33 +90,37 @@ export default async function CategoryPage({
 
   return (
     <>
-      <section className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <span
-          className="mx-auto mb-6 inline-flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: `${category.color}1a`, color: category.color }}
-        >
-          <Icon size={28} aria-hidden="true" />
-        </span>
-        <h1
-          className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-          style={{ color: category.color }}
-        >
-          {category.name[language]}
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-balance text-white/70">
-          {category.description[language]}
-        </p>
+      <section className="mx-auto max-w-5xl px-4 py-16">
+        <div className="flex items-center gap-4">
+          <span
+            className={cn(
+              'inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border',
+              ICON_SQUARE_CLASS[category.slug],
+            )}
+          >
+            <Icon size={28} aria-hidden="true" />
+          </span>
+          <h1
+            className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
+            style={{ color: category.color }}
+          >
+            {category.name[language]}
+          </h1>
+        </div>
+        <p className="mt-4 max-w-xl text-balance text-white/70">{category.description[language]}</p>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 pb-16">
+      <FeedDivider label={t('feedLabel')} />
+
+      <section className="mx-auto max-w-5xl px-4 py-12">
         {items.length === 0 ? (
           <p data-testid="category-empty" className="py-12 text-center text-white/60">
             {t('empty')}
           </p>
         ) : (
-          <div data-testid="category-grid" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div data-testid="category-grid" className="flex flex-col gap-6">
             {items.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard key={post.id} post={post} variant="row" />
             ))}
           </div>
         )}

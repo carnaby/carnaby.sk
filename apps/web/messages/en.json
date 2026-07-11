@@ -31,6 +31,7 @@
     "backToCategory": "More from {category}"
   },
   "category": {
+    "feedLabel": "FEED",
     "empty": "No posts here yet — check back soon.",
     "newer": "Newer posts",
     "older": "Older posts"
