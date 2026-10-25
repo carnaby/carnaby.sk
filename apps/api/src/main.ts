@@ -21,6 +21,10 @@ async function bootstrap() {
   const server = app.getHttpAdapter().getInstance();
   const auth = app.get<Auth>(AUTH);
   server.all('/api/auth/*splat', toNodeHandler(auth));
+  // MCP tool calls may carry a base64 image (upload_image, max 10 MB of bytes ≈ 13.4 MB of
+  // base64); everything else keeps the tight default. Registered first so the global parser
+  // below sees an already-parsed body and skips it.
+  server.use('/api/mcp', express.json({ limit: '15mb' }));
   server.use(express.json({ limit: '1mb' }));
   await app.listen(process.env.PORT ?? 3001);
 }

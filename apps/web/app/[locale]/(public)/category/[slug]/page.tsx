@@ -86,9 +86,7 @@ export default async function CategoryPage({
   const t = await getTranslations('category');
   const Icon = ICONS[category.icon];
 
-  // Tagged ['posts'] so an admin publish/edit (lib/revalidate.ts's revalidateContent) can bust
-  // this cached list without a redeploy — same convention as the homepage's featured query.
-  const { items, pageCount } = await serverTrpc(['posts']).posts.list.query({
+  const { items, pageCount } = await serverTrpc().posts.list.query({
     category: category.slug,
     language,
     page,

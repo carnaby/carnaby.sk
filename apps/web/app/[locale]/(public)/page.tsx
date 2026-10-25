@@ -13,9 +13,7 @@ const FEATURED_LIMIT = 6;
 // This page fetches live data from the api (`posts.list`), which isn't reachable during
 // `next build`'s static-generation pass (CI's build step doesn't run the api, only Postgres —
 // see .github/workflows/ci.yml) or a cold local build. Opting out of build-time prerendering
-// means it's rendered per-request instead; the underlying `serverTrpc(['posts'])` fetch still
-// participates in Next's Data Cache (5 min revalidate, tag-invalidated by
-// `lib/revalidate.ts`), so this doesn't turn into an uncached hit on every request.
+// means it's rendered per-request instead (see `lib/trpc-server.ts` for why reads are uncached).
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -23,9 +21,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const language = locale as Language;
   const t = await getTranslations('home');
 
-  // Tagged ['posts'] so an admin publish/edit (lib/revalidate.ts's revalidateContent) can bust
-  // this cached list without a redeploy.
-  const { items: featured } = await serverTrpc(['posts']).posts.list.query({
+  const { items: featured } = await serverTrpc().posts.list.query({
     featured: true,
     limit: FEATURED_LIMIT,
     language,

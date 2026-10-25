@@ -72,10 +72,11 @@ export function isTranslationPartial(t: TranslationFormState): boolean {
 }
 
 /**
- * Updates a single field of a single language's translation. Editing the `title` field
+ * Updates a single field of a single language's translation. Editing a `title` field
  * auto-regenerates the shared `slug` (via `slugify`) as long as the slug hasn't been hand-edited
- * yet (`!state.slugTouched`) — the brief's "slug auto-slugify from first non-empty title until
- * manually edited".
+ * yet (`!state.slugTouched`). The source is always the SK title (default language, unprefixed
+ * URL), falling back to EN only while SK has none -- typing the EN title must not hijack a slug
+ * already derived from the SK one.
  */
 export function setTranslationField(
   state: EditorState,
@@ -87,7 +88,8 @@ export function setTranslationField(
     ...state.translations,
     [language]: { ...state.translations[language], [field]: value },
   };
-  const slug = field === 'title' && !state.slugTouched ? slugify(value) : state.slug;
+  const slugSource = translations.sk.title.trim() || translations.en.title.trim();
+  const slug = field === 'title' && !state.slugTouched ? slugify(slugSource) : state.slug;
   return { ...state, translations, slug };
 }
 
