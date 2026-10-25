@@ -3,15 +3,13 @@ import { randomBytes } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import { uploadsBaseDir } from '../uploads/uploads.service';
+import { cacheBaseDir, IMAGE_WIDTHS, uploadsBaseDir } from '../uploads/uploads.service';
 
-const ALLOWED_WIDTHS: readonly number[] = [300, 600, 1200, 1920];
+export { cacheBaseDir };
+
+const ALLOWED_WIDTHS = IMAGE_WIDTHS;
 const FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const WEBP_QUALITY = 80;
-
-export function cacheBaseDir(): string {
-  return process.env['CACHE_DIR'] ?? './.data/cache';
-}
 
 /** Resolves `filename` against the v1 source lookup order: `${UPLOADS_DIR}/originals/<f>` first,
  * then `${UPLOADS_DIR}/<f>`. Throws NotFoundException when neither exists. `filename` is assumed

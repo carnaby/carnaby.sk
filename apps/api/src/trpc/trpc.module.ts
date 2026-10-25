@@ -15,6 +15,9 @@ export class TrpcModule implements NestModule {
       .apply(createExpressMiddleware({
         router: appRouter,
         createContext: ({ req }) => createContext({ req, db: this.db, auth: this.auth }),
+        onError: ({ error, path }) => {
+          if (error.code === 'INTERNAL_SERVER_ERROR') console.error(`tRPC ${path ?? '?'} failed:`, error.cause ?? error);
+        },
       }))
       .forRoutes('/trpc');
   }

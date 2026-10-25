@@ -103,6 +103,9 @@ it only confirms the technical preconditions are met.
   (2) as part of Task 31's own verification is the safest combination, and does not block Task 31
   from starting on its own — Task 31's rollback path (proxy back to `:3000`) already covers the
   case where (2) fails.
+- [ ] **Connect Claude to the MCP endpoint** (after login works on the real domain): Claude →
+  Settings → Connectors → Add custom connector → `https://carnaby.sk/api/mcp`, then ask it for
+  `site_overview`. Details and a curl smoke test: `docs/mcp.md`.
 - [ ] **Final go/no-go** — owner confirms all boxes above (including the two just above) and
   explicitly approves proceeding to Task 31. Per the plan, Task 31 additionally requires **explicit
   owner approval before each of its own steps**, not just one approval up front.

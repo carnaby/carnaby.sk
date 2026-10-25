@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import type { AppRouter } from '@carnaby/api';
 import type { inferRouterOutputs } from '@trpc/server';
 
-import { revalidateContent } from '../../lib/revalidate';
 import { useTRPC } from '../../lib/trpc-react';
 import { Button, buttonVariants } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
@@ -136,13 +135,8 @@ export function PostEditor({ mode }: PostEditorProps) {
     setPendingStatus(status);
     const { input } = result;
 
-    const onSuccess = async () => {
+    const onSuccess = () => {
       toast.success(isEdit ? 'Príspevok bol uložený.' : 'Príspevok bol vytvorený.');
-      try {
-        await revalidateContent([input.slug]);
-      } catch {
-        toast.warning('Príspevok bol uložený, ale obnovenie cache webu sa nepodarilo.');
-      }
       router.push('/admin/posts');
     };
     const onError = (error: unknown) => {

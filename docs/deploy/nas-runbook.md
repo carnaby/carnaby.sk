@@ -180,7 +180,12 @@ Reverse Proxy) points at the OLD stack's port `3000`. The v2 stack is reachable 
 
 1. **Cutover:** in DSM, change the reverse-proxy rule's destination port from `3000` to `3200`.
    Immediately verify `https://carnaby.sk`: public pages load, Google login works, `/admin` is
-   reachable and gated correctly, Umami events are arriving for the new site.
+   reachable and gated correctly, Umami events are arriving for the new site, and the MCP
+   endpoint answers (`docs/mcp.md` → "Verifying after a deploy").
+   In the same reverse-proxy rule, make sure **Custom Header** includes
+   `X-Forwarded-For: $proxy_add_x_forwarded_for` (DSM's "Create → WebSocket" preset adds the
+   other two; add this one by hand if missing). better-auth rate-limits sign-in per client IP and
+   reads it from that header; without it every visitor shares one bucket.
 2. **Rollback (if anything fails):** change the destination port back from `3200` to `3000`. The
    old stack is untouched and still running the whole time — this is a pure proxy-config revert,
    no container changes needed on either stack.

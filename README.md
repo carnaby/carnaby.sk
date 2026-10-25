@@ -49,6 +49,12 @@ tools/
 - `pnpm lint` - Lint code
 - `pnpm typecheck` - Check TypeScript types
 
+## Managing content from Claude (MCP)
+
+The api exposes an MCP server at `https://carnaby.sk/api/mcp` with every admin capability
+(posts, translations, publishing, images, thumbnails, users). Add it in Claude as a custom
+connector — sign-in is Google OAuth, admin role only. See [`docs/mcp.md`](docs/mcp.md).
+
 ## Documentation
 
 - See `.superpowers/sdd/` for the implementation spec and detailed planning documents

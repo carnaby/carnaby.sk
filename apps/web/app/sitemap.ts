@@ -6,6 +6,11 @@ import { APP_URL } from '../lib/site-url';
 import { serverTrpc } from '../lib/trpc-server';
 
 const PAGE_LIMIT = 50;
+
+// Rendered per request so newly published posts show up immediately. Must be explicit: the
+// try/catch below would otherwise swallow the signal Next uses to detect dynamic rendering at
+// build time and freeze the sitemap to its static entries.
+export const dynamic = 'force-dynamic';
 const EN_PREFIX = '/en';
 
 function localizedUrls(path: string): MetadataRoute.Sitemap {
@@ -19,7 +24,7 @@ async function allPublishedSlugs(): Promise<string[]> {
   const slugs: string[] = [];
   let page = 1;
   for (;;) {
-    const { items, pageCount } = await serverTrpc(['posts']).posts.list.query({ page, limit: PAGE_LIMIT });
+    const { items, pageCount } = await serverTrpc().posts.list.query({ page, limit: PAGE_LIMIT });
     slugs.push(...items.map((item) => item.slug));
     if (page >= pageCount) break;
     page += 1;
@@ -38,10 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const slugs = await allPublishedSlugs();
     return [...staticEntries, ...slugs.flatMap((slug) => localizedUrls(`/posts/${slug}`))];
   } catch {
-    // The api isn't reachable during `next build`'s static-generation pass (or a cold local
-    // build) -- ship the static entries rather than failing the build. In production the api is
-    // up, and this route revalidates every 5 minutes (`serverTrpc`'s fetch cache), so the full
-    // post list shows up shortly after the next successful fetch.
+    // api unreachable (e.g. restarting) -- ship the static entries rather than a 500.
     return staticEntries;
   }
 }
