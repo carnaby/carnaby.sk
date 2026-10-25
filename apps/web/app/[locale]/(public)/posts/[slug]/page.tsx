@@ -13,7 +13,7 @@ import { YoutubeEmbed } from '../../../../../components/post/youtube-embed';
 import { Link, getPathname } from '../../../../../i18n/navigation';
 import { thumbUrl, youtubeThumbUrl } from '../../../../../lib/images';
 import { APP_URL } from '../../../../../lib/site-url';
-import { serverTrpc, tagsFor, type PostListItem } from '../../../../../lib/trpc-server';
+import { serverTrpc, type PostListItem } from '../../../../../lib/trpc-server';
 
 // Same duplication as `app/[locale]/(public)/category/[slug]/page.tsx` and
 // `components/post/post-card.tsx` -- Tailwind needs literal class names to detect them at build
@@ -36,7 +36,7 @@ export const dynamic = 'force-dynamic';
  * `fetch` calls made during the same request, so this doesn't double the network cost. */
 async function loadPost(slug: string, language: Language) {
   try {
-    return await serverTrpc(tagsFor(slug)).posts.bySlug.query({ slug, language });
+    return await serverTrpc().posts.bySlug.query({ slug, language });
   } catch (err) {
     if (isTRPCClientError(err) && err.data?.code === 'NOT_FOUND') return null;
     throw err;

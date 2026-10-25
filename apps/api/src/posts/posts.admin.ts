@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import type { Db } from '@carnaby/db';
 import { categories, postCategories, posts, postTranslations } from '@carnaby/db';
@@ -11,6 +11,8 @@ export type SortOrder = 'asc' | 'desc';
 
 export interface AdminListArgs {
   status?: PostStatus;
+  /** Case-insensitive substring match on the slug and on both translations' titles. */
+  search?: string;
   category?: string;
   featured?: boolean;
   page: number;
@@ -65,23 +67,30 @@ export async function adminListPosts(db: Db, args: AdminListArgs): Promise<Admin
           .where(eq(categories.slug, args.category))),
   );
 
-  const rows = await db.select().from(posts).where(where);
-  const total = rows.length;
-  const ids = rows.map((r) => r.id);
+  const allRows = await db.select().from(posts).where(where);
+  const allIds = allRows.map((r) => r.id);
 
-  const [translations, cats] = ids.length
+  const [translations, cats] = allIds.length
     ? await Promise.all([
         db.select({
           postId: postTranslations.postId,
           language: postTranslations.language,
           title: postTranslations.title,
           excerpt: postTranslations.excerpt,
-        }).from(postTranslations).where(inArray(postTranslations.postId, ids)),
+        }).from(postTranslations).where(inArray(postTranslations.postId, allIds)),
         db.select({ postId: postCategories.postId, slug: categories.slug, name: categories.name })
           .from(postCategories).innerJoin(categories, eq(categories.id, postCategories.categoryId))
-          .where(inArray(postCategories.postId, ids)),
+          .where(inArray(postCategories.postId, allIds)),
       ])
     : [[], []];
+
+  const needle = args.search?.trim().toLowerCase();
+  const rows = needle
+    ? allRows.filter((p) =>
+        p.slug.includes(needle) ||
+        translations.some((t) => t.postId === p.id && t.title.toLowerCase().includes(needle)))
+    : allRows;
+  const total = rows.length;
 
   const items: AdminListItem[] = rows.map((p): AdminListItem => {
     const postTr = translations.filter((t) => t.postId === p.id);
@@ -163,19 +172,36 @@ interface PostgresError {
   constraint?: string;
 }
 
-function isUniqueViolation(error: unknown): { isViolation: boolean; constraintName?: string } {
-  // node-postgres surfaces a Postgres error as a plain object (not a subclass we can
-  // `instanceof`-check) with the driver's numeric SQLSTATE on `.code`; 23505 is
-  // unique_violation.
-  if (typeof error === 'object' && error !== null && (error as PostgresError).code === '23505') {
-    return { isViolation: true, constraintName: (error as PostgresError).constraint };
+export function isUniqueViolation(error: unknown): { isViolation: boolean; constraintName?: string } {
+  // node-postgres surfaces a Postgres error with the SQLSTATE on `.code` (23505 =
+  // unique_violation). drizzle >= 0.44 wraps it in a `DrizzleQueryError` and keeps the original
+  // on `.cause`, so walk the cause chain instead of only looking at the top-level error.
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && typeof current === 'object' && current !== null; depth++) {
+    const pgError = current as PostgresError & { cause?: unknown };
+    if (pgError.code === '23505') return { isViolation: true, constraintName: pgError.constraint };
+    current = pgError.cause;
   }
   return { isViolation: false };
 }
 
-export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number }, authorId: string): Promise<{ id: number }> {
+/** Deletes an uploaded original only when no post (other than `exceptPostId`) still points at
+ * it -- `yt-<id>.jpg` thumbnails are shared by every post with the same YouTube video. */
+async function deleteThumbnailIfUnused(db: Db, filename: string, exceptPostId?: number): Promise<void> {
   try {
-    return await db.transaction(async (tx) => {
+    const [stillUsed] = await db.select({ id: posts.id }).from(posts)
+      .where(and(eq(posts.thumbnailPath, filename), exceptPostId === undefined ? undefined : ne(posts.id, exceptPostId)))
+      .limit(1);
+    if (!stillUsed) await deleteOriginal(filename);
+  } catch {
+    // best-effort: cleanup must never fail the save/delete that triggered it
+  }
+}
+
+export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number }, authorId: string | null): Promise<{ id: number }> {
+  let replacedThumbnail: string | null = null;
+  try {
+    const result = await db.transaction(async (tx) => {
       const base = {
         slug: input.slug, status: input.status, isFeatured: input.isFeatured,
         thumbnailPath: input.thumbnailPath ?? null, youtubeId: input.youtubeId ?? null,
@@ -188,8 +214,10 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
           .returning({ id: posts.id });
         id = row!.id;
       } else {
-        const [existing] = await tx.select({ publishedAt: posts.publishedAt }).from(posts).where(eq(posts.id, id));
+        const [existing] = await tx.select({ publishedAt: posts.publishedAt, thumbnailPath: posts.thumbnailPath })
+          .from(posts).where(eq(posts.id, id));
         if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (existing.thumbnailPath && existing.thumbnailPath !== base.thumbnailPath) replacedThumbnail = existing.thumbnailPath;
         await tx.update(posts)
           .set({ ...base, publishedAt: input.status === 'published' ? existing.publishedAt ?? new Date() : existing.publishedAt })
           .where(eq(posts.id, id));
@@ -215,6 +243,9 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
       }
       return { id };
     });
+    // After commit: the old file is only garbage once the new row is durable.
+    if (replacedThumbnail) await deleteThumbnailIfUnused(db, replacedThumbnail);
+    return result;
   } catch (error) {
     if (error instanceof TRPCError) throw error;
     const violation = isUniqueViolation(error);
@@ -238,11 +269,9 @@ export async function removePost(db: Db, id: number): Promise<void> {
   // — no manual cleanup needed for those.
   await db.delete(posts).where(eq(posts.id, id));
 
-  // Best-effort thumbnail cleanup, delegated to the Task 10 UploadsService's shared
-  // implementation (validation/containment guard + swallowing all errors so a missing file,
-  // missing env var, or filesystem hiccup never turns a successful DB delete into a failed
-  // `remove` call).
+  // Best-effort thumbnail cleanup (skipped while another post still uses the same file); never
+  // turns a successful DB delete into a failed `remove` call.
   if (post.thumbnailPath) {
-    await deleteOriginal(post.thumbnailPath);
+    await deleteThumbnailIfUnused(db, post.thumbnailPath);
   }
 }

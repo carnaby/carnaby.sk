@@ -143,6 +143,21 @@ describe('setTranslationField (slug auto-generation)', () => {
     expect(state.slug).toBe('moj-vlastny-slug');
   });
 
+  it('keeps deriving the slug from the SK title when the EN title is typed afterwards', () => {
+    let state = createEmptyState();
+    state = setTranslationField(state, 'sk', 'title', 'Ahoj Svet');
+    state = setTranslationField(state, 'en', 'title', 'Hello World');
+    expect(state.slug).toBe('ahoj-svet');
+  });
+
+  it('falls back to the EN title while there is no SK title', () => {
+    let state = createEmptyState();
+    state = setTranslationField(state, 'en', 'title', 'Hello World');
+    expect(state.slug).toBe('hello-world');
+    state = setTranslationField(state, 'sk', 'title', 'Ahoj Svet');
+    expect(state.slug).toBe('ahoj-svet');
+  });
+
   it('does not touch the slug when editing a non-title field', () => {
     let state = createEmptyState();
     state = setTranslationField(state, 'sk', 'title', 'Ahoj Svet');

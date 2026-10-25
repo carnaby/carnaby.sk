@@ -55,6 +55,7 @@ export const postsRouter = router({
 
   adminList: adminProcedure.input(z.object({
     status: postStatusSchema.optional(),
+    search: z.string().max(200).optional(),
     category: z.string().optional(),
     featured: z.boolean().optional(),
     page: z.number().int().min(1).default(DEFAULT_PAGE),

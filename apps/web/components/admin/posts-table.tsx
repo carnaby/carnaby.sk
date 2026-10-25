@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import type { AppRouter } from '@carnaby/api';
 import type { inferRouterOutputs } from '@trpc/server';
 
-import { revalidateContent } from '../../lib/revalidate';
 import { useTRPC } from '../../lib/trpc-react';
 import { PostImage } from '../post/post-image';
 import { Badge } from '../ui/badge';
@@ -149,11 +148,6 @@ export function PostsTable() {
           toast.success(`Príspevok „${target.title}“ bol zmazaný.`);
           setDeleteTarget(null);
           await queryClient.invalidateQueries(trpc.posts.adminList.queryFilter());
-          try {
-            await revalidateContent([target.slug]);
-          } catch {
-            toast.warning('Príspevok bol zmazaný, ale obnovenie cache webu sa nepodarilo.');
-          }
         },
         onError: () => {
           toast.error(`Zmazanie príspevku „${target.title}“ sa nepodarilo. Skúste to znova.`);

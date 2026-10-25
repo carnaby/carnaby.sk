@@ -3,11 +3,12 @@ import { AuthModule } from '../auth/auth.module';
 import { DbModule } from '../db/db.module';
 import { HealthController } from '../health/health.controller';
 import { ImagesModule } from '../images/images.module';
+import { McpModule } from '../mcp/mcp.module';
 import { TrpcModule } from '../trpc/trpc.module';
 import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
-  imports: [DbModule, AuthModule, TrpcModule, UploadsModule, ImagesModule],
+  imports: [DbModule, AuthModule, TrpcModule, UploadsModule, ImagesModule, McpModule],
   controllers: [HealthController],
 })
 export class AppModule {}

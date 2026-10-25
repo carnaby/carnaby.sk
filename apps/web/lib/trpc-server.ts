@@ -20,36 +20,22 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? 'http://localhost:3001'
 export type PostListItem = inferRouterOutputs<AppRouter>['posts']['list']['items'][number];
 
 /**
- * Cache-tag convention shared by every consumer of `serverTrpc`/Next's Data
- * Cache (public pages: Tasks 15-17; revalidation: `lib/revalidate.ts`):
- *   - post lists       -> ['posts']
- *   - post detail      -> tagsFor(slug) === ['posts', 'post:<slug>']
- *   - category listing -> ['categories']
- */
-export function tagsFor(slug: string): string[] {
-  return ['posts', `post:${slug}`];
-}
-
-/**
- * tRPC client for use from React Server Components and Server Actions only
- * (guarded by the `server-only` import above).
+ * tRPC client for use from React Server Components only (guarded by the `server-only` import
+ * above).
  *
- * Pass `tags` to opt the underlying fetch into Next's Data Cache: the
- * response is cached for up to 5 minutes and tagged so
- * `revalidateContent` (`lib/revalidate.ts`) can invalidate it on demand.
- * Omit `tags` (or call with no arguments) for requests that must never be
- * cached, e.g. admin-only reads.
+ * Deliberately uncached (`no-store`): content changes from the admin UI *and* from the MCP
+ * endpoint (apps/api/src/mcp) must be visible on the very next request. A tag-based Data Cache
+ * would need every writer -- including the api itself -- to call back into Next to invalidate,
+ * and Next 16's `revalidateTag(tag, 'max')` is stale-while-revalidate anyway (the first visit
+ * after an edit still got the old page). The api sits next to this app on the same host, so the
+ * uncached round-trip is a few milliseconds.
  */
-export function serverTrpc(tags?: string[]) {
+export function serverTrpc() {
   return createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
         url: `${API_INTERNAL_URL}/trpc`,
-        fetch: (url, options) =>
-          fetch(url, {
-            ...options,
-            next: { revalidate: tags ? 300 : 0, tags },
-          }),
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
       }),
     ],
   });

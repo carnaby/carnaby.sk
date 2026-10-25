@@ -1,5 +1,8 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { randomBytes } from 'node:crypto';
+import { promises as fsp } from 'node:fs';
+import os from 'node:os';
+import nodePath from 'node:path';
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { createDb, categories, postTranslations, user } from '@carnaby/db';
 import { appRouter } from '../trpc/app-router';
@@ -68,5 +71,53 @@ d('posts admin', () => {
 
     await admin.posts.remove({ id });
     await expect(admin.posts.byId({ id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+d('posts admin -- regressions', () => {
+  const { db, pool } = createDb(url!);
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const adminUser = { id: randomBytes(16).toString('hex'), email: `admin2-${runId}@a.sk`, name: 'A', image: null, role: 'admin' };
+  const admin = appRouter.createCaller({ db, user: adminUser });
+  const post = (slug: string, extra: Record<string, unknown> = {}) => ({
+    slug, status: 'draft' as const, isFeatured: false, categoryIds: [],
+    translations: { sk: { title: 'T', content: 'C' } }, ...extra,
+  });
+
+  beforeAll(async () => {
+    await migrate(db, { migrationsFolder: __dirname + '/../../../../packages/db/migrations' });
+    await db.insert(user).values({ id: adminUser.id, email: adminUser.email, name: 'A' });
+  });
+  afterAll(async () => { await pool.end(); });
+
+  // drizzle >= 0.44 wraps the pg error in DrizzleQueryError (`.cause`); this used to surface as
+  // a 500 carrying the full SQL text instead of a CONFLICT.
+  it('maps a duplicate slug to CONFLICT', async () => {
+    await admin.posts.create(post(`dup-${runId}`));
+    await expect(admin.posts.create(post(`dup-${runId}`))).rejects.toMatchObject({ code: 'CONFLICT', message: 'slug already in use' });
+  });
+
+  it('keeps a thumbnail file that another post still uses', async () => {
+    const dir = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'carnaby-thumb-'));
+    process.env['UPLOADS_DIR'] = dir;
+    await fsp.mkdir(nodePath.join(dir, 'originals'), { recursive: true });
+    const shared = `yt-shared${runId.replace(/[^a-z0-9]/g, '')}.jpg`;
+    await fsp.writeFile(nodePath.join(dir, 'originals', shared), 'x');
+
+    const a = await admin.posts.create(post(`thumb-a-${runId}`, { thumbnailPath: shared }));
+    const b = await admin.posts.create(post(`thumb-b-${runId}`, { thumbnailPath: shared }));
+
+    await admin.posts.remove({ id: a.id });
+    await expect(fsp.access(nodePath.join(dir, 'originals', shared))).resolves.toBeUndefined();
+
+    await admin.posts.update({ id: b.id, ...post(`thumb-b-${runId}`) }); // thumbnail cleared
+    await expect(fsp.access(nodePath.join(dir, 'originals', shared))).rejects.toThrow();
+  });
+
+  it('filters the admin list by search text', async () => {
+    const { id } = await admin.posts.create(post(`hladany-${runId}`, { translations: { sk: { title: `Ihla v kope sena ${runId}`, content: 'x' } } }));
+    const result = await admin.posts.adminList({ search: `IHLA V KOPE SENA ${runId}` });
+    expect(result.items.map((i) => i.id)).toEqual([id]);
+    expect(result.total).toBe(1);
   });
 });
