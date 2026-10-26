@@ -8,7 +8,7 @@
 const EN_PREFIX = '/en';
 
 /**
- * Given a request URL, returns the URL it should 307-redirect to when a
+ * Given a request URL, returns the URL it should 308-redirect (permanently) to when a
  * legacy `?language=` param is present, or `null` when there is nothing to
  * do (no `language` param — let next-intl's own middleware handle routing).
  *

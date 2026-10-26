@@ -1,8 +1,8 @@
 import type { MetadataRoute } from 'next';
 
-import { CATEGORIES } from '@carnaby/shared';
+import { CATEGORIES, LANGUAGES, type Language } from '@carnaby/shared';
 
-import { APP_URL } from '../lib/site-url';
+import { localizedUrl } from '../lib/seo';
 import { serverTrpc } from '../lib/trpc-server';
 
 const PAGE_LIMIT = 50;
@@ -11,37 +11,53 @@ const PAGE_LIMIT = 50;
 // try/catch below would otherwise swallow the signal Next uses to detect dynamic rendering at
 // build time and freeze the sitemap to its static entries.
 export const dynamic = 'force-dynamic';
-const EN_PREFIX = '/en';
 
-function localizedUrls(path: string): MetadataRoute.Sitemap {
-  return [{ url: `${APP_URL}${path}` }, { url: `${APP_URL}${EN_PREFIX}${path}` }];
+/** One entry per existing language version, each listing all versions as hreflang alternates. */
+function entries(path: string, languages: readonly Language[], lastModified?: string): MetadataRoute.Sitemap {
+  const alternates = { languages: Object.fromEntries(languages.map((l) => [l, localizedUrl(path, l)])) };
+  return languages.map((language) => ({
+    url: localizedUrl(path, language),
+    ...(lastModified ? { lastModified } : {}),
+    alternates,
+  }));
 }
 
-/** All published post slugs, paged through `posts.list` (max `limit` is 50 -- see
- * `apps/api/src/posts/routers.ts`). Slugs are shared across languages (a post's translations
- * don't get their own slug), so a single default-language pass is enough to enumerate them. */
-async function allPublishedSlugs(): Promise<string[]> {
-  const slugs: string[] = [];
-  let page = 1;
-  for (;;) {
-    const { items, pageCount } = await serverTrpc().posts.list.query({ page, limit: PAGE_LIMIT });
-    slugs.push(...items.map((item) => item.slug));
-    if (page >= pageCount) break;
-    page += 1;
+/**
+ * Published posts with the languages each one really has. `posts.list` falls back to the other
+ * language when the requested one is missing (and reports which one it rendered), so a post is
+ * in language X only when the list for X returns it *in* X. Listing `/en/posts/x` for an SK-only
+ * post would hand Google a duplicate of the SK page.
+ */
+async function publishedPosts(): Promise<Map<string, { languages: Language[]; publishedAt: string | null }>> {
+  const posts = new Map<string, { languages: Language[]; publishedAt: string | null }>();
+  for (const language of LANGUAGES) {
+    for (let page = 1; ; page += 1) {
+      const { items, pageCount } = await serverTrpc().posts.list.query({ language, page, limit: PAGE_LIMIT });
+      for (const item of items) {
+        const entry = posts.get(item.slug) ?? { languages: [], publishedAt: item.publishedAt };
+        if (item.language === language) entry.languages.push(language);
+        posts.set(item.slug, entry);
+      }
+      if (page >= pageCount) break;
+    }
   }
-  return slugs;
+  return posts;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
-    { url: APP_URL },
-    { url: `${APP_URL}${EN_PREFIX}` },
-    ...Object.values(CATEGORIES).flatMap((category) => localizedUrls(`/category/${category.slug}`)),
+    ...entries('/', LANGUAGES),
+    ...Object.values(CATEGORIES).flatMap((category) => entries(`/category/${category.slug}`, LANGUAGES)),
   ];
 
   try {
-    const slugs = await allPublishedSlugs();
-    return [...staticEntries, ...slugs.flatMap((slug) => localizedUrls(`/posts/${slug}`))];
+    const posts = await publishedPosts();
+    return [
+      ...staticEntries,
+      ...[...posts].flatMap(([slug, { languages, publishedAt }]) =>
+        entries(`/posts/${slug}`, languages, publishedAt ?? undefined),
+      ),
+    ];
   } catch {
     // api unreachable (e.g. restarting) -- ship the static entries rather than a 500.
     return staticEntries;

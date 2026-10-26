@@ -10,6 +10,7 @@ import { FeedDivider } from '../../../../../components/site/feed-divider';
 import { Link, permanentRedirect } from '../../../../../i18n/navigation';
 import { cn } from '../../../../../lib/cn';
 import { serverTrpc } from '../../../../../lib/trpc-server';
+import { pageAlternates } from '../../../../../lib/seo';
 
 const ICONS = { terminal: Terminal, guitar: Guitar, 'music-2': Music2 } as const;
 const PAGE_LIMIT = 9;
@@ -47,17 +48,23 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<CategoryPageParams>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   const category = resolveCategory(slug);
   if (!category) return {};
 
+  // Page 2+ is its own canonical URL (not page 1): it lists different posts.
+  const page = Math.max(1, Number.parseInt((await searchParams).page ?? '1', 10) || 1);
+  const path = page > 1 ? `/category/${category.slug}?page=${page}` : `/category/${category.slug}`;
   const language = locale as Language;
   return {
     title: `${category.name[language]} — carnaby.sk`,
     description: category.description[language],
+    alternates: pageAlternates(path, language),
   };
 }
 
