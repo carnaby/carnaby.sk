@@ -18,6 +18,8 @@ import {
   UpstreamUnavailableError,
   uploadExists,
 } from '../uploads/uploads.service';
+import { YoutubeApiError, YoutubeNotConfiguredError, YoutubeVideoNotFoundError } from '../youtube/youtube.client';
+import { importYoutubeVideo, syncPostFromYoutube, youtubeOverview } from '../youtube/youtube.service';
 import type { McpActor } from './mcp-auth';
 
 const STATUSES = ['draft', 'published', 'archived'] as const;
@@ -44,6 +46,9 @@ Content:
   thumbnail fallback; soundcloudUrl renders a "listen on SoundCloud" button.
 - Images: upload with upload_image (from a URL or base64), then put the returned markdown into the
   content, or pass the filename as "thumbnail". set_thumbnail_from_youtube fetches the video still.
+- YouTube: youtube_overview compares the channel's videos with the site; import_youtube_video
+  creates a post from a video (both languages get YouTube's text when the video has only one --
+  translate the other one afterwards with update_post); sync_post_from_youtube refreshes a post.
 - Slugs: lowercase a-z, 0-9 and hyphens. If omitted on create, it is derived from the SK title
   (or EN when there is no SK). Changing the slug of a published post breaks existing links.
 
@@ -81,7 +86,10 @@ async function run(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
   try {
     return await fn();
   } catch (error) {
-    if (error instanceof ToolError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError) {
+    if (
+      error instanceof ToolError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError ||
+      error instanceof YoutubeNotConfiguredError || error instanceof YoutubeVideoNotFoundError || error instanceof YoutubeApiError
+    ) {
       return toolError(error.message);
     }
     if (error instanceof UpstreamUnavailableError) return toolError(`Download failed: ${error.message}`);
@@ -348,6 +356,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       youtubeId: z.string().nullable().optional(),
       soundcloudUrl: z.string().nullable().optional(),
       thumbnail: z.string().nullable().optional(),
+      publishedAt: z.string().datetime({ offset: true }).optional().describe('ISO date-time, e.g. 2026-03-01T18:00:00Z'),
       translations: z.object({
         sk: translationPatchSchema.nullable().optional(),
         en: translationPatchSchema.nullable().optional(),
@@ -389,6 +398,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       soundcloudUrl: patchField(args.soundcloudUrl, base.soundcloudUrl),
       thumbnailPath: patchField(args.thumbnail, base.thumbnailPath),
       categoryIds: args.categories ? resolveCategoryIds(args.categories, idBySlug) : base.categoryIds,
+      publishedAt: args.publishedAt,
       translations,
     });
     await assertThumbnailExists(input.thumbnailPath, base.thumbnailPath);
@@ -465,6 +475,48 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
     const filename = await fetchYoutubeThumbnail(youtubeId);
     await saveChanges(db, args.postId, { thumbnailPath: filename }, actor);
     return json({ postId: args.postId, thumbnail: imageInfo(filename) });
+  }));
+
+  server.registerTool('youtube_overview', {
+    title: 'YouTube channel vs site',
+    description: 'All public videos of the configured YouTube channels, newest first, with the post that embeds each one (or null when it is missing on the site).',
+    inputSchema: {
+      onlyMissing: z.boolean().default(false).describe('Only videos that have no post yet'),
+      refresh: z.boolean().default(false).describe('Bypass the 10-minute cache'),
+    },
+    annotations: { readOnlyHint: true },
+  }, (args) => run(async () => {
+    const overview = await youtubeOverview(db, { refresh: args.refresh });
+    if (!overview.configured) throw new ToolError(`YouTube is not configured on the server: set ${overview.missing.join(' and ')}.`);
+    const videos = args.onlyMissing ? overview.videos.filter((v) => !v.post) : overview.videos;
+    return json({
+      channels: overview.channels,
+      totals: { videos: overview.videos.length, onSite: overview.videos.filter((v) => v.post).length, missing: overview.videos.filter((v) => !v.post).length },
+      videos,
+    });
+  }));
+
+  server.registerTool('import_youtube_video', {
+    title: 'Create post from YouTube video',
+    description: "Creates a post from a video: title and description in both languages (YouTube localizations when present, otherwise the video's text in both), release date as publish date, best still as thumbnail, category from the channel.",
+    inputSchema: {
+      videoId: z.string().describe('Video id or YouTube URL'),
+      status: z.enum(STATUSES).default('draft'),
+    },
+  }, (args) => run(async () => {
+    const videoId = normalizeYoutubeId(args.videoId);
+    if (!videoId) throw new ToolError('Pass a video id.');
+    const result = await importYoutubeVideo(db, videoId, args.status, actor.userId);
+    return json({ created: true, thumbnailError: result.thumbnailError, post: await postDetail(db, result.id) });
+  }));
+
+  server.registerTool('sync_post_from_youtube', {
+    title: 'Refresh post from YouTube',
+    description: "Re-reads the post's video: replaces texts of the languages YouTube has, keeps other existing translations, updates release date and thumbnail. Slug, status and categories stay.",
+    inputSchema: { postId: z.number().int() },
+  }, (args) => run(async () => {
+    const result = await syncPostFromYoutube(db, args.postId, actor.userId);
+    return json({ updated: true, thumbnailError: result.thumbnailError, post: await postDetail(db, args.postId) });
   }));
 
   server.registerTool('list_users', {

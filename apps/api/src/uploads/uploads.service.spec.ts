@@ -146,12 +146,19 @@ describe('fetchYoutubeThumbnail', () => {
     }
   });
 
-  it('throws UpstreamNotFoundError when YouTube returns 404', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    });
+  it('throws UpstreamNotFoundError when YouTube returns 404 for every quality', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 });
     await expect(fetchYoutubeThumbnail('nonexistent')).rejects.toThrow(UpstreamNotFoundError);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('falls back from maxres to the next available quality', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: true, status: 200, arrayBuffer: async () => new TextEncoder().encode('jpg').buffer });
+    await expect(fetchYoutubeThumbnail('abc123')).resolves.toBe('yt-abc123.jpg');
+    expect(vi.mocked(global.fetch).mock.calls[1]?.[0]).toBe('https://img.youtube.com/vi/abc123/sddefault.jpg');
+    await expect(fs.readFile(path.join(dir, 'originals', 'yt-abc123.jpg'), 'utf8')).resolves.toBe('jpg');
   });
 
   it('throws UpstreamUnavailableError when fetch rejects (network error)', async () => {

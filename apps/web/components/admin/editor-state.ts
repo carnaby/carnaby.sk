@@ -1,4 +1,12 @@
-import { postUpsertInput, slugify, type Language, type PostUpsertInput } from '@carnaby/shared';
+import {
+  mergeYoutubeTranslations,
+  postUpsertInput,
+  slugify,
+  type Language,
+  type PostUpsertInput,
+  type TranslationInput,
+  type YoutubeTranslations,
+} from '@carnaby/shared';
 
 /**
  * Mirrors the api's `PostStatus` (`apps/api/src/posts/posts.read.ts`) — duplicated as a small,
@@ -30,6 +38,8 @@ export interface EditorState {
   soundcloudUrl: string;
   thumbnailPath: string;
   categoryIds: number[];
+  /** ISO date-time, '' = not set yet (the api stamps "now" on first publish). */
+  publishedAt: string;
   translations: Record<Language, TranslationFormState>;
 }
 
@@ -48,6 +58,7 @@ export function createEmptyState(): EditorState {
     soundcloudUrl: '',
     thumbnailPath: '',
     categoryIds: [],
+    publishedAt: '',
     translations: { sk: emptyTranslation(), en: emptyTranslation() },
   };
 }
@@ -155,6 +166,7 @@ export function buildUpsertInput(state: EditorState): BuildUpsertResult {
     soundcloudUrl: state.soundcloudUrl.trim() || undefined,
     thumbnailPath: state.thumbnailPath.trim() || undefined,
     categoryIds: state.categoryIds,
+    publishedAt: state.publishedAt || undefined,
     translations,
   };
 
@@ -163,4 +175,37 @@ export function buildUpsertInput(state: EditorState): BuildUpsertResult {
     return { errors: result.error.issues.map((issue) => issue.message) };
   }
   return { input: result.data };
+}
+
+export interface YoutubePreviewData {
+  translations: YoutubeTranslations;
+  publishedAt: string;
+  thumbnail: string | null;
+}
+
+function toFormState(t: TranslationInput): TranslationFormState {
+  return { title: t.title, excerpt: t.excerpt ?? '', content: t.content, metaDescription: t.metaDescription ?? '' };
+}
+
+/**
+ * "Načítať z YouTube": fills the form from the video -- texts per `mergeYoutubeTranslations`
+ * (a language YouTube has is replaced, an already written translation YouTube lacks is kept, an
+ * empty one gets the video's text), release date, still, and the slug while it is still
+ * auto-generated. Nothing is saved until the admin clicks a save button.
+ */
+export function applyYoutubePreview(state: EditorState, preview: YoutubePreviewData): EditorState {
+  const existing = Object.fromEntries(
+    (['sk', 'en'] as const).map((language) => {
+      const t = state.translations[language];
+      return [language, isTranslationPresent(t) ? { title: t.title, content: t.content, excerpt: t.excerpt || undefined, metaDescription: t.metaDescription || undefined } : null];
+    }),
+  ) as Record<Language, TranslationInput | null>;
+  const merged = mergeYoutubeTranslations(preview.translations, existing);
+  return {
+    ...state,
+    slug: state.slugTouched ? state.slug : slugify(merged.sk.title),
+    thumbnailPath: preview.thumbnail ?? state.thumbnailPath,
+    publishedAt: preview.publishedAt,
+    translations: { sk: toFormState(merged.sk), en: toFormState(merged.en) },
+  };
 }

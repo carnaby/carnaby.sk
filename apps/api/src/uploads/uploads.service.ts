@@ -147,33 +147,43 @@ export async function saveImageFromUrl(rawUrl: string, prefix: 'thumb' | 'img' =
   return saveImageBuffer(Buffer.concat(chunks), prefix);
 }
 
+/** YouTube still qualities, best first. `maxresdefault` (1280×720) only exists for HD uploads;
+ * `hqdefault` always exists but is 4:3 with letterbox bars. */
+const YOUTUBE_THUMB_QUALITIES = ['maxresdefault', 'sddefault', 'hqdefault'] as const;
+
 export async function fetchYoutubeThumbnail(youtubeId: string): Promise<string> {
-  const url = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
-  let res;
-  try {
-    res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  } catch (error) {
-    // Network error or timeout (AbortError)
-    throw new UpstreamUnavailableError(
-      error instanceof Error ? error.message : 'youtube fetch failed',
-    );
-  }
-
-  if (!res.ok) {
-    if (res.status === 404) {
-      throw new UpstreamNotFoundError('youtube thumbnail not found');
+  let buffer: Buffer | null = null;
+  for (const quality of YOUTUBE_THUMB_QUALITIES) {
+    let res: Response;
+    try {
+      res = await fetch(`https://img.youtube.com/vi/${youtubeId}/${quality}.jpg`, { signal: AbortSignal.timeout(10_000) });
+    } catch (error) {
+      // Network error or timeout (AbortError)
+      throw new UpstreamUnavailableError(error instanceof Error ? error.message : 'youtube fetch failed');
     }
-    throw new UpstreamUnavailableError(`youtube fetch failed with status ${res.status}`);
+    if (res.ok) {
+      buffer = Buffer.from(await res.arrayBuffer());
+      break;
+    }
+    if (res.status !== 404) throw new UpstreamUnavailableError(`youtube fetch failed with status ${res.status}`);
   }
+  if (!buffer) throw new UpstreamNotFoundError('youtube thumbnail not found');
 
-  const buffer = Buffer.from(await res.arrayBuffer());
-
-  const uploadsDir = uploadsBaseDir();
-  const base = originalsDir(uploadsDir);
+  const base = originalsDir(uploadsBaseDir());
   await fs.mkdir(base, { recursive: true });
   const filename = youtubeThumbFilename(youtubeId);
   await fs.writeFile(path.join(base, filename), buffer);
+  // Same filename on every re-fetch: drop resized variants so the new still is served.
+  await purgeCachedVariants(filename);
   return filename;
+}
+
+async function purgeCachedVariants(filename: string): Promise<void> {
+  await Promise.all(
+    IMAGE_WIDTHS.map((width) =>
+      fs.unlink(path.resolve(cacheBaseDir(), String(width), `${filename}.webp`)).catch(() => undefined),
+    ),
+  );
 }
 
 /** True when `filename` is a bare filename that exists in the uploads dir -- same lookup order as
@@ -211,11 +221,7 @@ export async function deleteOriginal(filename: string): Promise<void> {
   }
   // Resized variants are cached as `${CACHE_DIR}/<width>/<filename>.webp` (images.service.ts);
   // drop them too, otherwise a re-used filename (yt-<id>.jpg) would keep serving the old image.
-  await Promise.all(
-    IMAGE_WIDTHS.map((width) =>
-      fs.unlink(path.resolve(cacheBaseDir(), String(width), `${filename}.webp`)).catch(() => undefined),
-    ),
-  );
+  await purgeCachedVariants(filename);
 }
 
 @Injectable()

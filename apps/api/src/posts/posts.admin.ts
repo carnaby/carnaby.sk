@@ -207,10 +207,11 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
         thumbnailPath: input.thumbnailPath ?? null, youtubeId: input.youtubeId ?? null,
         soundcloudUrl: input.soundcloudUrl ?? null, updatedAt: new Date(),
       };
+      const explicitPublishedAt = input.publishedAt ? new Date(input.publishedAt) : null;
       let id = input.id;
       if (id == null) {
         const [row] = await tx.insert(posts)
-          .values({ ...base, authorId, publishedAt: input.status === 'published' ? new Date() : null })
+          .values({ ...base, authorId, publishedAt: explicitPublishedAt ?? (input.status === 'published' ? new Date() : null) })
           .returning({ id: posts.id });
         id = row!.id;
       } else {
@@ -219,7 +220,7 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
         if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
         if (existing.thumbnailPath && existing.thumbnailPath !== base.thumbnailPath) replacedThumbnail = existing.thumbnailPath;
         await tx.update(posts)
-          .set({ ...base, publishedAt: input.status === 'published' ? existing.publishedAt ?? new Date() : existing.publishedAt })
+          .set({ ...base, publishedAt: explicitPublishedAt ?? (input.status === 'published' ? existing.publishedAt ?? new Date() : existing.publishedAt) })
           .where(eq(posts.id, id));
       }
       const langs: Language[] = ['sk', 'en'];

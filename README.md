@@ -55,6 +55,9 @@ The api exposes an MCP server at `https://carnaby.sk/api/mcp` with every admin c
 (posts, translations, publishing, images, thumbnails, users). Add it in Claude as a custom
 connector — sign-in is Google OAuth, admin role only. See [`docs/mcp.md`](docs/mcp.md).
 
+YouTube videos can be pulled in as posts from `/admin/youtube` (or via MCP) — see
+[`docs/youtube.md`](docs/youtube.md).
+
 ## Documentation
 
 - See `.superpowers/sdd/` for the implementation spec and detailed planning documents

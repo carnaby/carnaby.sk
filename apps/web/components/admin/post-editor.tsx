@@ -23,6 +23,7 @@ import { Textarea } from '../ui/textarea';
 import { MarkdownPreview } from './markdown-preview';
 import { ThumbnailPicker } from './thumbnail-picker';
 import {
+  applyYoutubePreview,
   buildUpsertInput,
   copyTranslation,
   createEmptyState,
@@ -72,6 +73,7 @@ function fromPostById(data: PostByIdResult): EditorState {
     soundcloudUrl: data.post.soundcloudUrl ?? '',
     thumbnailPath: data.post.thumbnailPath ?? '',
     categoryIds: data.categoryIds,
+    publishedAt: data.post.publishedAt ?? '',
     translations: { sk: toForm(data.translations.sk), en: toForm(data.translations.en) },
   };
 }
@@ -123,6 +125,23 @@ export function PostEditor({ mode }: PostEditorProps) {
   const createMutation = useMutation(trpc.posts.create.mutationOptions());
   const updateMutation = useMutation(trpc.posts.update.mutationOptions());
   const saving = createMutation.isPending || updateMutation.isPending;
+  const youtubePreview = useMutation(trpc.youtube.preview.mutationOptions());
+
+  function handleLoadFromYoutube() {
+    const videoId = state.youtubeId.trim();
+    if (!videoId) return;
+    youtubePreview.mutate(
+      { videoId },
+      {
+        onSuccess: (preview) => {
+          updateState((prev) => applyYoutubePreview(prev, preview));
+          toast.success('Údaje z YouTube sú vo formulári — skontroluj ich a ulož.');
+          if (preview.thumbnailError) toast.warning(`Náhľad z YouTube sa nepodarilo stiahnuť: ${preview.thumbnailError}`);
+        },
+        onError: (error) => toast.error(error.message || 'Načítanie z YouTube sa nepodarilo.'),
+      },
+    );
+  }
 
   function handleSave(status: PostStatus) {
     const result = buildUpsertInput({ ...state, status });
@@ -280,6 +299,12 @@ export function PostEditor({ mode }: PostEditorProps) {
             <Label htmlFor="slug">Slug</Label>
             <Input id="slug" value={state.slug} onChange={(event) => updateState((prev) => setSlug(prev, event.target.value))} />
             <p className="text-xs text-white/40">Adresa príspevku: /posts/{state.slug || '…'}</p>
+            <p className="text-xs text-white/40">
+              Dátum publikovania:{' '}
+              {state.publishedAt
+                ? new Intl.DateTimeFormat('sk', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(state.publishedAt))
+                : 'pri prvom publikovaní'}
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -315,12 +340,24 @@ export function PostEditor({ mode }: PostEditorProps) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="youtubeId">YouTube ID</Label>
-              <Input
-                id="youtubeId"
-                value={state.youtubeId}
-                onChange={(event) => updateState((prev) => ({ ...prev, youtubeId: event.target.value }))}
-                placeholder="napr. dQw4w9WgXcQ"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="youtubeId"
+                  value={state.youtubeId}
+                  onChange={(event) => updateState((prev) => ({ ...prev, youtubeId: event.target.value }))}
+                  placeholder="napr. dQw4w9WgXcQ"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!state.youtubeId.trim() || youtubePreview.isPending}
+                  onClick={handleLoadFromYoutube}
+                  title="Doplní názov, popis, dátum vydania a náhľad z YouTube (neuloží)"
+                >
+                  {youtubePreview.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+                  Načítať z YouTube
+                </Button>
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="soundcloudUrl">SoundCloud URL</Label>
