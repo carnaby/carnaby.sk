@@ -4,14 +4,15 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { isTRPCClientError } from '@trpc/client';
 
-import { LANGUAGES, type CategorySlug, type Language } from '@carnaby/shared';
+import type { CategorySlug, Language } from '@carnaby/shared';
 
 import { PostBody } from '../../../../../components/post/markdown';
 import { PostImage } from '../../../../../components/post/post-image';
 import { ViewTracker } from '../../../../../components/post/view-tracker';
 import { YoutubeEmbed } from '../../../../../components/post/youtube-embed';
-import { Link, getPathname } from '../../../../../i18n/navigation';
+import { Link } from '../../../../../i18n/navigation';
 import { thumbUrl, youtubeThumbUrl } from '../../../../../lib/images';
+import { pageAlternates } from '../../../../../lib/seo';
 import { APP_URL } from '../../../../../lib/site-url';
 import { serverTrpc, type PostListItem } from '../../../../../lib/trpc-server';
 
@@ -64,11 +65,7 @@ export async function generateMetadata({
   return {
     title: `${post.title} — carnaby.sk`,
     description,
-    alternates: {
-      languages: Object.fromEntries(
-        LANGUAGES.map((language) => [language, `${APP_URL}${getPathname({ href: `/posts/${slug}`, locale: language })}`]),
-      ),
-    },
+    alternates: pageAlternates(`/posts/${slug}`, post.language, post.availableLanguages),
     openGraph: {
       title: post.title,
       description,

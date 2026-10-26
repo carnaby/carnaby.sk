@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import type { Language } from '@carnaby/shared';
@@ -6,6 +7,7 @@ import { PostCard } from '../../../components/post/post-card';
 import { About } from '../../../components/site/about';
 import { FeedDivider } from '../../../components/site/feed-divider';
 import { Hero } from '../../../components/site/hero';
+import { pageAlternates } from '../../../lib/seo';
 import { serverTrpc } from '../../../lib/trpc-server';
 
 const FEATURED_LIMIT = 6;
@@ -15,6 +17,11 @@ const FEATURED_LIMIT = 6;
 // see .github/workflows/ci.yml) or a cold local build. Opting out of build-time prerendering
 // means it's rendered per-request instead (see `lib/trpc-server.ts` for why reads are uncached).
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  return { alternates: pageAlternates('/', locale as Language) };
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
