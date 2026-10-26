@@ -18,6 +18,9 @@ export const postUpsertInput = z.object({
   soundcloudUrl: z.string().url().optional(),
   thumbnailPath: z.string().optional(),
   categoryIds: z.array(z.number().int()),
+  /** Overrides the publish date (e.g. the YouTube release date). Omitted = keep the stored one,
+   * or "now" when a post is first published. */
+  publishedAt: z.string().datetime({ offset: true }).optional(),
   translations: z
     .object({ sk: translationInput.optional(), en: translationInput.optional() })
     .refine((t) => t.sk || t.en, { message: 'At least one translation required' }),

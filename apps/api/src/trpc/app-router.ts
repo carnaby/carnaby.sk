@@ -1,6 +1,7 @@
 import { categoriesRouter } from '../categories/router';
 import { postsRouter } from '../posts/routers';
 import { usersRouter } from '../users/router';
+import { youtubeRouter } from '../youtube/router';
 import { publicProcedure, router } from './trpc';
 
 export const appRouter = router({
@@ -8,5 +9,6 @@ export const appRouter = router({
   posts: postsRouter,
   categories: categoriesRouter,
   users: usersRouter,
+  youtube: youtubeRouter,
 });
 export type AppRouter = typeof appRouter;

@@ -11,6 +11,11 @@ const QUICK_LINKS = [
     description: 'Písanie, úprava a publikovanie príspevkov.',
   },
   {
+    href: '/admin/youtube',
+    title: 'YouTube',
+    description: 'Videá z kanála vs. web — chýbajúce uverejníš jedným klikom.',
+  },
+  {
     href: '/admin/users',
     title: 'Používatelia',
     description: 'Prehľad prihlásených používateľov a ich rolí.',
