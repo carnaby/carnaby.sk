@@ -58,8 +58,9 @@ d('carnaby MCP server', () => {
   it('advertises every admin capability as a tool, with instructions', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
-      'create_post', 'delete_post', 'get_post', 'list_categories', 'list_posts', 'list_users',
-      'set_post_status', 'set_thumbnail_from_youtube', 'site_overview', 'update_post', 'upload_image',
+      'create_post', 'delete_post', 'get_post', 'import_youtube_video', 'list_categories', 'list_posts', 'list_users',
+      'set_post_status', 'set_thumbnail_from_youtube', 'site_overview', 'sync_post_from_youtube', 'update_post',
+      'upload_image', 'youtube_overview',
     ]);
     expect(client.getInstructions()).toContain('carnaby.sk');
   });

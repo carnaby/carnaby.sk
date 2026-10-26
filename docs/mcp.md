@@ -21,6 +21,9 @@ Code: `apps/api/src/mcp/` (`server.ts` = tools, `mcp-auth.ts` = auth, `mcp.contr
 | `list_categories` | devlog / dodo / carnaby |
 | `upload_image` | Store an image from a URL or base64 (jpeg/png/gif/webp, ≤ 10 MB); returns filename + markdown snippet; can set it as a post thumbnail |
 | `set_thumbnail_from_youtube` | Download the video still and use it as the thumbnail |
+| `youtube_overview` | Channel videos vs. site: which ones already have a post (and its status), which are missing |
+| `import_youtube_video` | Create a post from a video (texts, release date, still, category) — see `docs/youtube.md` |
+| `sync_post_from_youtube` | Refresh a post from its video, keeping translations YouTube doesn't have |
 | `list_users` | Registered users and roles |
 
 The server also sends instructions (content model, categories, markdown conventions) that

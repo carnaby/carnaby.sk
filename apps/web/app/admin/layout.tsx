@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/posts', label: 'Príspevky' },
+  { href: '/admin/youtube', label: 'YouTube' },
   { href: '/admin/users', label: 'Používatelia' },
 ];
 
