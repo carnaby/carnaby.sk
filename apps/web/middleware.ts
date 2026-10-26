@@ -12,7 +12,9 @@ export default function middleware(request: NextRequest) {
   // redirect.
   const legacyRedirect = legacyLanguageRedirect(request.nextUrl);
   if (legacyRedirect) {
-    return NextResponse.redirect(legacyRedirect, 307);
+    // Permanent: these v1 URLs are gone for good, and a temporary 307 makes Google keep the old
+    // URL in its index ("Page with redirect") instead of moving its signals to the new one.
+    return NextResponse.redirect(legacyRedirect, 308);
   }
 
   return intlMiddleware(request);
