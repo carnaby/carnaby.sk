@@ -236,10 +236,9 @@ describe('applyYoutubePreview', () => {
     thumbnail: 'yt-abc.jpg',
   });
 
-  it('fills both languages, slug, date and still on an empty form', () => {
+  it('fills the video language, slug, date and still on an empty form', () => {
     const state = applyYoutubePreview(createEmptyState(), preview({ sk }));
     expect(state.translations.sk.title).toBe('Nočná jazda');
-    expect(state.translations.en.title).toBe('Nočná jazda');
     expect(state.translations.sk.excerpt).toBe('Teaser');
     expect(state.slug).toBe('nocna-jazda');
     expect(state.publishedAt).toBe('2026-03-01T18:00:00Z');
@@ -255,6 +254,31 @@ describe('applyYoutubePreview', () => {
     expect(next.translations.en).toMatchObject({ title: 'Night Drive', content: 'translated' });
     expect(next.translations.sk.title).toBe('Nočná jazda');
     expect(next.slug).toBe('vlastny-slug');
+  });
+
+  it('leaves a language YouTube has no text for exactly as it was (empty stays empty)', () => {
+    const state = applyYoutubePreview(createEmptyState(), preview({ sk }));
+    expect(state.translations.en).toEqual({ title: '', excerpt: '', content: '', metaDescription: '' });
+    expect(buildUpsertInput(state)).not.toHaveProperty('input.translations.en');
+  });
+
+  it('does not touch a half-written translation YouTube lacks', () => {
+    const state = setTranslationField(createEmptyState(), 'en', 'title', 'Night Dri');
+    const next = applyYoutubePreview(state, preview({ sk }));
+    expect(next.translations.en).toEqual({ title: 'Night Dri', excerpt: '', content: '', metaDescription: '' });
+  });
+
+  it('replaces a language YouTube has a translation for', () => {
+    const en = { title: 'Night Drive', content: 'Description', excerpt: 'Teaser EN' };
+    const state = setTranslationField(createEmptyState(), 'en', 'title', 'Old');
+    const next = applyYoutubePreview(state, preview({ sk, en }));
+    expect(next.translations.en).toMatchObject({ title: 'Night Drive', content: 'Description', excerpt: 'Teaser EN' });
+  });
+
+  it('puts the text into SK when the video language is not one the site has', () => {
+    const next = applyYoutubePreview(createEmptyState(), preview({}));
+    expect(next.translations.sk.title).toBe('Nočná jazda');
+    expect(next.translations.en.title).toBe('');
   });
 
   it('keeps the current thumbnail when the still could not be downloaded', () => {

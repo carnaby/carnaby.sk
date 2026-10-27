@@ -6,7 +6,9 @@ Turns YouTube videos into posts without retyping anything.
   its status on the site (*Na webe* / *Koncept* / *Archivované* / *Chýba*). Missing videos have
   **Uverejniť** (publish now) and **Ako koncept** (draft).
 - **Post editor → "Načítať z YouTube"** (next to the YouTube ID field) refills the form from the
-  video. Nothing is saved until you click a save button.
+  video: only the languages the video has text in, plus release date and still. A language the
+  video has no text for is left exactly as it is (empty stays empty). Nothing is saved until you
+  click a save button.
 - **MCP**: `youtube_overview`, `import_youtube_video`, `sync_post_from_youtube` (`docs/mcp.md`).
 
 Code: `apps/api/src/youtube/` (API client, service, tRPC router), mapping rules in
