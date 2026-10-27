@@ -12,7 +12,7 @@ import './globals.css';
 export default function RootNotFound() {
   return (
     <html lang="en">
-      <body className="site-bg flex min-h-dvh items-center justify-center bg-base text-white antialiased">
+      <body className="site-bg flex min-h-dvh items-center justify-center bg-page text-white antialiased">
         <div className="mx-auto max-w-xl px-4 py-24 text-center">
           <h1 className="font-display text-3xl font-bold">Page not found</h1>
           <p className="mt-4 text-white/70">The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>

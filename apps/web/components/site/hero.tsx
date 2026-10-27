@@ -52,7 +52,7 @@ export function Hero() {
             width={112}
             height={112}
             sizes="112px"
-            className="size-24 shrink-0 rounded-xl object-cover ring-4 ring-base sm:size-28"
+            className="size-24 shrink-0 rounded-xl object-cover ring-4 ring-page sm:size-28"
           />
           <div className="pb-1">
             <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
