@@ -337,7 +337,8 @@ export function PostEditor({ mode }: PostEditorProps) {
             Odporúčaný príspevok
           </Label>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* One field per row: side by side, the YouTube ID box shrank to a few characters. */}
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="youtubeId">YouTube ID</Label>
               <div className="flex gap-2">
@@ -352,7 +353,7 @@ export function PostEditor({ mode }: PostEditorProps) {
                   variant="outline"
                   disabled={!state.youtubeId.trim() || youtubePreview.isPending}
                   onClick={handleLoadFromYoutube}
-                  title="Doplní názov, popis, dátum vydania a náhľad z YouTube (neuloží)"
+                  title="Prepíše texty v jazykoch, ktoré má video na YouTube, a doplní dátum vydania a náhľad. Ostatné jazyky nechá tak. Neuloží."
                 >
                   {youtubePreview.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
                   Načítať z YouTube

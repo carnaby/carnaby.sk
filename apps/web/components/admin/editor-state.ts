@@ -1,5 +1,5 @@
 import {
-  mergeYoutubeTranslations,
+  DEFAULT_LANGUAGE,
   postUpsertInput,
   slugify,
   type Language,
@@ -188,24 +188,26 @@ function toFormState(t: TranslationInput): TranslationFormState {
 }
 
 /**
- * "Načítať z YouTube": fills the form from the video -- texts per `mergeYoutubeTranslations`
- * (a language YouTube has is replaced, an already written translation YouTube lacks is kept, an
- * empty one gets the video's text), release date, still, and the slug while it is still
- * auto-generated. Nothing is saved until the admin clicks a save button.
+ * "Načítať z YouTube": refills only the languages the video has text in (its own language plus
+ * translations from YouTube Studio), plus release date, still, and the slug while it is still
+ * auto-generated. A language YouTube has no text for is left exactly as it is -- empty stays
+ * empty, a half-written translation stays half-written. When the video's language isn't one the
+ * site has, its text goes into the default language. Nothing is saved until the admin clicks save.
  */
 export function applyYoutubePreview(state: EditorState, preview: YoutubePreviewData): EditorState {
-  const existing = Object.fromEntries(
-    (['sk', 'en'] as const).map((language) => {
-      const t = state.translations[language];
-      return [language, isTranslationPresent(t) ? { title: t.title, content: t.content, excerpt: t.excerpt || undefined, metaDescription: t.metaDescription || undefined } : null];
-    }),
-  ) as Record<Language, TranslationInput | null>;
-  const merged = mergeYoutubeTranslations(preview.translations, existing);
+  const loaded: Partial<Record<Language, TranslationInput>> = { ...preview.translations.byLanguage };
+  if (Object.keys(loaded).length === 0) loaded[DEFAULT_LANGUAGE] = preview.translations.fallback;
+  const translations = { ...state.translations };
+  for (const language of ['sk', 'en'] as const) {
+    const text = loaded[language];
+    if (text) translations[language] = toFormState(text);
+  }
+  const slugSource = translations.sk.title.trim() || translations.en.title.trim();
   return {
     ...state,
-    slug: state.slugTouched ? state.slug : slugify(merged.sk.title),
+    slug: state.slugTouched ? state.slug : slugify(slugSource),
     thumbnailPath: preview.thumbnail ?? state.thumbnailPath,
     publishedAt: preview.publishedAt,
-    translations: { sk: toFormState(merged.sk), en: toFormState(merged.en) },
+    translations,
   };
 }
