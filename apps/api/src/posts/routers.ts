@@ -74,6 +74,17 @@ export const postsRouter = router({
   update: adminProcedure.input(z.object({ id: z.number().int() }).and(postUpsertInput))
     .mutation(({ ctx, input }) => upsertPost(ctx.db, input, ctx.user.id)),
 
+  /** The star in the admin list: flips one flag without resending the whole post. */
+  setFeatured: adminProcedure.input(z.object({ id: z.number().int(), isFeatured: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db.update(posts)
+        .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+        .where(eq(posts.id, input.id))
+        .returning({ id: posts.id, isFeatured: posts.isFeatured });
+      if (!row) throw new TRPCError({ code: 'NOT_FOUND' });
+      return row;
+    }),
+
   remove: adminProcedure.input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       await removePost(ctx.db, input.id);

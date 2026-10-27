@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Plus } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Pencil, Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Same type-only, module-boundary-safe pattern as `lib/trpc-server.ts`/`lib/trpc-react.tsx`:
@@ -59,6 +59,14 @@ const STATUS_BADGE_CLASS: Record<PostStatus, string> = {
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('sk', { dateStyle: 'medium' });
+
+// Labels for the filter selects' trigger -- without `items` base-ui shows the raw value ("all").
+const STATUS_ITEMS: Record<StatusFilter, string> = {
+  all: 'Všetky stavy',
+  draft: 'Koncept',
+  published: 'Publikované',
+  archived: 'Archivované',
+};
 
 interface SortButtonProps {
   label: string;
@@ -123,6 +131,11 @@ export function PostsTable() {
     }),
   );
   const removeMutation = useMutation(trpc.posts.remove.mutationOptions());
+  const featuredMutation = useMutation(trpc.posts.setFeatured.mutationOptions());
+  const categoryItems: Record<string, string> = {
+    all: 'Všetky kategórie',
+    ...Object.fromEntries((categoriesQuery.data ?? []).map((c) => [c.slug, c.name])),
+  };
 
   const items = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
@@ -136,6 +149,20 @@ export function PostsTable() {
       setSortBy(key);
       setOrder('desc');
     }
+  }
+
+  function toggleFeatured(item: AdminListItem) {
+    const next = !item.isFeatured;
+    featuredMutation.mutate(
+      { id: item.id, isFeatured: next },
+      {
+        onSuccess: async () => {
+          toast.success(next ? `„${item.title}“ je odporúčaný.` : `„${item.title}“ už nie je odporúčaný.`);
+          await queryClient.invalidateQueries(trpc.posts.adminList.queryFilter());
+        },
+        onError: () => toast.error('Zmena odporúčania sa nepodarila. Skúste to znova.'),
+      },
+    );
   }
 
   function handleConfirmDelete() {
@@ -161,6 +188,7 @@ export function PostsTable() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Select
+            items={STATUS_ITEMS}
             value={status}
             onValueChange={(value) => {
               // See the category select below: `onValueChange` is typed to allow `null`, but
@@ -182,6 +210,7 @@ export function PostsTable() {
           </Select>
 
           <Select
+            items={categoryItems}
             value={category}
             onValueChange={(value) => {
               // Single (non-multiple) select's `onValueChange` is typed to allow `null` (the
@@ -228,7 +257,7 @@ export function PostsTable() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[76px]">Náhľad</TableHead>
-              <TableHead>
+              <TableHead className="w-full">
                 <SortButton label="Názov" sortKey="title" sortBy={sortBy} order={order} onToggle={toggleSort} />
               </TableHead>
               <TableHead>Kategórie</TableHead>
@@ -237,7 +266,7 @@ export function PostsTable() {
               </TableHead>
               <TableHead className="text-right">
                 <SortButton
-                  label="Zobrazenia"
+                  label="Videné"
                   sortKey="viewCount"
                   sortBy={sortBy}
                   order={order}
@@ -253,7 +282,9 @@ export function PostsTable() {
                   onToggle={toggleSort}
                 />
               </TableHead>
-              <TableHead className="text-right">Akcie</TableHead>
+              <TableHead className="text-right">
+                <span className="sr-only">Akcie</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -291,14 +322,11 @@ export function PostsTable() {
                       <PostImage post={item} width={300} />
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-xs whitespace-normal">
-                    <div className="flex items-center gap-1.5">
-                      {item.isFeatured ? (
-                        <span aria-label="Odporúčané" title="Odporúčané">
-                          ⭐
-                        </span>
-                      ) : null}
-                      <span className="truncate font-medium text-white">{item.title || '(bez názvu)'}</span>
+                  {/* max-w-0 + w-full: the title column takes the leftover width and truncates,
+                      so the row never pushes the action buttons out of the table. */}
+                  <TableCell className="w-full max-w-0">
+                    <div className="truncate font-medium text-white" title={item.title}>
+                      {item.title || '(bez názvu)'}
                     </div>
                     <div className="mt-1 flex gap-1">
                       <Badge variant="secondary" className={item.hasSk ? undefined : 'opacity-30'}>
@@ -320,15 +348,38 @@ export function PostsTable() {
                   <TableCell className="text-right">{item.viewCount}</TableCell>
                   <TableCell>{DATE_FORMATTER.format(new Date(item.createdAt))}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-pressed={item.isFeatured}
+                        aria-label={item.isFeatured ? 'Zrušiť odporúčanie' : 'Odporučiť'}
+                        title={item.isFeatured ? 'Odporúčaný — kliknutím zrušíš' : 'Odporučiť'}
+                        disabled={featuredMutation.isPending && featuredMutation.variables?.id === item.id}
+                        onClick={() => toggleFeatured(item)}
+                      >
+                        <Star
+                          className={item.isFeatured ? 'size-4 fill-dodo text-dodo' : 'size-4 text-white/40'}
+                          aria-hidden="true"
+                        />
+                      </Button>
                       <Link
                         href={`/admin/posts/${item.id}/edit`}
-                        className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                        aria-label="Upraviť"
+                        title="Upraviť"
+                        className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
                       >
-                        Upraviť
+                        <Pencil className="size-4" aria-hidden="true" />
                       </Link>
-                      <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(item)}>
-                        Zmazať
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Zmazať"
+                        title="Zmazať"
+                        className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+                        onClick={() => setDeleteTarget(item)}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
                       </Button>
                     </div>
                   </TableCell>
