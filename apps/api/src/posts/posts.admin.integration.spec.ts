@@ -120,4 +120,22 @@ d('posts admin -- regressions', () => {
     expect(result.items.map((i) => i.id)).toEqual([id]);
     expect(result.total).toBe(1);
   });
+
+  it('setFeatured toggles only the featured flag', async () => {
+    const { id } = await admin.posts.create(post(`hviezda-${runId}`));
+    await admin.posts.setFeatured({ id, isFeatured: true });
+    const on = await admin.posts.byId({ id });
+    expect(on.post.isFeatured).toBe(true);
+    expect(on.post.status).toBe('draft');
+    expect(on.translations.sk?.title).toBeTruthy();
+
+    await admin.posts.setFeatured({ id, isFeatured: false });
+    expect((await admin.posts.byId({ id })).post.isFeatured).toBe(false);
+  });
+
+  it('setFeatured is admin-only and 404s an unknown id', async () => {
+    const nonAdmin = appRouter.createCaller({ db, user: { ...adminUser, id: 'not-admin', role: 'user' } });
+    await expect(nonAdmin.posts.setFeatured({ id: 1, isFeatured: true })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(admin.posts.setFeatured({ id: 2_000_000_000, isFeatured: true })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
 });
