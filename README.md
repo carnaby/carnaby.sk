@@ -1,4 +1,4 @@
-# carnaby.sk v2
+# carnaby.sk
 
 A modern rewrite of the carnaby.sk platform using a monorepo architecture with **pnpm** and **Nx**.
 

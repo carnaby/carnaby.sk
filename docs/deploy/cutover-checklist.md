@@ -130,12 +130,12 @@ a self-contained pre-flight to hand off:
    The old stack is untouched and still running throughout cutover — this is a pure proxy-config
    revert, no container changes needed on either stack.
 5. **Post-cutover** (after the owner confirms stability, target ≥1 week): stop the old
-   `carnaby-sk` container (keep `carnaby-db` running — Umami's database lives in the same
-   container; only the old `carnaby` database *inside* it becomes dormant), disable the
-   Watchtower label on the now-stopped container (moot once stopped), schedule
-   `backup-db-v2.sh` in DSM Task Scheduler (owner; daily, same cadence as v1's existing job),
-   remove the old `carnaby` database only after another verified backup, update the README on
+   `carnaby-sk` container, schedule `backup-db-v2.sh` in DSM Task Scheduler, update the README on
    `main` with the v2 architecture, and optionally drop the `?language=` redirect after 6 months.
+   - 2026-10-27: `carnaby-sk` container and image removed; final v1 dump archived as
+     `backups/archive-v1-carnaby-final-20261027.sql.gz`; first manual `backup-db-v2.sh` run OK.
+     Umami (with `carnaby-db`) and Watchtower are out of this repo's scope — they are managed
+     from `C:\Users\dodus\work\services`.
 
 ## Evidence index
 

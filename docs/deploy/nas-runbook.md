@@ -28,12 +28,11 @@ works too; the absolute path is always safe either way.
 └── cache/                  # api CACHE_DIR — resized image cache (bind mount)
 ```
 
-The old v1 stack lives alongside this, untouched, at `/volume1/docker/carnaby-sk/` (containers
-`carnaby-sk`, `carnaby-db`, plus Umami — `carnaby-db` also hosts the Umami database and must
-stay running even after v2 cutover). v1's own backup destination is
-`/volume1/private/clouds/GoogleDrive/carnaby_sk/backups` — v2 shares that same directory (see
-`backup-db-v2.sh`'s header comment) with a distinct `v2-carnaby-*` filename prefix so the two
-scripts' 30-day prunes never collide.
+Umami (`analytics.carnaby.sk`) and Watchtower are shared NAS services, not part of this repo.
+They are managed from `C:\Users\dodus\work\services`. The v1 web container (`carnaby-sk`) was removed on 2026-10-27;
+its final database dump is `backups/archive-v1-carnaby-final-20261027.sql.gz`. Backups go to
+`/volume1/private/clouds/GoogleDrive/carnaby_sk/backups` with a `v2-carnaby-*` filename prefix, so
+the 30-day prune never touches other files there.
 
 Containers, ports, images:
 
@@ -100,12 +99,11 @@ a bug.
 
 ## Rolling updates (new image, same TAG — Watchtower)
 
-Both `web` and `api` carry `labels: ['com.centurylinklabs.watchtower.enable=true']`. Watchtower is
-the **existing** container from the old stack (no new watchtower service in this compose file) —
-it already polls GHCR and will pull+recreate `carnaby-web`/`carnaby-api` automatically whenever a
-new image is pushed to the SAME tag (`:dev` while staging, `:latest` after cutover). No manual
-action needed for same-tag updates; this is the normal day-to-day path once CI (Task 27) is
-publishing on every push.
+Both `web` and `api` carry `labels: ['com.centurylinklabs.watchtower.enable=true']`, which opts
+them into the NAS's standalone Watchtower (`/volume1/docker/watchtower`, managed outside this
+repo). It polls GHCR and pulls+recreates `carnaby-web`/`carnaby-api` whenever CI pushes a new
+`:latest` from `main`. While their names are listed in that Watchtower's
+`WATCHTOWER_DISABLE_CONTAINERS`, updates are manual (next section).
 
 ## Manual update (tag change, e.g. `dev` → `latest` at cutover, or a forced re-pull)
 
@@ -192,10 +190,8 @@ Reverse Proxy) points at the OLD stack's port `3000`. The v2 stack is reachable 
 `backup-db-v2.sh` (deployed to `/volume1/docker/carnaby-sk-v2/backup-db-v2.sh`) dumps
 `carnaby-db-v2`'s `carnaby` database to
 `/volume1/private/clouds/GoogleDrive/carnaby_sk/backups/v2-carnaby-<timestamp>.sql.gz` and prunes
-files older than 30 days. Not scheduled automatically by this task — per the plan (Task 31, Step
-5), the owner schedules it in DSM Task Scheduler (daily, same cadence as v1's existing
-`backup-db.sh` job) once the v2 stack is the production stack. Until then it can be run manually
-for an ad-hoc backup:
+files older than 30 days. Schedule it in DSM Task Scheduler (daily, as user `carnaby`). It can also
+be run manually for an ad-hoc backup:
 
 ```bash
 ssh -p 2222 carnaby@192.168.1.41 "/volume1/docker/carnaby-sk-v2/backup-db-v2.sh"
