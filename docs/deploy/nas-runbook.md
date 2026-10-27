@@ -101,9 +101,10 @@ a bug.
 
 Both `web` and `api` carry `labels: ['com.centurylinklabs.watchtower.enable=true']`, which opts
 them into the NAS's standalone Watchtower (`/volume1/docker/watchtower`, managed outside this
-repo). It polls GHCR and pulls+recreates `carnaby-web`/`carnaby-api` whenever CI pushes a new
-`:latest` from `main`. While their names are listed in that Watchtower's
-`WATCHTOWER_DISABLE_CONTAINERS`, updates are manual (next section).
+repo). It polls GHCR every 5 minutes and pulls+recreates `carnaby-web`/`carnaby-api` whenever CI
+pushes a new `:latest` from `main` — a push to `main` is a production deploy (active since
+2026-10-27). Changes to `docker-compose.nas.yml` or `.env` are not picked up this way; deploy those
+manually (next section).
 
 ## Manual update (tag change, e.g. `dev` → `latest` at cutover, or a forced re-pull)
 
