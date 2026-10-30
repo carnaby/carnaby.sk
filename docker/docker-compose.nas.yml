@@ -47,9 +47,11 @@ services:
       api: { condition: service_healthy }
     networks: [carnaby-v2]
     labels: ['com.centurylinklabs.watchtower.enable=true']
-    # No explicit healthcheck block: the image itself declares HEALTHCHECK (wget against
-    # 127.0.0.1:3000, see docker/web.Dockerfile) and compose/docker respect that image default
-    # when the service doesn't override it.
+    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
+    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
+    # Only the interval is set; the check itself comes from the image.
+    healthcheck:
+      interval: 30m
 
   api:
     image: ghcr.io/carnaby/carnaby-api:${TAG:-dev}
@@ -78,9 +80,11 @@ services:
     depends_on:
       db: { condition: service_healthy }
     networks: [carnaby-v2]
+    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
+    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/health || exit 1']
-      interval: 30s
+      interval: 2m
       timeout: 3s
       retries: 3
       start_period: 20s
@@ -98,9 +102,11 @@ services:
     volumes:
       - /volume1/docker/carnaby-sk-v2/db:/var/lib/postgresql/data
     networks: [carnaby-v2]
+    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
+    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U carnaby -d carnaby']
-      interval: 10s
+      interval: 2m
       timeout: 5s
       retries: 5
 
