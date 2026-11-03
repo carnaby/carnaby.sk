@@ -4,7 +4,7 @@ import { DEFAULT_LANGUAGE, languageSchema, postStatusSchema, postUpsertInput } f
 import { and, eq, sql } from 'drizzle-orm';
 import { posts } from '@carnaby/db';
 import { adminProcedure, publicProcedure, router } from '../trpc/trpc';
-import { adminListPosts, getPostById, removePost, upsertPost } from './posts.admin';
+import { adminListPosts, adminStats, getPostById, removePost, upsertPost } from './posts.admin';
 import { getPostBySlug, listPosts } from './posts.read';
 
 // Single source of truth for the `list` input defaults — fed into both the per-field
@@ -56,6 +56,7 @@ export const postsRouter = router({
   adminList: adminProcedure.input(z.object({
     status: postStatusSchema.optional(),
     search: z.string().max(200).optional(),
+    missingLanguage: languageSchema.optional(),
     category: z.string().optional(),
     featured: z.boolean().optional(),
     page: z.number().int().min(1).default(DEFAULT_PAGE),
@@ -64,6 +65,11 @@ export const postsRouter = router({
     order: z.enum(ADMIN_ORDER).default('desc'),
   }).default({ page: DEFAULT_PAGE, limit: ADMIN_DEFAULT_LIMIT, sortBy: 'createdAt', order: 'desc' }))
     .query(({ ctx, input }) => adminListPosts(ctx.db, input)),
+
+  adminStats: adminProcedure.query(async ({ ctx }) => {
+    const { items: _items, ...stats } = await adminStats(ctx.db);
+    return stats;
+  }),
 
   byId: adminProcedure.input(z.object({ id: z.number().int() }))
     .query(({ ctx, input }) => getPostById(ctx.db, input.id)),

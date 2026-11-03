@@ -52,11 +52,11 @@ export function UsersTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">Avatar</TableHead>
-              <TableHead>Meno</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="w-12"><span className="sr-only">Avatar</span></TableHead>
+              <TableHead className="w-full md:w-auto">Meno</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Rola</TableHead>
-              <TableHead>Registrovaný</TableHead>
+              <TableHead className="hidden md:table-cell">Registrovaný</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,14 +106,17 @@ export function UsersTable() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium text-white">{item.name || '—'}</TableCell>
-                    <TableCell className="text-white/70">{item.email}</TableCell>
+                    <TableCell className="max-w-0 md:max-w-none">
+                      <div className="truncate font-medium text-white">{item.name || '—'}</div>
+                      <div className="truncate text-xs text-white/45 md:hidden">{item.email}</div>
+                    </TableCell>
+                    <TableCell className="hidden text-white/70 md:table-cell">{item.email}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={ROLE_BADGE_CLASS[role]}>
                         {ROLE_LABEL[role]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-white/70">{DATE_FORMATTER.format(new Date(item.createdAt))}</TableCell>
+                    <TableCell className="hidden text-white/70 md:table-cell">{DATE_FORMATTER.format(new Date(item.createdAt))}</TableCell>
                   </TableRow>
                 );
               })

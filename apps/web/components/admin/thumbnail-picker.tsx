@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ImageOff, Loader2 } from 'lucide-react';
+import { CirclePlay, ImageOff, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { thumbUrl } from '../../lib/images';
@@ -101,17 +101,20 @@ export function ThumbnailPicker({ value, onChange, youtubeId }: ThumbnailPickerP
   return (
     <div className="flex flex-col gap-2">
       <Label>Náhľadový obrázok</Label>
-      <div className="flex items-center gap-4">
-        <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-surface sm:w-48">
           {value ? (
             // Plain <img>, not next/image -- same rationale as PostImage: this is a same-origin
             // `/images/:width/:filename` path already served pre-resized by the api.
-            <img src={thumbUrl(value, 300)} alt="Náhľad príspevku" className="h-full w-full object-cover" />
+            <img src={thumbUrl(value, 600)} alt="Náhľad príspevku" className="h-full w-full object-cover" />
           ) : (
-            <ImageOff className="text-white/25" size={22} aria-hidden="true" />
+            <span className="flex flex-col items-center gap-1 text-xs text-white/35">
+              <ImageOff size={22} aria-hidden="true" />
+              {youtubeId.trim() ? 'Použije sa náhľad z YouTube' : 'Bez obrázka'}
+            </span>
           )}
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2 sm:flex-col">
           <input
             ref={fileInputRef}
             type="file"
@@ -120,28 +123,16 @@ export function ThumbnailPicker({ value, onChange, youtubeId }: ThumbnailPickerP
             onChange={handleFileChange}
             aria-label="Nahrať náhľadový obrázok"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {uploading ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+          <Button type="button" variant="outline" className="h-10 flex-1 sm:h-8 sm:flex-none" disabled={busy} onClick={() => fileInputRef.current?.click()}>
+            {uploading ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
             {uploading ? 'Nahrávam…' : 'Nahrať'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy || !youtubeId.trim()}
-            onClick={handleFromYoutube}
-          >
-            {fetchingYoutube ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+          <Button type="button" variant="outline" className="h-10 flex-1 sm:h-8 sm:flex-none" disabled={busy || !youtubeId.trim()} onClick={handleFromYoutube}>
+            {fetchingYoutube ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <CirclePlay aria-hidden="true" />}
             {fetchingYoutube ? 'Sťahujem…' : 'Z YouTube'}
           </Button>
           {value ? (
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => onChange('')}>
+            <Button type="button" variant="ghost" className="h-10 sm:h-8" disabled={busy} onClick={() => onChange('')}>
               Odstrániť
             </Button>
           ) : null}

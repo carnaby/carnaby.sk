@@ -13,6 +13,8 @@ export interface AdminListArgs {
   status?: PostStatus;
   /** Case-insensitive substring match on the slug and on both translations' titles. */
   search?: string;
+  /** Only posts that have no translation in this language. */
+  missingLanguage?: Language;
   category?: string;
   featured?: boolean;
   page: number;
@@ -85,11 +87,10 @@ export async function adminListPosts(db: Db, args: AdminListArgs): Promise<Admin
     : [[], []];
 
   const needle = args.search?.trim().toLowerCase();
-  const rows = needle
-    ? allRows.filter((p) =>
-        p.slug.includes(needle) ||
-        translations.some((t) => t.postId === p.id && t.title.toLowerCase().includes(needle)))
-    : allRows;
+  const rows = allRows.filter((p) =>
+    (!needle || p.slug.includes(needle) ||
+      translations.some((t) => t.postId === p.id && t.title.toLowerCase().includes(needle))) &&
+    (!args.missingLanguage || !translations.some((t) => t.postId === p.id && t.language === args.missingLanguage)));
   const total = rows.length;
 
   const items: AdminListItem[] = rows.map((p): AdminListItem => {
@@ -275,4 +276,51 @@ export async function removePost(db: Db, id: number): Promise<void> {
   if (post.thumbnailPath) {
     await deleteThumbnailIfUnused(db, post.thumbnailPath);
   }
+}
+
+export interface PostBrief {
+  id: number;
+  slug: string;
+  title: string;
+  status: PostStatus;
+  viewCount: number;
+  thumbnailPath: string | null;
+  youtubeId: string | null;
+}
+
+export interface AdminStats {
+  total: number;
+  totalViews: number;
+  byStatus: Record<PostStatus, number>;
+  byCategory: Record<string, number>;
+  /** Published posts without an EN / SK version. */
+  publishedMissing: { en: number; sk: number };
+  mostViewed: PostBrief[];
+  recentDrafts: PostBrief[];
+}
+
+/** Numbers for the admin dashboard and the MCP `site_overview` tool (small catalogue: computed
+ * over the admin list in memory). */
+export async function adminStats(db: Db): Promise<AdminStats & { items: AdminListItem[] }> {
+  const { items, total } = await adminListPosts(db, { page: 1, limit: 100_000, sortBy: 'createdAt', order: 'desc' });
+  const byStatus: Record<PostStatus, number> = { draft: 0, published: 0, archived: 0 };
+  const byCategory: Record<string, number> = {};
+  for (const p of items) {
+    byStatus[p.status] += 1;
+    for (const c of p.categories) byCategory[c.slug] = (byCategory[c.slug] ?? 0) + 1;
+  }
+  const brief = (p: AdminListItem): PostBrief => ({
+    id: p.id, slug: p.slug, title: p.title, status: p.status, viewCount: p.viewCount, thumbnailPath: p.thumbnailPath, youtubeId: p.youtubeId,
+  });
+  const published = items.filter((p) => p.status === 'published');
+  return {
+    total,
+    totalViews: items.reduce((sum, p) => sum + p.viewCount, 0),
+    byStatus,
+    byCategory,
+    publishedMissing: { en: published.filter((p) => !p.hasEn).length, sk: published.filter((p) => !p.hasSk).length },
+    mostViewed: [...items].sort((a, b) => b.viewCount - a.viewCount).slice(0, 5).map(brief),
+    recentDrafts: items.filter((p) => p.status === 'draft').slice(0, 5).map(brief),
+    items,
+  };
 }

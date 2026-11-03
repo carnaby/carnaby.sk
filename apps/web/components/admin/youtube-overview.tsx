@@ -15,18 +15,13 @@ import { useTRPC } from '../../lib/trpc-react';
 import { Badge } from '../ui/badge';
 import { Button, buttonVariants } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Chip } from './chip';
+import { STATUS_BADGE_CLASS, STATUS_LABEL } from './status';
 
 type Overview = inferRouterOutputs<AppRouter>['youtube']['overview'];
 type Video = Overview['videos'][number];
-type PostStatus = 'draft' | 'published' | 'archived';
 type Filter = 'missing' | 'all';
 
-const STATUS_LABEL: Record<PostStatus, string> = { draft: 'Koncept', published: 'Na webe', archived: 'Archivované' };
-const STATUS_BADGE_CLASS: Record<PostStatus, string> = {
-  draft: 'border-dodo/30 bg-dodo/15 text-dodo',
-  published: 'border-devlog/30 bg-devlog/15 text-devlog',
-  archived: 'border-white/20 bg-white/10 text-white/60',
-};
 const DATE_FORMATTER = new Intl.DateTimeFormat('sk', { dateStyle: 'medium' });
 
 function formatDuration(seconds: number): string {
@@ -139,23 +134,71 @@ export function YoutubeOverview() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Button variant={filter === 'missing' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('missing')}>
+          <Chip active={filter === 'missing'} onClick={() => setFilter('missing')}>
             Chýba na webe ({missingCount})
-          </Button>
-          <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>
-            Všetky videá ({overview.videos.length})
-          </Button>
-          <span className="text-white/40">
+          </Chip>
+          <Chip active={filter === 'all'} onClick={() => setFilter('all')}>
+            Všetky ({overview.videos.length})
+          </Chip>
+          <span className="w-full text-xs text-white/40 sm:w-auto">
             {overview.channels.filter((c) => !c.error).map((c) => `${c.title}${c.category ? ` → ${c.category}` : ''}`).join(' · ')}
           </span>
         </div>
-        <Button variant="outline" size="sm" onClick={reload} disabled={refreshing || overviewQuery.isFetching}>
+        <Button variant="outline" className="h-9" onClick={reload} disabled={refreshing || overviewQuery.isFetching}>
           <RefreshCw className={refreshing ? 'size-3.5 animate-spin' : 'size-3.5'} aria-hidden="true" />
           Obnoviť z YouTube
         </Button>
       </div>
 
-      <div className="glass overflow-hidden rounded-glass">
+      {/* Phones: cards */}
+      <ul className="flex flex-col gap-2 md:hidden">
+        {videos.length === 0 ? (
+          <li className="glass rounded-glass p-8 text-center text-sm text-white/50">
+            {filter === 'missing' ? 'Všetky videá z kanála sú na webe. 🎉' : 'Kanál nemá žiadne verejné videá.'}
+          </li>
+        ) : (
+          videos.map((video) => (
+            <li key={video.id} className="glass flex flex-col gap-3 rounded-glass p-3">
+              <div className="flex gap-3">
+                <a href={`https://youtu.be/${video.id}`} target="_blank" rel="noreferrer" className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg bg-surface">
+                  {video.thumbnailUrl ? <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}
+                  <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 text-[10px] tabular-nums text-white">{formatDuration(video.durationSeconds)}</span>
+                </a>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[15px] font-medium leading-snug text-white">{video.title}</p>
+                  <p className="mt-1 text-xs text-white/45">
+                    {DATE_FORMATTER.format(new Date(video.publishedAt))}
+                    {video.viewCount !== null ? ` · ${video.viewCount.toLocaleString('sk')}×` : ''}
+                    {video.languages.length ? ` · ${video.languages.join('/').toUpperCase()}` : ''}
+                  </p>
+                  {video.post ? (
+                    <Badge variant="outline" className={`mt-1.5 ${STATUS_BADGE_CLASS[video.post.status]}`}>
+                      {STATUS_LABEL[video.post.status]}
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+              {video.post ? (
+                <Link href={`/admin/posts/${video.post.id}/edit`} className={buttonVariants({ variant: 'outline', className: 'h-10 w-full' })}>
+                  Upraviť príspevok
+                </Link>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="h-10" disabled={pendingId !== null} onClick={() => handleImport(video, 'draft')}>
+                    Ako koncept
+                  </Button>
+                  <Button className="h-10" disabled={pendingId !== null} onClick={() => handleImport(video, 'published')}>
+                    {pendingId === video.id ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                    Uverejniť
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))
+        )}
+      </ul>
+
+      <div className="glass hidden overflow-hidden rounded-glass md:block">
         <Table>
           <TableHeader>
             <TableRow>

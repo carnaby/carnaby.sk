@@ -7,7 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { appUrl } from '../auth/auth';
-import { adminListPosts, getPostById, removePost, upsertPost, type PostById } from '../posts/posts.admin';
+import { adminListPosts, adminStats, getPostById, removePost, upsertPost, type PostById } from '../posts/posts.admin';
 import {
   fetchYoutubeThumbnail,
   IMAGE_WIDTHS,
@@ -247,14 +247,10 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
     description: 'Counts of posts by status and category, missing translations, most viewed posts and recent drafts.',
     annotations: { readOnlyHint: true },
   }, () => run(async () => {
-    const all = await adminListPosts(db, { page: 1, limit: 100_000, sortBy: 'createdAt', order: 'desc' });
-    const items = all.items;
-    const byStatus = Object.fromEntries(STATUSES.map((s) => [s, items.filter((p) => p.status === s).length]));
-    const byCategory: Record<string, number> = {};
-    for (const p of items) for (const c of p.categories) byCategory[c.slug] = (byCategory[c.slug] ?? 0) + 1;
+    const { items, total, byStatus, byCategory } = await adminStats(db);
     const brief = (p: (typeof items)[number]) => ({ id: p.id, slug: p.slug, title: p.title, status: p.status });
     return json({
-      totalPosts: all.total,
+      totalPosts: total,
       byStatus,
       byCategory,
       publishedMissingEnglish: items.filter((p) => p.status === 'published' && !p.hasEn).map(brief),

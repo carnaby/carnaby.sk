@@ -24,12 +24,5 @@ export default async function EditPostPage({ params }: { params: Promise<EditPos
     notFound();
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-white">Upraviť príspevok</h1>
-      </div>
-      <PostEditor mode={{ id: postId }} />
-    </div>
-  );
+  return <PostEditor mode={{ id: postId }} />;
 }

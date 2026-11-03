@@ -1,26 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, CirclePlay, Copy, ExternalLink, Eye, Loader2, MoreHorizontal, PenLine, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Same type-only, module-boundary-safe pattern as `posts-table.tsx`: `@carnaby/api` resolves to a
-// barrel that only re-exports the `AppRouter` type, erased entirely at compile time.
+// Type-only import from the api project: erased at compile time, so none of its runtime code
+// reaches the web bundle (see lib/trpc-server.ts).
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import type { AppRouter } from '@carnaby/api';
 import type { inferRouterOutputs } from '@trpc/server';
 
+import { cn } from '../../lib/cn';
 import { useTRPC } from '../../lib/trpc-react';
-import { Button, buttonVariants } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Textarea } from '../ui/textarea';
+import { Chip } from './chip';
 import { MarkdownPreview } from './markdown-preview';
+import { STATUS_BADGE_CLASS, STATUS_LABEL } from './status';
 import { ThumbnailPicker } from './thumbnail-picker';
 import {
   applyYoutubePreview,
@@ -40,11 +43,10 @@ import {
 
 type PostByIdResult = inferRouterOutputs<AppRouter>['posts']['byId'];
 
-// Duplicated small literal union, same convention as `posts-table.tsx` -- keeps this file free of
-// any runtime import from the api project.
+// Duplicated small literal union -- keeps this file free of any runtime import from the api.
 type Language = 'sk' | 'en';
 
-const LANGUAGE_LABEL: Record<Language, string> = { sk: 'SK', en: 'EN' };
+const LANGUAGE_LABEL: Record<Language, string> = { sk: 'Slovensky', en: 'English' };
 const OTHER_LANGUAGE: Record<Language, Language> = { sk: 'en', en: 'sk' };
 
 export type PostEditorMode = 'new' | { id: number };
@@ -54,8 +56,7 @@ export interface PostEditorProps {
 }
 
 /** Converts the api's `posts.byId` shape into this component's free-form `EditorState`.
- * `slugTouched: true` -- the brief's edit-mode requirement that the slug never auto-changes once
- * a post already exists, even as its title is edited further. */
+ * `slugTouched: true` -- the slug of an existing post never auto-changes as its title is edited. */
 function fromPostById(data: PostByIdResult): EditorState {
   const base = createEmptyState();
   const toForm = (t: PostByIdResult['translations']['sk']): TranslationFormState =>
@@ -78,46 +79,65 @@ function fromPostById(data: PostByIdResult): EditorState {
   };
 }
 
+function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <section className={cn('glass flex flex-col gap-4 rounded-glass p-4 sm:p-5', className)}>
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+      {hint ? <p className="text-xs text-white/40">{hint}</p> : null}
+    </div>
+  );
+}
+
+const INPUT_CLASS = 'h-10 lg:h-9';
+
 /**
- * The heart of the admin (Task 21): bilingual markdown post editor with a live preview.
+ * Bilingual markdown post editor.
  *
- * `mode="new"` starts from a blank `EditorState`; `mode={{ id }}` loads `posts.byId` and hydrates
- * from it. Two columns: the form (SK/EN tabs + shared fields) on the left, a sticky live preview
- * of the ACTIVE tab's markdown on the right.
+ * Phones: one column, a "Písať / Náhľad" switch instead of the side preview, and a fixed action
+ * bar at the bottom (the admin tab bar is hidden on this screen). xl+: live preview column.
+ * Saving keeps you on the page; a new post moves to its edit URL. Cmd/Ctrl+S saves without
+ * changing the status, and leaving with unsaved changes asks first.
  *
- * All state lives in one `EditorState` (`components/admin/editor-state.ts`) manipulated through
- * that module's pure helpers -- this component's own job is just wiring those helpers to inputs
- * and to the two save mutations.
+ * All state lives in one `EditorState` manipulated through `editor-state.ts`'s pure helpers.
  */
 export function PostEditor({ mode }: PostEditorProps) {
   const router = useRouter();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const isEdit = mode !== 'new';
   const id = isEdit ? mode.id : undefined;
 
   const categoriesQuery = useQuery(trpc.categories.list.queryOptions());
-  const postQuery = useQuery({
-    ...trpc.posts.byId.queryOptions({ id: id ?? -1 }),
-    enabled: isEdit,
-  });
+  const postQuery = useQuery({ ...trpc.posts.byId.queryOptions({ id: id ?? -1 }), enabled: isEdit });
 
-  // `manualState` is `null` until the first edit; until then, `state` is derived straight from
-  // the loaded post (edit mode) or a blank slate (new mode) -- no `useEffect`/hydration-race
-  // needed to keep the form in sync with an async query. `deriveHydratedState` names that
-  // fallback once so both the render-time `state` below and `updateState`'s functional
-  // `setManualState` updater (which needs the exact same fallback the moment `manualState` is
-  // still `null`) can't drift apart.
-  const deriveHydratedState = () => (isEdit && postQuery.data ? fromPostById(postQuery.data) : createEmptyState());
+  // `manualState` is `null` until the first edit; until then `state` is derived straight from the
+  // loaded post (or a blank slate) -- no effect needed to sync the form with the async query.
+  const deriveHydratedState = useCallback(
+    () => (isEdit && postQuery.data ? fromPostById(postQuery.data) : createEmptyState()),
+    [isEdit, postQuery.data],
+  );
   const [manualState, setManualState] = useState<EditorState | null>(null);
   const state: EditorState = manualState ?? deriveHydratedState();
 
+  // Dirty tracking: compare against the last saved (or loaded) state.
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+  const dirty = manualState !== null && JSON.stringify(state) !== (savedSnapshot ?? JSON.stringify(deriveHydratedState()));
+
   const [activeLanguage, setActiveLanguage] = useState<Language>('sk');
+  const [view, setView] = useState<'write' | 'preview'>('write');
   const [errors, setErrors] = useState<string[]>([]);
   const [pendingStatus, setPendingStatus] = useState<PostStatus | null>(null);
 
-  // Functional `setState` form -- reads the *current* state at the moment React applies the
-  // update rather than closing over whatever `state` was in scope when the calling event handler
-  // was created, so this stays correct even if multiple updates land before a re-render.
   function updateState(updater: (prev: EditorState) => EditorState) {
     setManualState((prev) => updater(prev ?? deriveHydratedState()));
   }
@@ -126,6 +146,14 @@ export function PostEditor({ mode }: PostEditorProps) {
   const updateMutation = useMutation(trpc.posts.update.mutationOptions());
   const saving = createMutation.isPending || updateMutation.isPending;
   const youtubePreview = useMutation(trpc.youtube.preview.mutationOptions());
+
+  // Leaving the page (reload, close tab, external link) with unsaved changes asks first.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   function handleLoadFromYoutube() {
     const videoId = state.youtubeId.trim();
@@ -144,30 +172,82 @@ export function PostEditor({ mode }: PostEditorProps) {
   }
 
   function handleSave(status: PostStatus) {
-    const result = buildUpsertInput({ ...state, status });
+    const next = { ...state, status };
+    const result = buildUpsertInput(next);
     if ('errors' in result) {
       setErrors(result.errors);
-      toast.error('Formulár obsahuje chyby, skontrolujte ich nižšie.');
+      toast.error('Formulár obsahuje chyby.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     setErrors([]);
     setPendingStatus(status);
     const { input } = result;
 
-    const onSuccess = () => {
-      toast.success(isEdit ? 'Príspevok bol uložený.' : 'Príspevok bol vytvorený.');
-      router.push('/admin/posts');
+    const invalidate = async () => {
+      await Promise.all([
+        queryClient.invalidateQueries(trpc.posts.adminList.queryFilter()),
+        queryClient.invalidateQueries(trpc.posts.adminStats.queryFilter()),
+        queryClient.invalidateQueries(trpc.youtube.overview.queryFilter()),
+      ]);
     };
     const onError = (error: unknown) => {
       setPendingStatus(null);
       toast.error(error instanceof Error ? error.message : 'Uloženie príspevku sa nepodarilo.');
     };
+    const message =
+      status === 'published' && state.status !== 'published'
+        ? 'Príspevok je publikovaný.'
+        : status === 'archived' && state.status !== 'archived'
+          ? 'Príspevok je archivovaný.'
+          : 'Uložené.';
 
     if (mode === 'new') {
-      createMutation.mutate(input, { onSuccess, onError });
+      createMutation.mutate(input, {
+        onSuccess: async ({ id: newId }) => {
+          toast.success(status === 'published' ? 'Príspevok je publikovaný.' : 'Koncept je uložený.');
+          setSavedSnapshot(JSON.stringify(next));
+          await invalidate();
+          router.replace(`/admin/posts/${newId}/edit`);
+        },
+        onError,
+      });
     } else {
-      updateMutation.mutate({ id: mode.id, ...input }, { onSuccess, onError });
+      updateMutation.mutate(
+        { id: mode.id, ...input },
+        {
+          onSuccess: async () => {
+            setPendingStatus(null);
+            setManualState(next);
+            setSavedSnapshot(JSON.stringify(next));
+            toast.success(message);
+            await invalidate();
+            await queryClient.invalidateQueries(trpc.posts.byId.queryFilter({ id: mode.id }));
+          },
+          onError,
+        },
+      );
     }
+  }
+
+  // Cmd/Ctrl+S: save, keeping the current status (a new post becomes a draft).
+  const saveRef = useRef<() => void>(() => undefined);
+  saveRef.current = () => {
+    if (!saving) handleSave(isEdit ? state.status : 'draft');
+  };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  function confirmLeave(event: React.MouseEvent) {
+    if (dirty && !window.confirm('Máš neuložené zmeny. Naozaj odísť?')) event.preventDefault();
   }
 
   if (isEdit && postQuery.isLoading) {
@@ -194,218 +274,364 @@ export function PostEditor({ mode }: PostEditorProps) {
     updateState((prev) => setTranslationField(prev, language, field, value));
   }
 
+  const translation = state.translations[activeLanguage];
+  const other = OTHER_LANGUAGE[activeLanguage];
+  const present = isTranslationPresent(translation);
+  const partial = isTranslationPartial(translation);
+  const otherPresent = isTranslationPresent(state.translations[other]);
+  const headerTitle = state.translations.sk.title || state.translations.en.title || (isEdit ? '(bez názvu)' : 'Nový príspevok');
+  const savedStatus: PostStatus = isEdit ? (JSON.parse(savedSnapshot ?? 'null')?.status ?? postQuery.data?.post.status ?? 'draft') : 'draft';
+
+  const preview = (
+    <div className="flex flex-col gap-4">
+      {translation.title ? <h1 className="font-display text-2xl font-bold tracking-tight text-white">{translation.title}</h1> : null}
+      {translation.excerpt ? <p className="text-white/60">{translation.excerpt}</p> : null}
+      <MarkdownPreview markdown={translation.content} />
+    </div>
+  );
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="flex flex-col gap-6">
-        {errors.length > 0 ? (
-          <div role="alert" className="glass rounded-glass border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-            <p className="mb-1 font-medium">Formulár obsahuje chyby:</p>
-            <ul className="list-disc pl-5">
-              {errors.map((message, index) => (
-                <li key={index}>{message}</li>
-              ))}
-            </ul>
+    <div>
+      {/* Header */}
+      <div className="mb-5 flex items-start gap-2 lg:mb-6">
+        <Link
+          href="/admin/posts"
+          onClick={confirmLeave}
+          aria-label="Späť na príspevky"
+          className="-ml-2 flex size-10 shrink-0 items-center justify-center rounded-lg text-white/60 hover:bg-white/5 hover:text-white"
+        >
+          <ArrowLeft className="size-5" aria-hidden="true" />
+        </Link>
+        <div className="min-w-0 flex-1 pt-1">
+          <h1 className="line-clamp-2 font-display text-xl font-semibold tracking-tight text-white lg:text-2xl">{headerTitle}</h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-white/45">
+            <Badge variant="outline" className={STATUS_BADGE_CLASS[savedStatus]}>
+              {isEdit ? STATUS_LABEL[savedStatus] : 'Nový'}
+            </Badge>
+            {dirty ? <span className="text-dodo">• Neuložené zmeny</span> : null}
+            {isEdit && savedStatus === 'published' ? (
+              <a href={`/posts/${state.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-white">
+                Zobraziť na webe <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            ) : null}
           </div>
-        ) : null}
-
-        <div className="glass rounded-glass p-4 sm:p-6">
-          <Tabs
-            value={activeLanguage}
-            onValueChange={(value) => {
-              if (value === 'sk' || value === 'en') setActiveLanguage(value);
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="sk">{LANGUAGE_LABEL.sk}</TabsTrigger>
-              <TabsTrigger value="en">{LANGUAGE_LABEL.en}</TabsTrigger>
-            </TabsList>
-
-            {(['sk', 'en'] as const).map((language) => {
-              const translation = state.translations[language];
-              const other = OTHER_LANGUAGE[language];
-              const present = isTranslationPresent(translation);
-              const partial = isTranslationPartial(translation);
-              const otherPresent = isTranslationPresent(state.translations[other]);
-
-              return (
-                <TabsContent key={language} value={language} className="mt-4 flex flex-col gap-4">
-                  {!present && !partial ? (
-                    <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-glass px-4 py-3 text-sm text-white/60">
-                      <span>Táto jazyková verzia ešte nie je preložená.</span>
-                      {otherPresent ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateState((prev) => copyTranslation(prev, other, language))}
-                        >
-                          Skopírovať z {LANGUAGE_LABEL[other]}
-                        </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {partial ? (
-                    // No "Skopírovať z ..." button here on purpose: this tab already has typed
-                    // content, and that button unconditionally overwrites both fields -- offering
-                    // it here would make it a one-click way to lose whatever's already typed.
-                    <p className="text-sm text-amber-400">Rozpísaný preklad — doplň názov aj obsah.</p>
-                  ) : null}
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`title-${language}`}>Titulok</Label>
-                    <Input
-                      id={`title-${language}`}
-                      value={translation.title}
-                      onChange={(event) => updateField(language, 'title', event.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`excerpt-${language}`}>Krátky popis</Label>
-                    <Textarea
-                      id={`excerpt-${language}`}
-                      className="min-h-16"
-                      value={translation.excerpt}
-                      onChange={(event) => updateField(language, 'excerpt', event.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`content-${language}`}>Obsah (Markdown)</Label>
-                    <Textarea
-                      id={`content-${language}`}
-                      className="min-h-[400px] font-mono text-sm"
-                      value={translation.content}
-                      onChange={(event) => updateField(language, 'content', event.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`meta-${language}`}>Meta popis (SEO)</Label>
-                    <Input
-                      id={`meta-${language}`}
-                      value={translation.metaDescription}
-                      onChange={(event) => updateField(language, 'metaDescription', event.target.value)}
-                    />
-                  </div>
-                </TabsContent>
-              );
-            })}
-          </Tabs>
         </div>
+      </div>
 
-        <div className="glass flex flex-col gap-5 rounded-glass p-4 sm:p-6">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="slug">Slug</Label>
-            <Input id="slug" value={state.slug} onChange={(event) => updateState((prev) => setSlug(prev, event.target.value))} />
-            <p className="text-xs text-white/40">Adresa príspevku: /posts/{state.slug || '…'}</p>
-            <p className="text-xs text-white/40">
-              Dátum publikovania:{' '}
-              {state.publishedAt
-                ? new Intl.DateTimeFormat('sk', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(state.publishedAt))
-                : 'pri prvom publikovaní'}
-            </p>
-          </div>
+      {errors.length > 0 ? (
+        <div role="alert" className="mb-4 rounded-glass border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <p className="mb-1 font-medium">Formulár obsahuje chyby:</p>
+          <ul className="list-disc pl-5">
+            {errors.map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-          <div className="flex flex-col gap-2">
-            <Label>Kategórie</Label>
-            <div className="flex flex-wrap gap-4">
-              {(categoriesQuery.data ?? []).map((category) => (
-                <Label key={category.id} className="cursor-pointer select-none gap-2 text-white/80">
-                  <Checkbox
-                    checked={state.categoryIds.includes(category.id)}
-                    onCheckedChange={(checked) =>
-                      updateState((prev) => ({
-                        ...prev,
-                        categoryIds: checked
-                          ? [...prev.categoryIds, category.id]
-                          : prev.categoryIds.filter((categoryId) => categoryId !== category.id),
-                      }))
-                    }
-                  />
-                  {category.name}
-                </Label>
-              ))}
+      <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
+          {/* Content */}
+          <section className="glass flex flex-col gap-4 rounded-glass p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div role="tablist" aria-label="Jazyk" className="flex rounded-lg bg-white/[0.06] p-1">
+                {(['sk', 'en'] as const).map((language) => {
+                  const has = isTranslationPresent(state.translations[language]);
+                  return (
+                    <button
+                      key={language}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeLanguage === language}
+                      onClick={() => setActiveLanguage(language)}
+                      className={cn(
+                        'flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors lg:h-8',
+                        activeLanguage === language ? 'bg-white text-black' : 'text-white/60 hover:text-white',
+                      )}
+                    >
+                      {language.toUpperCase()}
+                      <span className={cn('size-1.5 rounded-full', has ? 'bg-devlog' : 'bg-white/25')} title={has ? 'Vyplnené' : 'Chýba'} />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex rounded-lg bg-white/[0.06] p-1 xl:hidden" role="group" aria-label="Zobrazenie">
+                {(
+                  [
+                    ['write', 'Písať', PenLine],
+                    ['preview', 'Náhľad', Eye],
+                  ] as const
+                ).map(([value, label, Icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={view === value}
+                    onClick={() => setView(value)}
+                    className={cn(
+                      'flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors lg:h-8',
+                      view === value ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white',
+                    )}
+                  >
+                    <Icon className="size-3.5" aria-hidden="true" />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <Label className="cursor-pointer select-none gap-2 text-white/80">
-            <Checkbox
-              checked={state.isFeatured}
-              onCheckedChange={(checked) => updateState((prev) => ({ ...prev, isFeatured: checked }))}
-            />
-            Odporúčaný príspevok
-          </Label>
+            {view === 'preview' ? (
+              <div className="min-h-[40dvh] xl:hidden">{preview}</div>
+            ) : null}
 
-          {/* One field per row: side by side, the YouTube ID box shrank to a few characters. */}
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="youtubeId">YouTube ID</Label>
-              <div className="flex gap-2">
+            <div className={cn('flex flex-col gap-4', view === 'preview' && 'hidden xl:flex')}>
+              {!present && !partial ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-white/15 px-4 py-3 text-sm text-white/55">
+                  <span>{LANGUAGE_LABEL[activeLanguage]} verzia zatiaľ chýba.</span>
+                  {otherPresent ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => updateState((prev) => copyTranslation(prev, other, activeLanguage))}>
+                      <Copy aria-hidden="true" />
+                      Skopírovať z {other.toUpperCase()}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              {partial ? (
+                // No copy button here: it would overwrite what is already typed in this tab.
+                <p className="text-sm text-dodo">Rozpísaný preklad — doplň titulok aj obsah.</p>
+              ) : null}
+
+              <Field label="Titulok" htmlFor={`title-${activeLanguage}`}>
+                <Input
+                  id={`title-${activeLanguage}`}
+                  value={translation.title}
+                  onChange={(event) => updateField(activeLanguage, 'title', event.target.value)}
+                  className="h-11 text-base font-medium lg:h-10"
+                />
+              </Field>
+
+              <Field label="Krátky popis" htmlFor={`excerpt-${activeLanguage}`} hint="1–2 vety na kartu príspevku.">
+                <Textarea
+                  id={`excerpt-${activeLanguage}`}
+                  className="min-h-20"
+                  value={translation.excerpt}
+                  onChange={(event) => updateField(activeLanguage, 'excerpt', event.target.value)}
+                />
+              </Field>
+
+              <Field label="Obsah (Markdown)" htmlFor={`content-${activeLanguage}`}>
+                <Textarea
+                  id={`content-${activeLanguage}`}
+                  className="min-h-[50dvh] font-mono text-sm leading-relaxed lg:min-h-[420px]"
+                  value={translation.content}
+                  onChange={(event) => updateField(activeLanguage, 'content', event.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Meta popis (SEO)"
+                htmlFor={`meta-${activeLanguage}`}
+                hint={`${translation.metaDescription.length}/160 znakov`}
+              >
+                <Input
+                  id={`meta-${activeLanguage}`}
+                  value={translation.metaDescription}
+                  onChange={(event) => updateField(activeLanguage, 'metaDescription', event.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </Field>
+            </div>
+          </section>
+
+          <Section title="Publikovanie">
+            <Field
+              label="Slug"
+              htmlFor="slug"
+              hint={
+                <>
+                  carnaby.sk/posts/{state.slug || '…'} · dátum publikovania:{' '}
+                  {state.publishedAt
+                    ? new Intl.DateTimeFormat('sk', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(state.publishedAt))
+                    : 'pri prvom publikovaní'}
+                </>
+              }
+            >
+              <Input id="slug" value={state.slug} onChange={(event) => updateState((prev) => setSlug(prev, event.target.value))} className={cn(INPUT_CLASS, 'font-mono text-sm')} />
+            </Field>
+
+            <div className="flex flex-col gap-2">
+              <Label>Kategórie</Label>
+              <div className="flex flex-wrap gap-2">
+                {(categoriesQuery.data ?? []).map((category) => {
+                  const selected = state.categoryIds.includes(category.id);
+                  return (
+                    <Chip
+                      key={category.id}
+                      active={selected}
+                      onClick={() =>
+                        updateState((prev) => ({
+                          ...prev,
+                          categoryIds: selected ? prev.categoryIds.filter((c) => c !== category.id) : [...prev.categoryIds, category.id],
+                        }))
+                      }
+                    >
+                      {category.name}
+                    </Chip>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={state.isFeatured}
+              onClick={() => updateState((prev) => ({ ...prev, isFeatured: !prev.isFeatured }))}
+              className="flex items-center justify-between gap-3 rounded-lg border border-line bg-white/[0.02] px-3 py-3 text-left"
+            >
+              <span className="flex items-center gap-2.5">
+                <Star className={state.isFeatured ? 'size-4 fill-dodo text-dodo' : 'size-4 text-white/35'} aria-hidden="true" />
+                <span>
+                  <span className="block text-sm font-medium text-white">Odporúčaný</span>
+                  <span className="block text-xs text-white/40">Zobrazí sa medzi odporúčanými na úvodnej stránke.</span>
+                </span>
+              </span>
+              <span className={cn('relative h-6 w-10 shrink-0 rounded-full transition-colors', state.isFeatured ? 'bg-dodo' : 'bg-white/15')}>
+                <span className={cn('absolute top-0.5 size-5 rounded-full bg-white transition-all', state.isFeatured ? 'left-[18px]' : 'left-0.5')} />
+              </span>
+            </button>
+          </Section>
+
+          <Section title="Médiá">
+            <Field label="YouTube ID" htmlFor="youtubeId">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="youtubeId"
                   value={state.youtubeId}
                   onChange={(event) => updateState((prev) => ({ ...prev, youtubeId: event.target.value }))}
                   placeholder="napr. dQw4w9WgXcQ"
+                  className={cn(INPUT_CLASS, 'font-mono text-sm')}
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  className="h-10 lg:h-9"
                   disabled={!state.youtubeId.trim() || youtubePreview.isPending}
                   onClick={handleLoadFromYoutube}
                   title="Prepíše texty v jazykoch, ktoré má video na YouTube, a doplní dátum vydania a náhľad. Ostatné jazyky nechá tak. Neuloží."
                 >
-                  {youtubePreview.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+                  {youtubePreview.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <CirclePlay aria-hidden="true" />}
                   Načítať z YouTube
                 </Button>
               </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="soundcloudUrl">SoundCloud URL</Label>
+            </Field>
+            <Field label="SoundCloud URL" htmlFor="soundcloudUrl">
               <Input
                 id="soundcloudUrl"
+                type="url"
+                inputMode="url"
                 value={state.soundcloudUrl}
                 onChange={(event) => updateState((prev) => ({ ...prev, soundcloudUrl: event.target.value }))}
                 placeholder="https://soundcloud.com/…"
+                className={INPUT_CLASS}
               />
-            </div>
-          </div>
-
-          <ThumbnailPicker
-            value={state.thumbnailPath}
-            onChange={(filename) => updateState((prev) => ({ ...prev, thumbnailPath: filename }))}
-            youtubeId={state.youtubeId}
-          />
+            </Field>
+            <ThumbnailPicker
+              value={state.thumbnailPath}
+              onChange={(filename) => updateState((prev) => ({ ...prev, thumbnailPath: filename }))}
+              youtubeId={state.youtubeId}
+            />
+          </Section>
         </div>
 
-        <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-glass p-4">
-          <Link href="/admin/posts" className={buttonVariants({ variant: 'ghost' })}>
-            Zrušiť
-          </Link>
-          <div className="flex flex-wrap gap-2">
-            {isEdit ? (
-              <Button type="button" variant="outline" disabled={saving} onClick={() => handleSave('archived')}>
-                {pendingStatus === 'archived' ? 'Archivujem…' : 'Archivovať'}
-              </Button>
-            ) : null}
-            <Button type="button" variant="outline" disabled={saving} onClick={() => handleSave('draft')}>
-              {pendingStatus === 'draft' ? 'Ukladám…' : 'Uložiť koncept'}
-            </Button>
-            <Button type="button" disabled={saving} onClick={() => handleSave('published')}>
-              {pendingStatus === 'published' ? 'Publikujem…' : 'Publikovať'}
-            </Button>
+        {/* xl+: live preview */}
+        <aside className="hidden xl:block">
+          <div className="glass sticky top-8 max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-glass p-5">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-white/45">Náhľad — {activeLanguage.toUpperCase()}</p>
+            {preview}
           </div>
-        </div>
+        </aside>
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100dvh-3rem)]">
-        <div className="glass flex h-full flex-col gap-3 overflow-y-auto rounded-glass p-4 sm:p-6">
-          <h2 className="font-display text-xs font-semibold uppercase tracking-wide text-white/50">
-            Náhľad — {LANGUAGE_LABEL[activeLanguage]}
-          </h2>
-          <MarkdownPreview markdown={state.translations[activeLanguage].content} />
+      {/* Action bar: fixed on phones (replaces the tab bar), sticky card from lg up */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-page/90 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl lg:sticky lg:bottom-6 lg:mt-6 lg:rounded-glass lg:border lg:bg-card/90 lg:px-4 lg:pb-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-2">
+          <span className="hidden flex-1 text-xs text-white/40 lg:block">
+            {dirty ? 'Neuložené zmeny · ⌘S uloží' : 'Všetko uložené'}
+          </span>
+          <ActionButtons
+            isEdit={isEdit}
+            status={savedStatus}
+            saving={saving}
+            pendingStatus={pendingStatus}
+            onSave={handleSave}
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+function ActionButtons({
+  isEdit,
+  status,
+  saving,
+  pendingStatus,
+  onSave,
+}: {
+  isEdit: boolean;
+  status: PostStatus;
+  saving: boolean;
+  pendingStatus: PostStatus | null;
+  onSave: (status: PostStatus) => void;
+}) {
+  const busy = (s: PostStatus) => saving && pendingStatus === s;
+  const spinner = <Loader2 className="size-4 animate-spin" aria-hidden="true" />;
+  const big = 'h-11 flex-1 text-[15px] lg:h-9 lg:flex-none lg:text-sm';
+
+  // Secondary transitions live in a menu so the bar holds at most two big buttons on a phone.
+  const menuItems: { label: string; status: PostStatus }[] = [];
+  if (isEdit && status === 'published') menuItems.push({ label: 'Stiahnuť do konceptu', status: 'draft' });
+  if (isEdit && status !== 'archived') menuItems.push({ label: 'Archivovať', status: 'archived' });
+  if (isEdit && status === 'archived') menuItems.push({ label: 'Obnoviť ako koncept', status: 'draft' });
+
+  const menu = menuItems.length ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Ďalšie akcie" className="size-11 shrink-0 lg:size-9" disabled={saving} />}>
+        <MoreHorizontal className="size-5" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top" className="min-w-48">
+        {menuItems.map((item) => (
+          <DropdownMenuItem key={item.label} className="py-2.5 lg:py-1.5" onClick={() => onSave(item.status)}>
+            {item.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
+  if (status === 'published') {
+    return (
+      <>
+        {menu}
+        <Button type="button" className={big} disabled={saving} onClick={() => onSave('published')}>
+          {busy('published') ? spinner : null}
+          Uložiť zmeny
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {menu}
+      <Button type="button" variant="outline" className={big} disabled={saving} onClick={() => onSave(status)}>
+        {busy(status) ? spinner : null}
+        {status === 'archived' ? 'Uložiť' : 'Uložiť koncept'}
+      </Button>
+      <Button type="button" className={big} disabled={saving} onClick={() => onSave('published')}>
+        {busy('published') ? spinner : null}
+        Publikovať
+      </Button>
+    </>
   );
 }

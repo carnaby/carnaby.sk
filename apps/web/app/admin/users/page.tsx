@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { PageHeader } from '../../../components/admin/page-header';
 import { UsersTable } from '../../../components/admin/users-table';
 
 export const metadata: Metadata = {
@@ -15,14 +16,9 @@ export const metadata: Metadata = {
  */
 export default function AdminUsersPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-white">Používatelia</h1>
-        <p className="mt-1 text-sm text-white/60">
-          Zoznam všetkých registrovaných používateľov.
-        </p>
-      </div>
+    <>
+      <PageHeader title="Používatelia" description="Všetci, ktorí sa prihlásili cez Google." />
       <UsersTable />
-    </div>
+    </>
   );
 }

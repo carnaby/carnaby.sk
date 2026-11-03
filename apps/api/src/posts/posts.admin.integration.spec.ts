@@ -114,6 +114,21 @@ d('posts admin -- regressions', () => {
     await expect(fsp.access(nodePath.join(dir, 'originals', shared))).rejects.toThrow();
   });
 
+  it('filters by a missing translation and counts it in adminStats', async () => {
+    const skOnly = await admin.posts.create(post(`sk-only-${runId}`, { status: 'published' }));
+    const both = await admin.posts.create(post(`both-${runId}`, {
+      status: 'published', translations: { sk: { title: 'T', content: 'C' }, en: { title: 'E', content: 'C' } },
+    }));
+    const missingEn = await admin.posts.adminList({ missingLanguage: 'en', search: runId, limit: 100 });
+    expect(missingEn.items.map((i) => i.id)).toContain(skOnly.id);
+    expect(missingEn.items.map((i) => i.id)).not.toContain(both.id);
+
+    const stats = await admin.posts.adminStats();
+    expect(stats.publishedMissing.en).toBeGreaterThanOrEqual(1);
+    expect(stats.byStatus.published).toBeGreaterThanOrEqual(2);
+    expect(stats).not.toHaveProperty('items');
+  });
+
   it('filters the admin list by search text', async () => {
     const { id } = await admin.posts.create(post(`hladany-${runId}`, { translations: { sk: { title: `Ihla v kope sena ${runId}`, content: 'x' } } }));
     const result = await admin.posts.adminList({ search: `IHLA V KOPE SENA ${runId}` });

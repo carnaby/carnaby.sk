@@ -8,6 +8,9 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? 'http://localhost:3001'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // The floating dev-mode "N" badge sits bottom-left -- exactly over the admin's bottom bars on
+  // phones. Error overlays still show; this only hides the badge.
+  devIndicators: false,
   // Monorepo root for `output: 'standalone'`'s file tracing -- without this Next infers it by
   // walking up from apps/web looking for the outermost lockfile, which happens to land on the
   // repo root anyway here (verified: `nx build @carnaby/web` produces the same
