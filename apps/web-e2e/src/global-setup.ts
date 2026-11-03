@@ -1,46 +1,89 @@
-import { EXTERNAL_BASE_URL } from './fixtures/env';
-import { seedPosts } from './fixtures/seed-posts';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import type { Server } from 'node:http';
 
-const API_HEALTH_URL = 'http://localhost:3001/api/health';
-const API_READY_TIMEOUT_MS = 60_000;
-const API_POLL_INTERVAL_MS = 500;
+import { closeDb, createSessionCookie, deleteAllTestPosts, deleteUsers, SESSION_COOKIE } from './support/db';
+import { ADMIN_STATE, ADMIN_USER, API_URL, AUTH_DIR, BASE_URL, REGULAR_USER, USER_STATE } from './support/env';
+import { startFakeYoutube } from './support/fake-youtube';
 
-/**
- * Playwright's `webServer` option only waits for the *web* app's port (3000) to answer before
- * handing off to the test run -- it has no visibility into the api process started alongside it
- * (`pnpm nx run-many -t dev -p @carnaby/web @carnaby/api`), which takes longer to come up (build +
- * migrate + Nest bootstrap vs. Next's near-instant dev server). Without this, tests that render
- * server-fetched content (posts, categories) can start running against a web server that's up but
- * still getting `ECONNREFUSED` from every api call, and fail non-deterministically depending on
- * which worker happens to run first.
- */
-async function waitForApi(): Promise<void> {
-  const deadline = Date.now() + API_READY_TIMEOUT_MS;
+const READY_TIMEOUT_MS = 120_000;
+
+async function waitFor(url: string, label: string): Promise<void> {
+  const deadline = Date.now() + READY_TIMEOUT_MS;
   for (;;) {
     try {
-      const res = await fetch(API_HEALTH_URL);
-      if (res.ok) return;
+      const res = await fetch(url, { redirect: 'manual' });
+      if (res.status < 500) return;
     } catch {
-      // ECONNREFUSED while the api is still building/migrating/bootstrapping -- keep polling.
+      // not up yet
     }
     if (Date.now() > deadline) {
-      throw new Error(`global-setup: api at ${API_HEALTH_URL} did not become ready within ${API_READY_TIMEOUT_MS}ms`);
+      throw new Error(
+        `e2e: ${label} at ${url} is not reachable. Start the dev stack first (\`pnpm dev\`, with Postgres running) -- see README "End-to-end tests".`,
+      );
     }
-    await new Promise((resolve) => setTimeout(resolve, API_POLL_INTERVAL_MS));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 }
 
-/** Playwright `globalSetup`: runs once before the suite (see `playwright.config.mts`), seeding
- * the dev Postgres database the `webServer`-started api/web processes read from, and waiting for
- * the api itself to be reachable (see `waitForApi` above). */
-export default async function globalSetup(): Promise<void> {
-  // Task 30: external mode (e.g. NAS staging) targets an already-running deployment with real
-  // production data -- there's no local dev DB to seed and no local api dev server to health-poll
-  // (the api isn't even reachable on localhost:3001 in that case; it's internal-only on the NAS,
-  // see docs/deploy/nas-runbook.md). See playwright.config.mts's doc comment for the other two
-  // places this same var gates behavior.
-  if (EXTERNAL_BASE_URL) return;
+function writeStorageState(path: string, cookieValue: string): void {
+  const { hostname } = new URL(BASE_URL);
+  const state = {
+    cookies: [
+      { name: SESSION_COOKIE, value: cookieValue, domain: hostname, path: '/', expires: -1, httpOnly: true, secure: false, sameSite: 'Lax' },
+    ],
+    origins: [],
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
 
-  await waitForApi();
-  await seedPosts();
+/**
+ * Starts the fake YouTube API when the api is configured to talk to one on localhost. Returns
+ * null (and the YouTube spec skips itself) when it isn't, or when the port is already taken by
+ * something we don't control.
+ */
+async function maybeStartFakeYoutube(): Promise<Server | null> {
+  const base = process.env['YOUTUBE_API_BASE_URL'];
+  if (!base) return null;
+  const url = new URL(base);
+  if (!['localhost', '127.0.0.1'].includes(url.hostname) || !url.port) return null;
+  try {
+    const server = await startFakeYoutube(Number(url.port));
+    process.env['E2E_FAKE_YOUTUBE'] = '1'; // inherited by the test workers
+    return server;
+  } catch (error) {
+    console.warn(`e2e: fake YouTube API not started on ${url.port} (${(error as Error).message}); YouTube tests will be skipped.`);
+    return null;
+  }
+}
+
+/** Requests every admin route once so Next's dev server compiles them before the timed tests. */
+async function warmUp(adminCookie: string): Promise<void> {
+  const headers = { cookie: `${SESSION_COOKIE}=${adminCookie}` };
+  for (const path of ['/', '/en', '/category/devlog', '/admin', '/admin/posts', '/admin/posts/new', '/admin/youtube', '/login']) {
+    await fetch(`${BASE_URL}${path}`, { headers, redirect: 'manual' }).catch(() => undefined);
+  }
+}
+
+export default async function globalSetup(): Promise<() => Promise<void>> {
+  await waitFor(`${API_URL}/api/health`, 'api');
+  await waitFor(BASE_URL, 'web');
+
+  const secret = process.env['BETTER_AUTH_SECRET'];
+  if (!secret) throw new Error('e2e: BETTER_AUTH_SECRET is not set (repo-root .env).');
+
+  await deleteAllTestPosts();
+  mkdirSync(AUTH_DIR, { recursive: true });
+  const adminCookie = await createSessionCookie(ADMIN_USER, secret);
+  writeStorageState(ADMIN_STATE, adminCookie);
+  writeStorageState(USER_STATE, await createSessionCookie(REGULAR_USER, secret));
+
+  const fakeYoutube = await maybeStartFakeYoutube();
+  await warmUp(adminCookie);
+
+  return async () => {
+    await new Promise<void>((resolve) => (fakeYoutube ? fakeYoutube.close(() => resolve()) : resolve()));
+    await deleteAllTestPosts();
+    await deleteUsers([ADMIN_USER.id, REGULAR_USER.id]);
+    await closeDb();
+  };
 }

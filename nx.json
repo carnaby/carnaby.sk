@@ -52,6 +52,7 @@
     },
     {
       "plugin": "@nx/playwright/plugin",
+      "exclude": ["apps/web-e2e/**"],
       "options": {
         "targetName": "e2e"
       }

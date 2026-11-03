@@ -6,7 +6,9 @@ export default [
   ...baseConfig,
   {
     files: ['**/*.ts', '**/*.js'],
-    // Override or add rules here
-    rules: {},
+    rules: {
+      // Shared multi-step flows (src/support/lifecycle.ts) assert inside the helper.
+      'playwright/expect-expect': ['warn', { assertFunctionNames: ['postLifecycle'] }],
+    },
   },
 ];
