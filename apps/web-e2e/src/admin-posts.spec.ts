@@ -56,13 +56,10 @@ test('"Zrušiť filtre" without an active search clears the chips', async ({ pag
   await expect(page.getByRole('button', { name: 'Všetky', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
-// KNOWN APP BUG (reported, not fixed here): with a search active, "Zrušiť filtre" clears the URL,
-// but the search box's 300 ms debounce then fires with the *old* params (`update({ q: null })` in
-// posts-table.tsx) and restores the other filters whenever the navigation takes longer than the
-// debounce -- common in `next dev`. Slowed RSC responses make it deterministic. test.fail(): this
-// starts "failing" (i.e. passing) once the bug is fixed -- then drop the annotation.
+// Regression: with a search active, "Zrušiť filtre" used to be undone by the search box's
+// 300 ms debounce firing with the *old* params whenever the navigation took longer than the
+// debounce (common in `next dev`). Slowed RSC responses make the race deterministic.
 test('"Zrušiť filtre" with an active search clears everything', async ({ page }) => {
-  test.fail();
   const post = await seedDraft('clear');
   await page.goto(`/admin/posts?status=draft&q=${post.slug}`);
   await expect(page.getByRole('searchbox', { name: 'Hľadať' })).toHaveValue(post.slug);

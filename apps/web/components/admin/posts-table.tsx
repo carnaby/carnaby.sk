@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -118,11 +118,22 @@ export function PostsTable() {
   const { filters, update } = useListParams();
   const [deleteTarget, setDeleteTarget] = useState<AdminListItem | null>(null);
 
-  // Search input is local state, pushed to the URL after a short pause.
+  // Search input is local state, pushed to the URL after a short pause. `pushedSearch` is the
+  // value already sent to the URL: a navigation can take longer than the debounce (the URL still
+  // shows the old `q`), and syncing again then would replay the *old* params -- e.g. "Zrušiť
+  // filtre" clears everything, and a late debounce restored the other filters.
   const [searchText, setSearchText] = useState(filters.search);
+  const pushedSearch = useRef(filters.search);
   useEffect(() => {
-    if (searchText.trim() === filters.search) return;
-    const timer = setTimeout(() => update({ q: searchText.trim() || null }), 300);
+    pushedSearch.current = filters.search;
+  }, [filters.search]);
+  useEffect(() => {
+    const value = searchText.trim();
+    if (value === filters.search || value === pushedSearch.current) return;
+    const timer = setTimeout(() => {
+      pushedSearch.current = value;
+      update({ q: value || null });
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchText, filters.search]);
 
@@ -258,6 +269,7 @@ export function PostsTable() {
               type="button"
               onClick={() => {
                 setSearchText('');
+                pushedSearch.current = '';
                 update({ status: null, category: null, featured: null, missing: null, q: null });
               }}
               className="inline-flex h-9 shrink-0 items-center gap-1 px-2 text-sm text-white/50 hover:text-white lg:h-8"
