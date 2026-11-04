@@ -1,0 +1,9 @@
+{
+  "project": "carnaby-sk",
+  "sync": [
+    "docs/**",
+    ".superpowers/sdd/progress.md",
+    ".superpowers/sdd/task-*-report.md"
+  ],
+  "state": ["docs/handoff/*.md"]
+}

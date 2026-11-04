@@ -13,3 +13,5 @@ playwright-report
 tools/migrate-legacy/data
 vitest.config.*.timestamp*
 .data
+# Docs live in Tabula (project carnaby-sk), see CLAUDE.md
+docs/
