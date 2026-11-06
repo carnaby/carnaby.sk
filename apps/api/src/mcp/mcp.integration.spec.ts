@@ -3,6 +3,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { eq } from 'drizzle-orm';
 import { promises as fs } from 'node:fs';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -25,6 +27,8 @@ d('carnaby MCP server', () => {
   const categorySlug = `mcp-${runId}`;
   let client: Client;
   let uploadsDir: string;
+  let site: http.Server;
+  let siteBase = '';
 
   async function call(name: string, args: Record<string, unknown> = {}): Promise<ToolResult> {
     return (await client.callTool({ name, arguments: args })) as ToolResult;
@@ -36,6 +40,15 @@ d('carnaby MCP server', () => {
   }
 
   beforeAll(async () => {
+    const png = await sharp({ create: { width: 40, height: 21, channels: 3, background: '#10b981' } }).png().toBuffer();
+    site = http.createServer((req, res) => {
+      if (req.url === '/project/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<meta property="og:image" content="/og.png">');
+      if (req.url === '/og.png') return res.writeHead(200, { 'content-type': 'image/png' }).end(png);
+      if (req.url === '/plain/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<title>no image</title>');
+      return res.writeHead(404).end();
+    });
+    await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
+    siteBase = `http://127.0.0.1:${(site.address() as AddressInfo).port}`;
     await migrate(db, { migrationsFolder: __dirname + '/../../../../packages/db/migrations' });
     uploadsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'carnaby-mcp-'));
     process.env['UPLOADS_DIR'] = uploadsDir;
@@ -43,7 +56,9 @@ d('carnaby MCP server', () => {
     await db.insert(user).values({ id: adminId, email: `mcp-admin-${runId}@a.sk`, name: 'MCP Admin', role: 'admin' });
     await db.insert(categories).values({ slug: categorySlug, name: 'MCP test' });
 
-    const server = createCarnabyMcpServer(db, { userId: adminId, email: null, via: 'static-token' });
+    const server = createCarnabyMcpServer(db, { userId: adminId, email: null, via: 'static-token' }, {
+      urlPolicy: { isAllowedAddress: (ip) => ip === '127.0.0.1', allowAnyPort: true },
+    });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     client = new Client({ name: 'test', version: '1.0.0' });
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
@@ -51,6 +66,8 @@ d('carnaby MCP server', () => {
 
   afterAll(async () => {
     await client?.close();
+    site.closeAllConnections();
+    await new Promise((resolve) => site.close(resolve));
     await pool.end();
     await fs.rm(uploadsDir, { recursive: true, force: true });
   });
@@ -59,7 +76,7 @@ d('carnaby MCP server', () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       'create_post', 'delete_post', 'get_post', 'import_youtube_video', 'list_categories', 'list_posts', 'list_users',
-      'set_post_status', 'set_thumbnail_from_youtube', 'site_overview', 'sync_post_from_youtube', 'update_post',
+      'set_post_status', 'set_thumbnail_from_link', 'set_thumbnail_from_youtube', 'site_overview', 'sync_post_from_youtube', 'update_post',
       'upload_image', 'youtube_overview',
     ]);
     expect(client.getInstructions()).toContain('carnaby.sk');
@@ -108,6 +125,37 @@ d('carnaby MCP server', () => {
     expect(wrongConfirm.isError).toBe(true);
     await ok('delete_post', { id, confirmSlug: slug });
     expect(await db.select().from(posts).where(eq(posts.id, id))).toHaveLength(0);
+  });
+
+  it('stores projectUrl and takes the thumbnail from the project page', async () => {
+    const created = await ok<{ post: { id: number; projectUrl: string | null } }>('create_post', {
+      translations: { sk: { title: `Projekt ${runId}`, content: 'x' } },
+      projectUrl: `${siteBase}/project/`,
+    });
+    const { id } = created.post;
+    expect(created.post.projectUrl).toBe(`${siteBase}/project/`);
+
+    const thumb = await ok<{ postId: number; thumbnail: { filename: string } }>('set_thumbnail_from_link', { postId: id });
+    expect(thumb.thumbnail.filename).toMatch(/^link-\d+-[0-9a-f]{6}\.png$/);
+    const detail = await ok<{ thumbnail: { filename: string } }>('get_post', { id });
+    expect(detail.thumbnail.filename).toBe(thumb.thumbnail.filename);
+
+    const noImage = await call('set_thumbnail_from_link', { postId: id, url: `${siteBase}/plain/` });
+    expect(noImage.isError).toBe(true);
+    expect(noImage.content[0]!.text).toMatch(/og:image/);
+
+    const cleared = await ok<{ post: { projectUrl: string | null } }>('update_post', { id, projectUrl: null });
+    expect(cleared.post.projectUrl).toBeNull();
+    const noLink = await call('set_thumbnail_from_link', { postId: id });
+    expect(noLink.content[0]!.text).toMatch(/no projectUrl/);
+
+    const evil = await call('update_post', { id, projectUrl: 'javascript:alert(1)' });
+    expect(evil.isError).toBe(true);
+    expect(evil.content[0]!.text).toMatch(/http/);
+
+    const blocked = await call('set_thumbnail_from_link', { postId: id, url: 'http://10.0.0.1/' });
+    expect(blocked.isError).toBe(true);
+    expect(blocked.content[0]!.text).toMatch(/not a public address/);
   });
 
   it('reports validation problems as readable tool errors instead of throwing', async () => {

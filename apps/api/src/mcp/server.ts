@@ -9,15 +9,19 @@ import { z } from 'zod';
 import { appUrl } from '../auth/auth';
 import { adminListPosts, adminStats, getPostById, removePost, upsertPost, type PostById } from '../posts/posts.admin';
 import {
+  BlockedUrlError,
   fetchYoutubeThumbnail,
   IMAGE_WIDTHS,
   InvalidImageError,
+  NoShareImageError,
   saveImageBuffer,
+  saveImageFromLink,
   saveImageFromUrl,
   UpstreamNotFoundError,
   UpstreamUnavailableError,
   uploadExists,
 } from '../uploads/uploads.service';
+import type { UrlPolicy } from '../uploads/safe-fetch';
 import { YoutubeApiError, YoutubeNotConfiguredError, YoutubeVideoNotFoundError } from '../youtube/youtube.client';
 import { importYoutubeVideo, syncPostFromYoutube, youtubeOverview } from '../youtube/youtube.service';
 import type { McpActor } from './mcp-auth';
@@ -43,9 +47,11 @@ Content:
   an H1 in the content -- the page already renders it. Use ## and lower headings.
 - excerpt = 1-2 sentence teaser for cards; metaDescription = SEO description (<= 160 chars).
 - youtubeId (e.g. dQw4w9WgXcQ, not a full URL) embeds the video above the content and is the
-  thumbnail fallback; soundcloudUrl renders a "listen on SoundCloud" button.
+  thumbnail fallback; soundcloudUrl renders a "listen on SoundCloud" button; projectUrl (devlog posts
+  about a project with its own site) makes the post preview clickable and adds an "Open project" button.
 - Images: upload with upload_image (from a URL or base64), then put the returned markdown into the
-  content, or pass the filename as "thumbnail". set_thumbnail_from_youtube fetches the video still.
+  content, or pass the filename as "thumbnail". set_thumbnail_from_youtube fetches the video still;
+  set_thumbnail_from_link takes the share image (og:image) of the post's projectUrl page.
 - YouTube: youtube_overview compares the channel's videos with the site; import_youtube_video
   creates a post from a video (both languages get YouTube's text when the video has only one --
   translate the other one afterwards with update_post); sync_post_from_youtube refreshes a post.
@@ -87,7 +93,7 @@ async function run(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
     return await fn();
   } catch (error) {
     if (
-      error instanceof ToolError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError ||
+      error instanceof BlockedUrlError || error instanceof NoShareImageError || error instanceof ToolError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError ||
       error instanceof YoutubeNotConfiguredError || error instanceof YoutubeVideoNotFoundError || error instanceof YoutubeApiError
     ) {
       return toolError(error.message);
@@ -161,6 +167,7 @@ async function postDetail(db: Db, id: number) {
     categories: data.categoryIds.map((cid) => slugById.get(cid)).filter(Boolean),
     youtubeId: data.post.youtubeId,
     soundcloudUrl: data.post.soundcloudUrl,
+    projectUrl: data.post.projectUrl,
     thumbnail: data.post.thumbnailPath ? imageInfo(data.post.thumbnailPath) : null,
     viewCount: data.post.viewCount,
     publishedAt: data.post.publishedAt,
@@ -213,6 +220,7 @@ function currentAsInput(current: PostById): PostUpsertInput {
     isFeatured: current.post.isFeatured,
     youtubeId: current.post.youtubeId ?? undefined,
     soundcloudUrl: current.post.soundcloudUrl ?? undefined,
+    projectUrl: current.post.projectUrl ?? undefined,
     thumbnailPath: current.post.thumbnailPath ?? undefined,
     categoryIds: current.categoryIds,
     translations,
@@ -239,7 +247,12 @@ async function saveChanges(db: Db, id: number, changes: Partial<PostUpsertInput>
   await upsertPost(db, { ...input, id }, actor.userId);
 }
 
-export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
+export interface CarnabyMcpOptions {
+  /** Tests only: lets the link/URL tools reach a local fake server. Production passes nothing. */
+  urlPolicy?: UrlPolicy;
+}
+
+export function createCarnabyMcpServer(db: Db, actor: McpActor, options: CarnabyMcpOptions = {}): McpServer {
   const server = new McpServer({ name: 'carnaby.sk', version: '1.0.0' }, { instructions: INSTRUCTIONS });
 
   server.registerTool('site_overview', {
@@ -315,6 +328,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       isFeatured: z.boolean().default(false),
       youtubeId: z.string().optional().describe('Video id or YouTube URL'),
       soundcloudUrl: z.string().optional(),
+      projectUrl: z.string().optional().describe('http(s) link to the project\'s own site (devlog posts)'),
       thumbnail: z.string().optional().describe('Filename returned by upload_image'),
     },
   }, (args) => run(async () => {
@@ -331,6 +345,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       isFeatured: args.isFeatured,
       youtubeId: normalizeYoutubeId(args.youtubeId),
       soundcloudUrl: args.soundcloudUrl?.trim() || undefined,
+      projectUrl: args.projectUrl?.trim() || undefined,
       thumbnailPath: args.thumbnail?.trim() || undefined,
       categoryIds: resolveCategoryIds(args.categories, idBySlug),
       translations,
@@ -342,7 +357,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
 
   server.registerTool('update_post', {
     title: 'Update post',
-    description: 'Partially updates a post: only the fields you pass change. For a translation, pass only the fields to change (it is merged with the stored one); pass null to remove a whole language version. Pass null for youtubeId/soundcloudUrl/thumbnail to clear them.',
+    description: 'Partially updates a post: only the fields you pass change. For a translation, pass only the fields to change (it is merged with the stored one); pass null to remove a whole language version. Pass null for youtubeId/soundcloudUrl/projectUrl/thumbnail to clear them.',
     inputSchema: {
       id: z.number().int(),
       slug: z.string().optional(),
@@ -351,6 +366,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       isFeatured: z.boolean().optional(),
       youtubeId: z.string().nullable().optional(),
       soundcloudUrl: z.string().nullable().optional(),
+      projectUrl: z.string().nullable().optional(),
       thumbnail: z.string().nullable().optional(),
       publishedAt: z.string().datetime({ offset: true }).optional().describe('ISO date-time, e.g. 2026-03-01T18:00:00Z'),
       translations: z.object({
@@ -392,6 +408,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
       isFeatured: args.isFeatured ?? base.isFeatured,
       youtubeId: args.youtubeId === undefined ? base.youtubeId : normalizeYoutubeId(args.youtubeId),
       soundcloudUrl: patchField(args.soundcloudUrl, base.soundcloudUrl),
+      projectUrl: patchField(args.projectUrl, base.projectUrl),
       thumbnailPath: patchField(args.thumbnail, base.thumbnailPath),
       categoryIds: args.categories ? resolveCategoryIds(args.categories, idBySlug) : base.categoryIds,
       publishedAt: args.publishedAt,
@@ -451,7 +468,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
     if (!args.url === !args.base64) throw new ToolError('Pass exactly one of url or base64.');
     const prefix = args.setAsThumbnailOfPostId ? 'thumb' : 'img';
     const filename = args.url
-      ? await saveImageFromUrl(args.url, prefix)
+      ? await saveImageFromUrl(args.url, prefix, options.urlPolicy)
       : await saveImageBuffer(Buffer.from((args.base64 ?? '').replace(/^data:[^;,]*;base64,/, '').replace(/\s+/g, ''), 'base64'), prefix);
     if (args.setAsThumbnailOfPostId) await saveChanges(db, args.setAsThumbnailOfPostId, { thumbnailPath: filename }, actor);
     return json({ ...imageInfo(filename), thumbnailOfPostId: args.setAsThumbnailOfPostId ?? null });
@@ -471,6 +488,22 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor): McpServer {
     const filename = await fetchYoutubeThumbnail(youtubeId);
     await saveChanges(db, args.postId, { thumbnailPath: filename }, actor);
     return json({ postId: args.postId, thumbnail: imageInfo(filename) });
+  }));
+
+  server.registerTool('set_thumbnail_from_link', {
+    title: 'Thumbnail from project link',
+    description: 'Downloads the share image (og:image, else twitter:image) of a web page and sets it as the post thumbnail. Uses the post\'s own projectUrl unless a url is given.',
+    inputSchema: {
+      postId: z.number().int(),
+      url: z.string().optional().describe('http(s) page URL; defaults to the post\'s projectUrl'),
+    },
+  }, (args) => run(async () => {
+    const current = await getPostById(db, args.postId);
+    const url = args.url?.trim() || current.post.projectUrl;
+    if (!url) throw new ToolError('The post has no projectUrl -- pass url.');
+    const filename = await saveImageFromLink(url, options.urlPolicy);
+    await saveChanges(db, args.postId, { thumbnailPath: filename }, actor);
+    return json({ postId: args.postId, source: url, thumbnail: imageInfo(filename) });
   }));
 
   server.registerTool('youtube_overview', {
