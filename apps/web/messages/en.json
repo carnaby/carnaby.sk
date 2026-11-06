@@ -28,6 +28,8 @@
     "viewsAria": "{count, plural, one {# view} other {# views}}",
     "fallbackNote": "Not yet available in this language — shown in {lang}.",
     "soundcloudCta": "Listen on SoundCloud",
+    "projectCta": "Open project",
+    "openProjectAria": "Open project {host} in a new tab",
     "backToCategory": "More from {category}"
   },
   "category": {

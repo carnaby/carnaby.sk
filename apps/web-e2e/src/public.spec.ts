@@ -15,15 +15,24 @@ const skOnly = {
   slug: skSlug,
   sk: { title: `E2E iba po slovensky ${skSlug.slice(-8)}`, content: 'Tento príspevok nemá anglickú verziu.' },
 };
+const projectSlug = uniqueSlug('public-project');
+const withProject = {
+  slug: projectSlug,
+  projectUrl: 'https://www.example.com/project/',
+  sk: { title: `E2E projekt ${projectSlug.slice(-8)}`, content: 'Príspevok o projekte.' },
+  en: { title: `E2E project ${projectSlug.slice(-8)}`, content: 'A post about a project.' },
+};
 
 test.beforeAll(async () => {
   await seedPost({ ...bilingual, status: 'published', featured: true, category: 'devlog' });
   await seedPost({ ...skOnly, status: 'published', category: 'devlog' });
+  await seedPost({ ...withProject, status: 'published', category: 'devlog' });
 });
 
 test.afterAll(async () => {
   await deletePost(bilingual.slug);
   await deletePost(skOnly.slug);
+  await deletePost(withProject.slug);
 });
 
 // Not scoped to <head>: for regular browsers Next 16 streams metadata of dynamic pages, so under
@@ -74,6 +83,28 @@ test('/en URL of an SK-only post falls back to SK and canonicalises to the SK UR
   expect(canonical).toMatch(new RegExp(`/posts/${skOnly.slug}$`));
   expect(canonical).not.toContain('/en/');
   await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveCount(0);
+});
+
+test('a post with a project link has a clickable preview and an "Open project" button', async ({ page }) => {
+  await page.goto(`/posts/${withProject.slug}`);
+  const preview = page.getByTestId('project-preview');
+  await expect(preview).toHaveAttribute('href', withProject.projectUrl);
+  await expect(preview).toHaveAttribute('target', '_blank');
+  await expect(preview).toHaveAttribute('rel', /noopener/);
+  const cta = page.getByTestId('project-cta');
+  await expect(cta).toHaveAttribute('href', withProject.projectUrl);
+  await expect(cta).toContainText('Otvoriť projekt');
+  await expect(cta).toContainText('example.com');
+
+  await page.goto(`/en/posts/${withProject.slug}`);
+  await expect(page.getByTestId('project-cta')).toContainText('Open project');
+});
+
+test('a post without a project link has no project button', async ({ page }) => {
+  await page.goto(`/posts/${bilingual.slug}`);
+  await expect(page.getByRole('heading', { level: 1, name: bilingual.sk.title })).toBeVisible();
+  await expect(page.getByTestId('project-cta')).toHaveCount(0);
+  await expect(page.getByTestId('project-preview')).toHaveCount(0);
 });
 
 test('category page lists its published posts', async ({ page }) => {

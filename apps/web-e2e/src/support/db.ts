@@ -32,6 +32,7 @@ export interface SeedPost {
   slug: string;
   status?: PostStatus;
   featured?: boolean;
+  projectUrl?: string;
   category?: 'devlog' | 'dodo' | 'carnaby';
   sk?: SeedTranslation;
   en?: SeedTranslation;
@@ -45,9 +46,9 @@ export function uniqueSlug(tag: string): string {
 export async function seedPost(post: SeedPost): Promise<{ id: number; slug: string }> {
   const status = post.status ?? 'published';
   const { rows } = await db().query<{ id: number }>(
-    `insert into posts (slug, status, is_featured, published_at)
-     values ($1, $2, $3, $4) returning id`,
-    [post.slug, status, post.featured ?? false, status === 'published' ? new Date() : null],
+    `insert into posts (slug, status, is_featured, published_at, project_url)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [post.slug, status, post.featured ?? false, status === 'published' ? new Date() : null, post.projectUrl ?? null],
   );
   const id = rows[0]?.id;
   if (id === undefined) throw new Error(`seedPost: insert of ${post.slug} returned no row`);

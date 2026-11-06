@@ -1,4 +1,4 @@
-import { Calendar, Eye } from 'lucide-react';
+import { ArrowUpRight, Calendar, Eye } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -12,6 +12,7 @@ import { ViewTracker } from '../../../../../components/post/view-tracker';
 import { YoutubeEmbed } from '../../../../../components/post/youtube-embed';
 import { Link } from '../../../../../i18n/navigation';
 import { thumbUrl, youtubeThumbUrl } from '../../../../../lib/images';
+import { projectHost } from '../../../../../lib/project-url';
 import { pageAlternates } from '../../../../../lib/seo';
 import { APP_URL } from '../../../../../lib/site-url';
 import { serverTrpc, type PostListItem } from '../../../../../lib/trpc-server';
@@ -88,6 +89,7 @@ export default async function PostPage({ params }: { params: Promise<PostPagePar
     ? new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(new Date(post.publishedAt))
     : null;
   const primaryCategory = post.categories[0];
+  const projectHostName = post.projectUrl ? projectHost(post.projectUrl) : null;
 
   return (
     <article className="mx-auto max-w-[800px] px-4 py-12">
@@ -132,11 +134,38 @@ export default async function PostPage({ params }: { params: Promise<PostPagePar
       <div className="mb-8">
         {post.youtubeId ? (
           <YoutubeEmbed youtubeId={post.youtubeId} title={post.title} />
+        ) : post.projectUrl ? (
+          <a
+            href={post.projectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('openProjectAria', { host: projectHostName ?? '' })}
+            data-testid="project-preview"
+            className="group block aspect-video overflow-hidden rounded-glass bg-surface"
+          >
+            <div className="h-full w-full transition-transform duration-300 group-hover:scale-[1.02]">
+              <PostImage post={post} width={1200} />
+            </div>
+          </a>
         ) : (
           <div className="aspect-video overflow-hidden rounded-glass bg-surface">
             <PostImage post={post} width={1200} />
           </div>
         )}
+
+        {post.projectUrl ? (
+          <a
+            href={post.projectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="project-cta"
+            className="glass mt-4 inline-flex items-center gap-2 rounded-glass px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:text-white"
+          >
+            {t('projectCta')}
+            <ArrowUpRight size={16} aria-hidden="true" />
+            <span className="text-xs font-normal text-white/50">{projectHostName}</span>
+          </a>
+        ) : null}
       </div>
 
       <PostBody markdown={post.content} />

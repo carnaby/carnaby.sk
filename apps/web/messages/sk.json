@@ -28,6 +28,8 @@
     "viewsAria": "{count, plural, one {# zobrazenie} few {# zobrazenia} other {# zobrazení}}",
     "fallbackNote": "Zatiaľ nie je dostupné v tomto jazyku — zobrazené v {lang}.",
     "soundcloudCta": "Vypočuť na SoundCloud",
+    "projectCta": "Otvoriť projekt",
+    "openProjectAria": "Otvoriť projekt {host} v novej karte",
     "backToCategory": "Ďalšie z kategórie {category}"
   },
   "category": {
