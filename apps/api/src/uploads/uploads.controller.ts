@@ -12,11 +12,15 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { httpUrl } from '@carnaby/shared';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage, MulterError } from 'multer';
 import { Response } from 'express';
 import { AdminGuard } from './admin.guard';
 import {
+  BlockedUrlError,
+  InvalidImageError,
+  NoShareImageError,
   UnsupportedMimeTypeError,
   UpstreamNotFoundError,
   UpstreamUnavailableError,
@@ -75,6 +79,26 @@ export class UploadsController {
       }
       if (error instanceof UpstreamUnavailableError) {
         throw new BadGatewayException('youtube fetch failed');
+      }
+      throw error;
+    }
+  }
+
+  /** Editor "Z odkazu": the project page's share image becomes the thumbnail. Slovak messages -- only the editor calls this. */
+  @Post('from-link')
+  async fromLink(@Body('url') url?: string): Promise<{ filename: string }> {
+    const parsed = httpUrl.safeParse(url ?? '');
+    if (!parsed.success) throw new BadRequestException('Táto adresa nie je povolená.');
+    try {
+      return { filename: await this.uploads.saveImageFromLink(parsed.data) };
+    } catch (error) {
+      if (error instanceof NoShareImageError) throw new BadRequestException('Stránka nemá zdieľací obrázok (og:image).');
+      if (error instanceof BlockedUrlError) throw new BadRequestException('Táto adresa nie je povolená.');
+      if (error instanceof InvalidImageError || error instanceof UnsupportedMimeTypeError) {
+        throw new BadRequestException('Obrázok nie je podporovaný (jpeg, png, gif, webp, max 10 MB).');
+      }
+      if (error instanceof UpstreamUnavailableError || error instanceof UpstreamNotFoundError) {
+        throw new BadGatewayException('Stránka alebo obrázok nie sú dostupné.');
       }
       throw error;
     }

@@ -4,7 +4,11 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
-import { InvalidImageError, UnsupportedMimeTypeError, UpstreamNotFoundError, UpstreamUnavailableError } from './errors';
+import {
+  InvalidImageError, NoShareImageError, ResponseTooLargeError, UnsupportedMimeTypeError, UpstreamNotFoundError, UpstreamUnavailableError,
+} from './errors';
+import { findShareImage } from './og-image';
+import { safeFetch, type UrlPolicy } from './safe-fetch';
 
 // Multer only reports the mimetype the client sent, so the mapping below both allowlists the
 // four supported image types AND supplies the on-disk extension — the original filename's
@@ -99,51 +103,40 @@ export async function saveThumbnail(buffer: Buffer, mimetype: string): Promise<s
 }
 
 /** Saves raw image bytes (e.g. a base64 payload from an MCP tool) as a new original. */
-export async function saveImageBuffer(buffer: Buffer, prefix: 'thumb' | 'img' = 'img'): Promise<string> {
+export async function saveImageBuffer(buffer: Buffer, prefix: 'thumb' | 'img' | 'link' = 'img'): Promise<string> {
   if (buffer.length === 0) throw new InvalidImageError('image is empty');
   if (buffer.length > MAX_IMAGE_BYTES) throw new InvalidImageError(`image too large (max ${MAX_IMAGE_BYTES / 1024 / 1024}MB)`);
   const ext = await detectImageExtension(buffer);
   return writeOriginal(buffer, prefix, ext);
 }
 
-/** Downloads an image from a public http(s) URL and saves it as a new original. The size cap
- * is enforced while streaming, so a huge or endless response can't exhaust memory. */
-export async function saveImageFromUrl(rawUrl: string, prefix: 'thumb' | 'img' = 'img'): Promise<string> {
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new InvalidImageError('invalid url');
-  }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new InvalidImageError('only http(s) urls are supported');
+/** HTML cap for share-image lookups: the meta tags live in <head>, the rest is never needed. */
+const MAX_HTML_BYTES = 1024 * 1024;
 
-  let res: Response;
+/** Downloads an image from a public http(s) URL (SSRF-safe, capped while streaming) and saves it as a new original. */
+export async function saveImageFromUrl(rawUrl: string, prefix: 'thumb' | 'img' | 'link' = 'img', policy?: UrlPolicy): Promise<string> {
+  let body: Buffer;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(20_000), redirect: 'follow' });
+    ({ body } = await safeFetch(rawUrl, { maxBytes: MAX_IMAGE_BYTES, accept: 'image/*', policy }));
   } catch (error) {
-    throw new UpstreamUnavailableError(error instanceof Error ? error.message : 'image download failed');
+    if (error instanceof ResponseTooLargeError) throw new InvalidImageError(`image too large (max ${MAX_IMAGE_BYTES / 1024 / 1024}MB)`);
+    throw error;
   }
-  if (!res.ok || !res.body) {
-    if (res.status === 404) throw new UpstreamNotFoundError('image not found at url');
-    throw new UpstreamUnavailableError(`image download failed with status ${res.status}`);
-  }
-  const declared = Number(res.headers.get('content-length') ?? 0);
-  if (declared > MAX_IMAGE_BYTES) throw new InvalidImageError(`image too large (max ${MAX_IMAGE_BYTES / 1024 / 1024}MB)`);
+  return saveImageBuffer(body, prefix);
+}
 
-  const chunks: Buffer[] = [];
-  let total = 0;
-  const reader = res.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_IMAGE_BYTES) {
-      await reader.cancel();
-      throw new InvalidImageError(`image too large (max ${MAX_IMAGE_BYTES / 1024 / 1024}MB)`);
-    }
-    chunks.push(Buffer.from(value));
+/** Saves the share image (og:image, twitter:image) of a project page as a new `link-` original. */
+export async function saveImageFromLink(pageUrl: string, policy?: UrlPolicy): Promise<string> {
+  const page = await safeFetch(pageUrl, {
+    maxBytes: MAX_HTML_BYTES, truncate: true, accept: 'text/html,application/xhtml+xml', policy,
+  });
+  const type = page.contentType.split(';')[0]!.trim().toLowerCase();
+  if (type !== 'text/html' && type !== 'application/xhtml+xml') {
+    throw new NoShareImageError(`the link is not an HTML page (${type || 'no content type'})`);
   }
-  return saveImageBuffer(Buffer.concat(chunks), prefix);
+  const imageUrl = findShareImage(page.body.toString('utf8'), page.url.toString());
+  if (!imageUrl) throw new NoShareImageError('the page has no og:image / twitter:image');
+  return saveImageFromUrl(imageUrl, 'link', policy);
 }
 
 /** YouTube still qualities, best first. `maxresdefault` (1280×720) only exists for HD uploads;
@@ -238,6 +231,10 @@ export class UploadsService implements OnModuleInit {
 
   fetchYoutubeThumbnail(youtubeId: string): Promise<string> {
     return fetchYoutubeThumbnail(youtubeId);
+  }
+
+  saveImageFromLink(url: string): Promise<string> {
+    return saveImageFromLink(url);
   }
 
   deleteOriginal(filename: string): Promise<void> {
