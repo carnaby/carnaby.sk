@@ -31,8 +31,8 @@ ENV API_INTERNAL_URL=$API_INTERNAL_URL
 ENV APP_URL=$APP_URL
 # NEXT_PUBLIC_* vars are inlined by Next into the client/server JS at build time (not read from
 # the running container's env, unlike API_INTERNAL_URL/APP_URL above) -- see
-# apps/web/components/site/umami.tsx. Must be passed as build-args by CI (docker/.env.nas.example
-# runtime env of the same name is a no-op; kept there only for parity, see docker-compose.nas.yml).
+# apps/web/components/site/umami.tsx. Must be passed as build-args by CI (docker/.env.prod.example
+# runtime env of the same name is a no-op; kept there only for parity, see docker-compose.prod.yml).
 ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
 ARG NEXT_PUBLIC_UMAMI_SRC=""
 ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
@@ -48,8 +48,8 @@ WORKDIR /app
 COPY --from=build /repo/apps/web/.next/standalone ./
 COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /repo/apps/web/public ./apps/web/public
-# The runner's files are owned by the build-stage user, but the NAS compose runs this container
-# as an arbitrary host uid:gid (`user: "1026:100"`) that doesn't match. Next's ISR/prerender disk
+# The runner's files are owned by the build-stage user, but the prod compose runs this container
+# as an arbitrary host uid:gid (`user: "1000:1000"`) that doesn't match. Next's ISR/prerender disk
 # cache lazily mkdirs apps/web/.next/cache at request time; without write access that mkdir fails
 # with EACCES and the cache is silently disabled (serving still works off the prerendered pages).
 # Pre-create the dir and open up perms for arbitrary uids: a+rwX keeps dirs traversable/writable

@@ -7,7 +7,7 @@ coverage
 .env
 .env.*
 !.env.example
-!docker/.env.nas.example
+!docker/.env.prod.example
 test-results
 playwright-report
 tools/migrate-legacy/data

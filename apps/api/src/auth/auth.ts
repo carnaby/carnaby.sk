@@ -50,7 +50,7 @@ export function createAuth(db: Db) {
     },
     session: { expiresIn: 7 * DAY_SECONDS },
     advanced: {
-      // Requests arrive via DSM's reverse proxy and then the Next.js rewrite proxy, so
+      // Requests arrive via the Caddy reverse proxy and then the Next.js rewrite proxy, so
       // X-Forwarded-For carries more than one hop. Without trusted proxies better-auth refuses a
       // multi-value header and rate-limits everyone in ONE shared bucket -- a few bad requests
       // would then lock every visitor (including the admin) out of sign-in. With the private

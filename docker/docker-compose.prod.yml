@@ -1,28 +1,29 @@
-# Deployed verbatim to /volume1/docker/carnaby-sk-v2/docker-compose.yml on the Synology NAS
-# (Task 28 scp's this file to that exact destination filename). Do not add local `build:`
-# blocks here -- this stack only ever pulls prebuilt images from GHCR (published by CI, Task 27);
-# building on the NAS itself is not supported (no repo checkout there).
+# Production stack. Copied verbatim as /srv/carnaby-sk/docker-compose.yml on the NUC
+# `carnaby-server` (since 2026-11-06; before that the Synology NAS). The infra admin (services
+# repo) deploys this file and owns /srv/carnaby-sk/docker-compose.override.yml next to it, which
+# compose loads on its own -- run `docker compose up -d` there WITHOUT -f. Push to `main` needs
+# none of this: CI publishes the images to GHCR and Watchtower rolls out web/api within ~5 min.
+#
+# This stack only pulls prebuilt images from GHCR; do not add `build:` blocks (no repo checkout on
+# the server). Relative paths (./uploads, ./cache, ./db) resolve next to the deployed file, i.e.
+# under /srv/carnaby-sk, where the infra admin's nightly backup picks them up.
+#
+# No host port: Caddy on the NUC terminates HTTPS and reaches carnaby-web:3000 over the shared
+# `edge` network, which the infra admin's override attaches to `web`. Web calls the API as
+# http://api:3001, so no other container on `edge` may be named `api` (guarded by the infra admin).
 #
 # Explicit project name -- same collision class documented in docker-compose.dev.yml and
 # docker-compose.local-prod.yml (Task 25 incident): without `name:`, compose infers the project
-# name from the compose file's directory. On the NAS the directory is already
-# `/volume1/docker/carnaby-sk-v2`, so inference would happen to be fine there, but pinning it
-# explicitly is now house style for every compose file in this repo, and it also makes this file
-# safe to run from any other directory (e.g. a local `docker compose -f docker/docker-compose.nas.yml
-# config` dry-run from the repo root) without colliding with docker-compose.dev.yml's
-# `carnaby-dev` or docker-compose.local-prod.yml's `carnaby-local-prod`.
-name: carnaby-sk-v2
+# name from the directory. Pinning it also makes a local `docker compose -f
+# docker/docker-compose.prod.yml config` dry-run safe next to `carnaby-dev` / `carnaby-local-prod`.
+name: carnaby-sk
 
 services:
   web:
     image: ghcr.io/carnaby/carnaby-web:${TAG:-dev}
     container_name: carnaby-web
     restart: unless-stopped
-    user: "1026:100"
-    # Staging host port changed from the plan's 3100 -> 3200: Task 28 pre-flight found 3100
-    # already bound by the unrelated omnistra-cc project's web container (occupied since
-    # 2026-07-02). 3200 verified free on the NAS at the time of this change.
-    ports: ['3200:3000']
+    user: "1000:1000"
     environment:
       - NODE_ENV=production
       # Runtime copy of API_INTERNAL_URL -- lib/trpc-server.ts and lib/session.ts read it from
@@ -57,7 +58,7 @@ services:
     image: ghcr.io/carnaby/carnaby-api:${TAG:-dev}
     container_name: carnaby-api
     restart: unless-stopped
-    user: "1026:100"
+    user: "1000:1000"
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -75,8 +76,8 @@ services:
       - UPLOADS_DIR=/data/uploads
       - CACHE_DIR=/data/cache
     volumes:
-      - /volume1/docker/carnaby-sk-v2/uploads:/data/uploads
-      - /volume1/docker/carnaby-sk-v2/cache:/data/cache
+      - ./uploads:/data/uploads
+      - ./cache:/data/cache
     depends_on:
       db: { condition: service_healthy }
     networks: [carnaby-v2]
@@ -92,15 +93,15 @@ services:
 
   db:
     image: postgres:17-alpine
-    container_name: carnaby-db-v2
+    container_name: carnaby-db
     restart: unless-stopped
-    user: "1026:100"
+    user: "1000:1000"
     environment:
       - POSTGRES_DB=carnaby
       - POSTGRES_USER=carnaby
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
-      - /volume1/docker/carnaby-sk-v2/db:/var/lib/postgresql/data
+      - ./db:/var/lib/postgresql/data
     networks: [carnaby-v2]
     # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
     # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.

@@ -2,12 +2,16 @@
 
 Osobný web Jozefa Sokola (hudba Dodo/Carnaby, devlog): pnpm + Nx monorepo, Next.js 16 (`apps/web`),
 NestJS + tRPC (`apps/api`), Drizzle/Postgres (`packages/db`), MCP server na správu obsahu.
-Beží na Synology NAS; push na `main` sa cez CI a Watchtower do pár minút nasadí do produkcie.
+Beží na NUC `carnaby-server` (od 2026-11-06, predtým Synology NAS) ako compose projekt `carnaby-sk`
+v `/srv/carnaby-sk` za Caddy; push na `main` sa cez CI (GHCR) a Watchtower do pár minút nasadí do produkcie.
+Server, compose súbor na ňom (`docker/docker-compose.prod.yml`), override, zálohy a Caddy spravuje infra admin
+(projekt `services`, pravidlá v Tabula `services` → `docs/infra/rules.md`); riadky so značkou
+`infra-admin (services)` nemeň.
 
 ## Dokumentácia
 
 `docs/` nie je v gite. Je len v Tabula (projekt `carnaby-sk`) a na disk ju vráti `tabula pull`
-(alebo SessionStart hook). Patrí sem runbook pre NAS (`docs/deploy/`), MCP (`docs/mcp.md`),
+(alebo SessionStart hook). Patrí sem história nasadenia a runbook z čias NAS (`docs/deploy/`), MCP (`docs/mcp.md`),
 YouTube sync (`docs/youtube.md`), pôvodný spec a plán prepisu (`docs/superpowers/`) a znalosti agenta
 (`docs/agents/`). Rozhodnutia z prepisu v2 sú v `.superpowers/sdd/progress.md` a `task-*-report.md`.
 Nový alebo zmenený súbor v `docs/` ulož do Tabula (`tabula push`, na webe `write_file`).
