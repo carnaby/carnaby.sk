@@ -4,6 +4,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
+import { InvalidImageError, UnsupportedMimeTypeError, UpstreamNotFoundError, UpstreamUnavailableError } from './errors';
+
 // Multer only reports the mimetype the client sent, so the mapping below both allowlists the
 // four supported image types AND supplies the on-disk extension — the original filename's
 // extension (client-controlled) is never trusted.
@@ -14,13 +16,10 @@ const ALLOWED_MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
 };
 
-export class UnsupportedMimeTypeError extends Error {}
-
-export class UpstreamNotFoundError extends Error {}
-
-export class UpstreamUnavailableError extends Error {}
-
-export class InvalidImageError extends Error {}
+export {
+  BlockedUrlError, InvalidImageError, NoShareImageError, ResponseTooLargeError,
+  UnsupportedMimeTypeError, UpstreamNotFoundError, UpstreamUnavailableError,
+} from './errors';
 
 /** Upper bound for images saved from a URL or a base64 payload (MCP tools). */
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
