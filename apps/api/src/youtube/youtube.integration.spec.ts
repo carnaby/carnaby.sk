@@ -122,11 +122,13 @@ d('YouTube sync', () => {
     await upsertPost(db, {
       id: row!.id, slug: current.post.slug, status: current.post.status, isFeatured: current.post.isFeatured,
       youtubeId: vid(1), thumbnailPath: current.post.thumbnailPath ?? undefined, categoryIds: current.categoryIds,
+      projectUrl: 'https://example.com/project',
       translations: { sk: { title: 'Stará verzia', content: 'stará' }, en: { title: 'Night Drive', content: 'translated on the web' } },
     }, authorId);
 
     await syncPostFromYoutube(db, row!.id, authorId, settings);
     const after = await getPostById(db, row!.id);
+    expect(after.post.projectUrl).toBe('https://example.com/project');
     expect(after.translations.sk?.title).toBe('Nočná jazda');
     expect(after.translations.en).toMatchObject({ title: 'Night Drive', content: 'translated on the web' });
     expect(after.post.status).toBe('published');

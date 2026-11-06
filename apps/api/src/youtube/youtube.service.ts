@@ -238,6 +238,7 @@ export async function syncPostFromYoutube(
     isFeatured: current.post.isFeatured,
     youtubeId: current.post.youtubeId,
     soundcloudUrl: current.post.soundcloudUrl ?? undefined,
+    projectUrl: current.post.projectUrl ?? undefined,
     thumbnailPath: preview.thumbnail ?? current.post.thumbnailPath ?? undefined,
     categoryIds: current.categoryIds,
     publishedAt: preview.publishedAt,

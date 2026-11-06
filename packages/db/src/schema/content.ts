@@ -21,6 +21,7 @@ export const posts = pgTable('posts', {
   thumbnailPath: text('thumbnail_path'),
   youtubeId: text('youtube_id'),
   soundcloudUrl: text('soundcloud_url'),
+  projectUrl: text('project_url'),
   authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
   viewCount: integer('view_count').notNull().default(0),
   publishedAt: timestamp('published_at', { withTimezone: true }),

@@ -72,6 +72,22 @@ d('posts admin', () => {
     await admin.posts.remove({ id });
     await expect(admin.posts.byId({ id })).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
+
+  it('stores, returns and clears projectUrl', async () => {
+    const slug = `adm-project-${runId}`;
+    const { id } = await admin.posts.create({
+      slug, status: 'published', isFeatured: false, categoryIds: [catId],
+      projectUrl: 'https://one-light-day.carnaby.sk/',
+      translations: { sk: { title: 'Projekt', content: 'telo' } },
+    });
+    expect((await admin.posts.byId({ id })).post.projectUrl).toBe('https://one-light-day.carnaby.sk/');
+    expect((await anon.posts.bySlug({ slug, language: 'sk' }))?.projectUrl).toBe('https://one-light-day.carnaby.sk/');
+
+    await admin.posts.update({ id, slug, status: 'published', isFeatured: false, categoryIds: [catId],
+      translations: { sk: { title: 'Projekt', content: 'telo' } } });
+    expect((await admin.posts.byId({ id })).post.projectUrl).toBeNull();
+    await admin.posts.remove({ id });
+  });
 });
 
 d('posts admin -- regressions', () => {

@@ -46,6 +46,7 @@ export interface PostById {
     thumbnailPath: string | null;
     youtubeId: string | null;
     soundcloudUrl: string | null;
+    projectUrl: string | null;
     publishedAt: string | null;
     viewCount: number;
   };
@@ -157,6 +158,7 @@ export async function getPostById(db: Db, id: number): Promise<PostById> {
       thumbnailPath: post.thumbnailPath,
       youtubeId: post.youtubeId,
       soundcloudUrl: post.soundcloudUrl,
+      projectUrl: post.projectUrl,
       publishedAt: post.publishedAt?.toISOString() ?? null,
       viewCount: post.viewCount,
     },
@@ -206,7 +208,7 @@ export async function upsertPost(db: Db, input: PostUpsertInput & { id?: number 
       const base = {
         slug: input.slug, status: input.status, isFeatured: input.isFeatured,
         thumbnailPath: input.thumbnailPath ?? null, youtubeId: input.youtubeId ?? null,
-        soundcloudUrl: input.soundcloudUrl ?? null, updatedAt: new Date(),
+        soundcloudUrl: input.soundcloudUrl ?? null, projectUrl: input.projectUrl ?? null, updatedAt: new Date(),
       };
       const explicitPublishedAt = input.publishedAt ? new Date(input.publishedAt) : null;
       let id = input.id;

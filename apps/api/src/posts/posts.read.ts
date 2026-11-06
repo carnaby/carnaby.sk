@@ -36,6 +36,7 @@ export type PostDetail = PostListItem & {
   content: string;
   metaDescription: string | null;
   soundcloudUrl: string | null;
+  projectUrl: string | null;
   availableLanguages: Language[];
 };
 
@@ -151,6 +152,7 @@ export async function getPostBySlug(
     content: tr.content,
     metaDescription: tr.metaDescription,
     soundcloudUrl: post.soundcloudUrl,
+    projectUrl: post.projectUrl,
     availableLanguages,
   };
 }
