@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { CirclePlay, ImageOff, Loader2, Upload } from 'lucide-react';
+import { CirclePlay, ImageOff, Link2, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { thumbUrl } from '../../lib/images';
@@ -16,6 +16,8 @@ export interface ThumbnailPickerProps {
   /** The editor's current `youtubeId` field value — "Z YouTube" fetches a stock thumbnail for
    * whatever id is currently typed there, so this must stay live as the caller's state changes. */
   youtubeId: string;
+  /** The editor's current "Odkaz na projekt" value — "Z odkazu" takes that page's share image (og:image). */
+  projectUrl: string;
 }
 
 interface UploadErrorBody {
@@ -36,16 +38,18 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
 
 /**
  * `<PostEditor>`'s thumbnail control (Task 21): shows the current thumbnail (if any) at 300px via
- * `thumbUrl`, and two upload paths — a hidden file input triggered by "Nahrať"
- * (`POST /api/uploads/thumbnail`, multipart), and "Z YouTube" (`POST /api/uploads/from-youtube`)
- * which uses whatever `youtubeId` is currently typed into the editor's own field. Both REST calls
- * are same-origin, so the browser already sends the admin session cookie — no auth header needed.
+ * `thumbUrl`, and three upload paths — a hidden file input triggered by "Nahrať"
+ * (`POST /api/uploads/thumbnail`, multipart), "Z YouTube" (`POST /api/uploads/from-youtube`)
+ * which uses whatever `youtubeId` is currently typed into the editor's own field, and "Z odkazu"
+ * (`POST /api/uploads/from-link`) which takes the share image of the typed project link. All REST
+ * calls are same-origin, so the browser already sends the admin session cookie — no auth header needed.
  */
-export function ThumbnailPicker({ value, onChange, youtubeId }: ThumbnailPickerProps) {
+export function ThumbnailPicker({ value, onChange, youtubeId, projectUrl }: ThumbnailPickerProps) {
   const [uploading, setUploading] = useState(false);
   const [fetchingYoutube, setFetchingYoutube] = useState(false);
+  const [fetchingLink, setFetchingLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const busy = uploading || fetchingYoutube;
+  const busy = uploading || fetchingYoutube || fetchingLink;
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -98,6 +102,33 @@ export function ThumbnailPicker({ value, onChange, youtubeId }: ThumbnailPickerP
     }
   }
 
+  async function handleFromLink() {
+    const url = projectUrl.trim();
+    if (!url) {
+      toast.error('Najprv zadajte odkaz na projekt.');
+      return;
+    }
+
+    setFetchingLink(true);
+    try {
+      const res = await fetch('/api/uploads/from-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res, 'Stiahnutie náhľadu z odkazu sa nepodarilo.'));
+      }
+      const data = (await res.json()) as { filename: string };
+      onChange(data.filename);
+      toast.success('Náhľadový obrázok bol stiahnutý z odkazu.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Stiahnutie náhľadu z odkazu sa nepodarilo.');
+    } finally {
+      setFetchingLink(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <Label>Náhľadový obrázok</Label>
@@ -130,6 +161,10 @@ export function ThumbnailPicker({ value, onChange, youtubeId }: ThumbnailPickerP
           <Button type="button" variant="outline" className="h-10 flex-1 sm:h-8 sm:flex-none" disabled={busy || !youtubeId.trim()} onClick={handleFromYoutube}>
             {fetchingYoutube ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <CirclePlay aria-hidden="true" />}
             {fetchingYoutube ? 'Sťahujem…' : 'Z YouTube'}
+          </Button>
+          <Button type="button" variant="outline" className="h-10 flex-1 sm:h-8 sm:flex-none" disabled={busy || !projectUrl.trim()} onClick={handleFromLink}>
+            {fetchingLink ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Link2 aria-hidden="true" />}
+            {fetchingLink ? 'Sťahujem…' : 'Z odkazu'}
           </Button>
           {value ? (
             <Button type="button" variant="ghost" className="h-10 sm:h-8" disabled={busy} onClick={() => onChange('')}>

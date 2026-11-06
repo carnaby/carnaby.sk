@@ -112,14 +112,27 @@ describe('buildUpsertInput', () => {
 
   it('sends blank optional fields as undefined, not empty strings', () => {
     let state = skOnlyState();
-    state = { ...state, youtubeId: '   ', soundcloudUrl: '', thumbnailPath: '' };
+    state = { ...state, youtubeId: '   ', soundcloudUrl: '', projectUrl: '  ', thumbnailPath: '' };
 
     const result = buildUpsertInput(state);
     expect('input' in result).toBe(true);
     if (!('input' in result)) throw new Error('expected input');
     expect(result.input.youtubeId).toBeUndefined();
     expect(result.input.soundcloudUrl).toBeUndefined();
+    expect(result.input.projectUrl).toBeUndefined();
     expect(result.input.thumbnailPath).toBeUndefined();
+  });
+
+  it('passes a trimmed project link through', () => {
+    const state = { ...skOnlyState(), projectUrl: ' https://one-light-day.carnaby.sk/ ' };
+    const result = buildUpsertInput(state);
+    if (!('input' in result)) throw new Error('expected input');
+    expect(result.input.projectUrl).toBe('https://one-light-day.carnaby.sk/');
+  });
+
+  it('rejects a project link that is not http(s), in Slovak', () => {
+    const result = buildUpsertInput({ ...skOnlyState(), projectUrl: 'javascript:alert(1)' });
+    expect(result).toEqual({ errors: ['Odkaz musí byť adresa http:// alebo https://.'] });
   });
 });
 

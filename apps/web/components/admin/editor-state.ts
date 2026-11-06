@@ -36,6 +36,7 @@ export interface EditorState {
   isFeatured: boolean;
   youtubeId: string;
   soundcloudUrl: string;
+  projectUrl: string;
   thumbnailPath: string;
   categoryIds: number[];
   /** ISO date-time, '' = not set yet (the api stamps "now" on first publish). */
@@ -56,6 +57,7 @@ export function createEmptyState(): EditorState {
     isFeatured: false,
     youtubeId: '',
     soundcloudUrl: '',
+    projectUrl: '',
     thumbnailPath: '',
     categoryIds: [],
     publishedAt: '',
@@ -134,7 +136,7 @@ const LANGUAGE_LABEL: Record<Language, string> = { sk: 'SK', en: 'EN' };
  * warning. So instead this returns a validation error for every partial tab, blocking the save
  * entirely, before even attempting the zod parse below.
  *
- * Blank optional fields (excerpt, metaDescription, youtubeId, soundcloudUrl, thumbnailPath) on a
+ * Blank optional fields (excerpt, metaDescription, youtubeId, soundcloudUrl, projectUrl, thumbnailPath) on a
  * present tab are sent as `undefined`, never as `""`.
  */
 export function buildUpsertInput(state: EditorState): BuildUpsertResult {
@@ -164,6 +166,7 @@ export function buildUpsertInput(state: EditorState): BuildUpsertResult {
     isFeatured: state.isFeatured,
     youtubeId: state.youtubeId.trim() || undefined,
     soundcloudUrl: state.soundcloudUrl.trim() || undefined,
+    projectUrl: state.projectUrl.trim() || undefined,
     thumbnailPath: state.thumbnailPath.trim() || undefined,
     categoryIds: state.categoryIds,
     publishedAt: state.publishedAt || undefined,

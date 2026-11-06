@@ -72,6 +72,7 @@ function fromPostById(data: PostByIdResult): EditorState {
     isFeatured: data.post.isFeatured,
     youtubeId: data.post.youtubeId ?? '',
     soundcloudUrl: data.post.soundcloudUrl ?? '',
+    projectUrl: data.post.projectUrl ?? '',
     thumbnailPath: data.post.thumbnailPath ?? '',
     categoryIds: data.categoryIds,
     publishedAt: data.post.publishedAt ?? '',
@@ -535,10 +536,22 @@ export function PostEditor({ mode }: PostEditorProps) {
                 className={INPUT_CLASS}
               />
             </Field>
+            <Field label="Odkaz na projekt" htmlFor="projectUrl">
+              <Input
+                id="projectUrl"
+                type="url"
+                inputMode="url"
+                value={state.projectUrl}
+                onChange={(event) => updateState((prev) => ({ ...prev, projectUrl: event.target.value }))}
+                placeholder="https://…"
+                className={INPUT_CLASS}
+              />
+            </Field>
             <ThumbnailPicker
               value={state.thumbnailPath}
               onChange={(filename) => updateState((prev) => ({ ...prev, thumbnailPath: filename }))}
               youtubeId={state.youtubeId}
+              projectUrl={state.projectUrl}
             />
           </Section>
         </div>
