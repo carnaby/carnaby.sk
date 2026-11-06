@@ -19,7 +19,8 @@ function parseAttributes(source: string): Map<string, string> {
  * input cannot make it quadratic.
  */
 function* metaTagBodies(html: string): Generator<string> {
-  const lower = html.toLowerCase();
+  // ASCII-only lowercasing keeps every index valid for `html` (toLowerCase can change length).
+  const lower = html.replace(/[A-Z]/g, (c) => c.toLowerCase());
   let from = 0;
   for (;;) {
     const start = lower.indexOf('<meta', from);

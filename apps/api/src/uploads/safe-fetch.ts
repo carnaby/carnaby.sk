@@ -124,7 +124,7 @@ function fetchOnce(url: URL, options: SafeFetchOptions, policy: UrlPolicy, deadl
       method: 'GET',
       agent: false,
       lookup: guardedLookup(policy.isAllowedAddress ?? isPublicAddress),
-      headers: { 'user-agent': USER_AGENT, accept: options.accept ?? '*/*', 'accept-encoding': 'gzip, deflate, br' },
+      headers: { 'user-agent': USER_AGENT, accept: options.accept ?? '*/*', 'accept-encoding': 'gzip, br' },
     });
     const timer = setTimeout(() => {
       fail(new UpstreamUnavailableError('request timed out'));

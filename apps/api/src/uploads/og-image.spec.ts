@@ -60,6 +60,12 @@ describe('findShareImage', () => {
     );
   });
 
+  it('keeps indices right when lowercasing changes string length (U+0130 and friends)', () => {
+    expect(
+      findShareImage('<title>İstanbul</title><meta property="og:image" content="https://e.com/a.png">', 'https://e.com/'),
+    ).toBe('https://e.com/a.png');
+  });
+
   it('uses the first duplicate og:image tag', () => {
     expect(
       findShareImage('<meta property="og:image" content="/first.png"><meta property="og:image" content="/second.png">', PAGE),
