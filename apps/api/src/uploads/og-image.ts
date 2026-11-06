@@ -1,7 +1,6 @@
 /** Meta keys that name a page's share image, most specific first. */
 const SHARE_IMAGE_KEYS = ['og:image', 'og:image:secure_url', 'og:image:url', 'twitter:image', 'twitter:image:src'] as const;
 
-const META_TAG = /<meta\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi;
 const ATTRIBUTE = /([^\s"'=<>`/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
@@ -12,6 +11,42 @@ function parseAttributes(source: string): Map<string, string> {
     if (!attributes.has(name)) attributes.set(name, m[2] ?? m[3] ?? m[4] ?? '');
   }
   return attributes;
+}
+
+/**
+ * Bodies of the `<meta ...>` tags (text between `<meta` and the closing `>`), in one linear pass.
+ * `>` inside quotes does not close a tag. An unterminated tag or quote ends the scan, so hostile
+ * input cannot make it quadratic.
+ */
+function* metaTagBodies(html: string): Generator<string> {
+  const lower = html.toLowerCase();
+  let from = 0;
+  for (;;) {
+    const start = lower.indexOf('<meta', from);
+    if (start === -1) return;
+    const bodyStart = start + 5;
+    const next = html[bodyStart];
+    if (next !== undefined && !/[\s/>]/.test(next)) {
+      from = bodyStart;
+      continue;
+    }
+    let quote: string | null = null;
+    let end = -1;
+    for (let i = bodyStart; i < html.length; i++) {
+      const ch = html[i];
+      if (quote) {
+        if (ch === quote) quote = null;
+      } else if (ch === '"' || ch === "'") {
+        quote = ch;
+      } else if (ch === '>') {
+        end = i;
+        break;
+      }
+    }
+    if (end === -1) return;
+    yield html.slice(bodyStart, end);
+    from = end + 1;
+  }
 }
 
 function decodeEntities(value: string): string {
@@ -27,8 +62,8 @@ function decodeEntities(value: string): string {
 /** The page's share image (og:image and fallbacks) as an absolute http(s) URL, or null. */
 export function findShareImage(html: string, pageUrl: string): string | null {
   const found = new Map<string, string>();
-  for (const tag of html.matchAll(META_TAG)) {
-    const attributes = parseAttributes(tag[1] ?? '');
+  for (const body of metaTagBodies(html)) {
+    const attributes = parseAttributes(body);
     const key = (attributes.get('property') ?? attributes.get('name') ?? '').trim().toLowerCase();
     const content = attributes.get('content')?.trim();
     if (content && (SHARE_IMAGE_KEYS as readonly string[]).includes(key) && !found.has(key)) found.set(key, content);

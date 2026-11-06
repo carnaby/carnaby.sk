@@ -42,4 +42,27 @@ describe('findShareImage', () => {
     expect(findShareImage('<meta property="og:image" content="  ">', PAGE)).toBeNull();
     expect(findShareImage('<title>No image</title>', PAGE)).toBeNull();
   });
+
+  it('stays linear on hostile unterminated markup', () => {
+    for (const html of ['<meta '.repeat(200_000), '<meta content="'.repeat(70_000)]) {
+      const started = performance.now();
+      expect(findShareImage(html, PAGE)).toBeNull();
+      expect(performance.now() - started).toBeLessThan(500);
+    }
+  });
+
+  it('keeps tags parsed before an unterminated <meta', () => {
+    expect(
+      findShareImage('<meta property="og:image" content="https://a.sk/ok.png"><meta data-x="never closed', PAGE),
+    ).toBe('https://a.sk/ok.png');
+    expect(findShareImage('<meta name="twitter:image" content="/tw.png"><meta data-x="open', PAGE)).toBe(
+      'https://one-light-day.carnaby.sk/tw.png',
+    );
+  });
+
+  it('uses the first duplicate og:image tag', () => {
+    expect(
+      findShareImage('<meta property="og:image" content="/first.png"><meta property="og:image" content="/second.png">', PAGE),
+    ).toBe('https://one-light-day.carnaby.sk/first.png');
+  });
 });
