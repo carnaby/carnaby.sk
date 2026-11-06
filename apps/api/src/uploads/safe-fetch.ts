@@ -101,11 +101,21 @@ function fetchOnce(url: URL, options: SafeFetchOptions, policy: UrlPolicy, deadl
     if (remaining <= 0) return reject(new UpstreamUnavailableError('request timed out'));
 
     let settled = false;
+    let incoming: IncomingMessage | undefined;
+    let decoder: Readable | undefined;
+    // On every way out (result, error, cap, timeout, redirect) stop the decoder and close the
+    // socket, so nothing keeps inflating or trickling after the call has returned.
+    const teardown = () => {
+      decoder?.destroy();
+      incoming?.destroy();
+      req.destroy();
+    };
     const settle = (fn: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       fn();
+      teardown();
     };
     const fail = (error: unknown) => settle(() => reject(asFetchError(error)));
 
@@ -118,28 +128,24 @@ function fetchOnce(url: URL, options: SafeFetchOptions, policy: UrlPolicy, deadl
     });
     const timer = setTimeout(() => {
       fail(new UpstreamUnavailableError('request timed out'));
-      req.destroy();
     }, remaining);
     req.on('error', fail);
 
     req.on('response', (res) => {
+      incoming = res;
       res.on('error', fail);
       const status = res.statusCode ?? 0;
       if (status >= 300 && status < 400 && res.headers.location) {
         const location = res.headers.location;
         settle(() => resolve({ kind: 'redirect', location }));
-        res.resume();
-        req.destroy();
         return;
       }
       if (status < 200 || status >= 300) {
-        res.resume();
         if (status === 404 || status === 410) return fail(new UpstreamNotFoundError(`not found (status ${status})`));
         return fail(new UpstreamUnavailableError(`download failed with status ${status}`));
       }
       const declared = Number(res.headers['content-length'] ?? 0);
       if (!options.truncate && declared > options.maxBytes) {
-        res.destroy();
         return fail(new ResponseTooLargeError(`response too large (max ${options.maxBytes} bytes)`));
       }
 
@@ -149,7 +155,7 @@ function fetchOnce(url: URL, options: SafeFetchOptions, policy: UrlPolicy, deadl
         settle(() =>
           resolve({ kind: 'done', result: { url, contentType: String(res.headers['content-type'] ?? ''), body: Buffer.concat(chunks) } }),
         );
-      const body = decoded(res);
+      const body = (decoder = decoded(res));
       body.on('data', (chunk: Buffer) => {
         if (settled) return;
         const room = options.maxBytes - total;
@@ -161,7 +167,6 @@ function fetchOnce(url: URL, options: SafeFetchOptions, policy: UrlPolicy, deadl
           } else {
             fail(new ResponseTooLargeError(`response too large (max ${options.maxBytes} bytes)`));
           }
-          res.destroy();
           return;
         }
         chunks.push(chunk);

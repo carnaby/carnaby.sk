@@ -1,7 +1,7 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import zlib from 'node:zlib';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BlockedUrlError, ResponseTooLargeError, UpstreamNotFoundError, UpstreamUnavailableError } from './errors';
 import { safeFetch, type UrlPolicy } from './safe-fetch';
 
@@ -10,13 +10,30 @@ const LOCAL: UrlPolicy = { isAllowedAddress: (ip) => ip === '127.0.0.1', allowAn
 
 let base = '';
 let server: http.Server;
+let loopHits = 0;
+let slowSocketClosed: Promise<void> = Promise.resolve();
+const timers: NodeJS.Timeout[] = [];
+const zeros = Buffer.alloc(32 * 1024 * 1024);
+const brBomb = zlib.brotliCompressSync(zeros);
+const gzipBomb = zlib.gzipSync(zeros);
 
 beforeAll(async () => {
   server = http.createServer((req, res) => {
     const path = req.url ?? '/';
     if (path === '/ok') return res.writeHead(200, { 'content-type': 'text/plain' }).end('hello');
     if (path === '/redirect') return res.writeHead(302, { location: '/ok' }).end();
-    if (path === '/loop') return res.writeHead(302, { location: '/loop' }).end();
+    if (path === '/loop') {
+      loopHits++;
+      return res.writeHead(302, { location: '/loop' }).end();
+    }
+    if (path === '/bomb-br') return res.writeHead(200, { 'content-encoding': 'br' }).end(brBomb);
+    if (path === '/bomb-gzip') return res.writeHead(200, { 'content-encoding': 'gzip' }).end(gzipBomb);
+    if (path === '/slow500') {
+      res.writeHead(500);
+      slowSocketClosed = new Promise<void>((resolve) => req.socket.on('close', () => resolve()));
+      timers.push(setInterval(() => res.write('z'), 50));
+      return;
+    }
     if (path === '/to-private') return res.writeHead(301, { location: 'http://10.0.0.1/secret' }).end();
     if (path === '/missing') return res.writeHead(404).end();
     if (path === '/boom') return res.writeHead(500).end();
@@ -37,6 +54,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  timers.forEach(clearInterval);
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
 });
@@ -56,7 +74,9 @@ describe('safeFetch with a local test policy', () => {
   });
 
   it('stops after 3 redirects', async () => {
+    loopHits = 0;
     await expect(safeFetch(`${base}/loop`, { maxBytes: 1000, policy: LOCAL })).rejects.toThrow(/redirects/);
+    expect(loopHits).toBe(4); // the first request plus 3 redirects
   });
 
   it('re-checks every redirect target', async () => {
@@ -81,6 +101,33 @@ describe('safeFetch with a local test policy', () => {
   it('decodes gzip', async () => {
     const res = await safeFetch(`${base}/gzip`, { maxBytes: 1000, policy: LOCAL });
     expect(res.body.toString()).toBe('<p>zipped</p>');
+  });
+
+  it.each([
+    ['createBrotliDecompress', '/bomb-br'],
+    ['createGunzip', '/bomb-gzip'],
+  ] as const)('stops the %s decoder once the cap is hit (decompression bomb)', async (factory, path) => {
+    const created: { destroyed: boolean }[] = [];
+    const original = zlib[factory].bind(zlib) as () => { destroyed: boolean };
+    const spy = vi.spyOn(zlib, factory).mockImplementation((() => {
+      const stream = original();
+      created.push(stream);
+      return stream;
+    }) as never);
+    try {
+      await expect(safeFetch(`${base}${path}`, { maxBytes: 1000, policy: LOCAL })).rejects.toBeInstanceOf(ResponseTooLargeError);
+      expect(created).toHaveLength(1);
+      expect(created[0]?.destroyed).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('closes the connection after a non-2xx status even if the body trickles on', async () => {
+    await expect(safeFetch(`${base}/slow500`, { maxBytes: 1000, policy: LOCAL })).rejects.toBeInstanceOf(UpstreamUnavailableError);
+    await expect(
+      Promise.race([slowSocketClosed, new Promise((_, reject) => setTimeout(() => reject(new Error('socket still open')), 500))]),
+    ).resolves.toBeUndefined();
   });
 
   it('times out', async () => {
