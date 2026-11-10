@@ -2,11 +2,9 @@
 
 Osobný web Jozefa Sokola (hudba Dodo/Carnaby, devlog): pnpm + Nx monorepo, Next.js 16 (`apps/web`),
 NestJS + tRPC (`apps/api`), Drizzle/Postgres (`packages/db`), MCP server na správu obsahu.
-Beží na NUC `carnaby-server` (od 2026-11-06, predtým Synology NAS) ako compose projekt `carnaby-sk`
-v `/srv/carnaby-sk` za Caddy; push na `main` sa cez CI (GHCR) a Watchtower do pár minút nasadí do produkcie.
-Server, compose súbor na ňom (`docker/docker-compose.prod.yml`), override, zálohy a Caddy spravuje infra admin
-(projekt `services`, pravidlá v Tabula `services` → `docs/infra/rules.md`); riadky so značkou
-`infra-admin (services)` nemeň.
+Produkciu (server, compose, zálohy, reverse proxy) spravuje infra admin. Push na `main` sa cez CI (GHCR) do pár minút
+nasadí do produkcie. Riadky so značkou `infra-admin (services)` nemeň. Podrobnosti o nasadení sú v `docs/` (mimo git),
+nie v tomto verejnom repe.
 
 ## Dokumentácia
 

@@ -1,16 +1,13 @@
-# Production stack. Copied verbatim as /srv/carnaby-sk/docker-compose.yml on the NUC
-# `carnaby-server` (since 2026-11-06; before that the Synology NAS). The infra admin (services
-# repo) deploys this file and owns /srv/carnaby-sk/docker-compose.override.yml next to it, which
-# compose loads on its own -- run `docker compose up -d` there WITHOUT -f. Push to `main` needs
-# none of this: CI publishes the images to GHCR and Watchtower rolls out web/api within ~5 min.
+# Production stack, deployed as docker-compose.yml by the infra admin, who also owns a
+# docker-compose.override.yml next to it (compose loads it on its own -- run `docker compose up -d`
+# without -f). A push to `main` needs none of this: CI publishes the images to GHCR and the
+# production host rolls out web/api within minutes.
 #
 # This stack only pulls prebuilt images from GHCR; do not add `build:` blocks (no repo checkout on
-# the server). Relative paths (./uploads, ./cache, ./db) resolve next to the deployed file, i.e.
-# under /srv/carnaby-sk, where the infra admin's nightly backup picks them up.
+# the server). Relative paths (./uploads, ./cache, ./db) resolve next to the deployed file.
 #
-# No host port: Caddy on the NUC terminates HTTPS and reaches carnaby-web:3000 over the shared
-# `edge` network, which the infra admin's override attaches to `web`. Web calls the API as
-# http://api:3001, so no other container on `edge` may be named `api` (guarded by the infra admin).
+# No host port: a reverse proxy in front of the stack terminates HTTPS and reaches carnaby-web:3000
+# (the infra admin's override wires that up). Web calls the API as http://api:3001.
 #
 # Explicit project name -- same collision class documented in docker-compose.dev.yml and
 # docker-compose.local-prod.yml (Task 25 incident): without `name:`, compose infers the project
