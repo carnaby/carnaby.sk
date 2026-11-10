@@ -45,8 +45,7 @@ services:
       api: { condition: service_healthy }
     networks: [carnaby-v2]
     labels: ['com.centurylinklabs.watchtower.enable=true']
-    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
-    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
+    # infra-admin (services): healthcheck timing is set by the operator; do not change it in this project.
     # Only the interval is set; the check itself comes from the image.
     healthcheck:
       interval: 30m
@@ -78,8 +77,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
     networks: [carnaby-v2]
-    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
-    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
+    # infra-admin (services): healthcheck timing is set by the operator; do not change it in this project.
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/health || exit 1']
       interval: 2m
@@ -100,8 +98,7 @@ services:
     volumes:
       - ./db:/var/lib/postgresql/data
     networks: [carnaby-v2]
-    # infra-admin (services): healthcheck timing is owned by the infra admin; do not change it in this project.
-    # Policy: Tabula global decision "Healthcheck intervals on the home NAS" (#cb98). Requests go to the services project.
+    # infra-admin (services): healthcheck timing is set by the operator; do not change it in this project.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U carnaby -d carnaby']
       interval: 2m
