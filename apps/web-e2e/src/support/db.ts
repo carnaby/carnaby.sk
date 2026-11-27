@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 import { Pool } from 'pg';
 
@@ -127,4 +127,23 @@ export async function createSessionCookie(user: TestUser, secret: string): Promi
 /** Sessions cascade with the user row. */
 export async function deleteUsers(ids: string[]): Promise<void> {
   await db().query(`delete from "user" where id = any($1)`, [ids]);
+}
+
+// --- upload links ---------------------------------------------------------------------------
+
+/** Inserts a valid one-hour image upload link (only the SHA-256 is stored) and returns its token. */
+export async function seedUploadLink(opts: { thumbnailPostId?: number } = {}): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  await db().query(
+    `insert into image_upload_links (token_hash, expires_at, thumbnail_post_id)
+     values ($1, now() + interval '1 hour', $2)`,
+    [createHash('sha256').update(token).digest('hex'), opts.thumbnailPostId ?? null],
+  );
+  return token;
+}
+
+export async function deleteUploadLink(token: string): Promise<void> {
+  await db().query(`delete from image_upload_links where token_hash = $1`, [
+    createHash('sha256').update(token).digest('hex'),
+  ]);
 }
