@@ -45,3 +45,14 @@ export const postCategories = pgTable('post_categories', {
   postId: integer('post_id').notNull().references(() => posts.id, { onDelete: 'cascade' }),
   categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
 }, (t) => [primaryKey({ columns: [t.postId, t.categoryId] })]);
+
+export const imageUploadLinks = pgTable('image_upload_links', {
+  id: serial('id').primaryKey(),
+  tokenHash: text('token_hash').notNull().unique(),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  thumbnailPostId: integer('thumbnail_post_id').references(() => posts.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  filename: text('filename'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
