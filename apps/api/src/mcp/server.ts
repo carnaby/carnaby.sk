@@ -2,16 +2,16 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Db } from '@carnaby/db';
 import { categories, posts, user } from '@carnaby/db';
-import { LANGUAGES, postUpsertInput, slugify, type Language, type PostUpsertInput, type TranslationInput } from '@carnaby/shared';
+import { LANGUAGES, slugify, type Language, type PostUpsertInput, type TranslationInput } from '@carnaby/shared';
 import { TRPCError } from '@trpc/server';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { appUrl } from '../auth/auth';
-import { adminListPosts, adminStats, getPostById, removePost, upsertPost, type PostById } from '../posts/posts.admin';
+import { adminListPosts, adminStats, getPostById, removePost, upsertPost } from '../posts/posts.admin';
+import { currentAsInput, InvalidPostError, savePostChanges, validateUpsert } from '../posts/post-changes';
 import {
   BlockedUrlError,
   fetchYoutubeThumbnail,
-  IMAGE_WIDTHS,
   InvalidImageError,
   NoShareImageError,
   saveImageBuffer,
@@ -21,6 +21,7 @@ import {
   UpstreamUnavailableError,
   uploadExists,
 } from '../uploads/uploads.service';
+import { imageInfo } from '../uploads/image-info';
 import type { UrlPolicy } from '../uploads/safe-fetch';
 import { YoutubeApiError, YoutubeNotConfiguredError, YoutubeVideoNotFoundError } from '../youtube/youtube.client';
 import { importYoutubeVideo, syncPostFromYoutube, youtubeOverview } from '../youtube/youtube.service';
@@ -100,7 +101,7 @@ async function run(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
     return await fn();
   } catch (error) {
     if (
-      error instanceof BlockedUrlError || error instanceof NoShareImageError || error instanceof ToolError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError ||
+      error instanceof BlockedUrlError || error instanceof NoShareImageError || error instanceof ToolError || error instanceof InvalidPostError || error instanceof InvalidImageError || error instanceof UpstreamNotFoundError ||
       error instanceof YoutubeNotConfiguredError || error instanceof YoutubeVideoNotFoundError || error instanceof YoutubeApiError
     ) {
       return toolError(error.message);
@@ -119,15 +120,6 @@ async function run(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
 function publicUrls(slug: string) {
   const base = appUrl();
   return { sk: `${base}/posts/${slug}`, en: `${base}/en/posts/${slug}` };
-}
-
-function imageInfo(filename: string) {
-  const base = appUrl();
-  return {
-    filename,
-    urls: Object.fromEntries(IMAGE_WIDTHS.map((w) => [w, `${base}/images/${w}/${filename}`])),
-    markdown: `![](/images/1200/${filename})`,
-  };
 }
 
 async function categoryMaps(db: Db) {
@@ -194,15 +186,6 @@ function postSummary(detail: Awaited<ReturnType<typeof postDetail>>) {
   return { ...detail, translations: { sk: brief(detail.translations.sk), en: brief(detail.translations.en) } };
 }
 
-/** Final validation through the same contract the admin UI uses, with readable messages. */
-function validateUpsert(candidate: unknown): PostUpsertInput {
-  const parsed = postUpsertInput.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ToolError(`Invalid post: ${parsed.error.issues.map((i) => `${i.path.join('.') || 'post'}: ${i.message}`).join('; ')}`);
-  }
-  return parsed.data;
-}
-
 function normalizeYoutubeId(value: string | null | undefined): string | undefined {
   if (value == null || value.trim() === '') return undefined;
   const raw = value.trim();
@@ -222,26 +205,6 @@ function cleanTranslation(t: TranslationInput): TranslationInput {
   };
 }
 
-/** The stored post in `postUpsertInput` shape -- the base every partial change is applied to. */
-function currentAsInput(current: PostById): PostUpsertInput {
-  const translations: PostUpsertInput['translations'] = {};
-  for (const lang of LANGUAGES) {
-    const t = current.translations[lang];
-    if (t) translations[lang] = t;
-  }
-  return {
-    slug: current.post.slug,
-    status: current.post.status,
-    isFeatured: current.post.isFeatured,
-    youtubeId: current.post.youtubeId ?? undefined,
-    soundcloudUrl: current.post.soundcloudUrl ?? undefined,
-    projectUrl: current.post.projectUrl ?? undefined,
-    thumbnailPath: current.post.thumbnailPath ?? undefined,
-    categoryIds: current.categoryIds,
-    translations,
-  };
-}
-
 /** Patch semantics for optional string fields: undefined keeps the current value, null or a
  * blank string clears it, anything else replaces it. */
 function patchField(next: string | null | undefined, current: string | undefined): string | undefined {
@@ -254,12 +217,6 @@ async function assertThumbnailExists(filename: string | undefined, previous?: st
   if (!(await uploadExists(filename))) {
     throw new ToolError(`Thumbnail "${filename}" does not exist -- upload it with upload_image first and pass the returned filename.`);
   }
-}
-
-async function saveChanges(db: Db, id: number, changes: Partial<PostUpsertInput>, actor: McpActor): Promise<void> {
-  const current = await getPostById(db, id);
-  const input = validateUpsert({ ...currentAsInput(current), ...changes });
-  await upsertPost(db, { ...input, id }, actor.userId);
 }
 
 export interface CarnabyMcpOptions {
@@ -453,7 +410,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     description: 'Changes only the status of a post: published (public), draft (hidden, work in progress) or archived (hidden, kept).',
     inputSchema: { id: z.number().int(), status: z.enum(STATUSES) },
   }, (args) => run(async () => {
-    await saveChanges(db, args.id, { status: args.status }, actor);
+    await savePostChanges(db, args.id, { status: args.status }, actor.userId);
     const post = await postDetail(db, args.id);
     return json({ id: post.id, slug: post.slug, status: post.status, publishedAt: post.publishedAt, publicUrls: post.publicUrls });
   }));
@@ -499,7 +456,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     const filename = args.url
       ? await saveImageFromUrl(args.url, prefix, options.urlPolicy)
       : await saveImageBuffer(Buffer.from((args.base64 ?? '').replace(/^data:[^;,]*;base64,/, '').replace(/\s+/g, ''), 'base64'), prefix);
-    if (args.setAsThumbnailOfPostId) await saveChanges(db, args.setAsThumbnailOfPostId, { thumbnailPath: filename }, actor);
+    if (args.setAsThumbnailOfPostId) await savePostChanges(db, args.setAsThumbnailOfPostId, { thumbnailPath: filename }, actor.userId);
     return json({ ...imageInfo(filename), thumbnailOfPostId: args.setAsThumbnailOfPostId ?? null });
   }));
 
@@ -515,7 +472,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     const youtubeId = normalizeYoutubeId(args.youtubeId ?? current.post.youtubeId);
     if (!youtubeId) throw new ToolError('The post has no youtubeId -- pass one.');
     const filename = await fetchYoutubeThumbnail(youtubeId);
-    await saveChanges(db, args.postId, { thumbnailPath: filename }, actor);
+    await savePostChanges(db, args.postId, { thumbnailPath: filename }, actor.userId);
     return json({ postId: args.postId, thumbnail: imageInfo(filename) });
   }));
 
@@ -531,7 +488,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     const url = args.url?.trim() || current.post.projectUrl;
     if (!url) throw new ToolError('The post has no projectUrl -- pass url.');
     const filename = await saveImageFromLink(url, options.urlPolicy);
-    await saveChanges(db, args.postId, { thumbnailPath: filename }, actor);
+    await savePostChanges(db, args.postId, { thumbnailPath: filename }, actor.userId);
     return json({ postId: args.postId, source: url, thumbnail: imageInfo(filename) });
   }));
 
