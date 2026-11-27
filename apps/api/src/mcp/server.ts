@@ -19,9 +19,11 @@ import {
   saveImageFromUrl,
   UpstreamNotFoundError,
   UpstreamUnavailableError,
+  MAX_IMAGE_BYTES,
   uploadExists,
 } from '../uploads/uploads.service';
 import { imageInfo } from '../uploads/image-info';
+import { createUploadLink } from '../uploads/upload-links';
 import type { UrlPolicy } from '../uploads/safe-fetch';
 import { YoutubeApiError, YoutubeNotConfiguredError, YoutubeVideoNotFoundError } from '../youtube/youtube.client';
 import { importYoutubeVideo, syncPostFromYoutube, youtubeOverview } from '../youtube/youtube.service';
@@ -53,7 +55,8 @@ Content:
   about a project with its own site) makes the post preview clickable and adds an "Open project" button.
 - To change part of a text use update_post with translations.<lang>.edits (exact old/new pairs) instead
   of resending the whole content.
-- Images: upload with upload_image (from a URL or base64), then put the returned markdown into the
+- Images: for a local file call create_image_upload and run the returned curl; use upload_image for
+  a public URL or a small base64 image. Then put the returned markdown into the
   content, or pass the filename as "thumbnail". set_thumbnail_from_youtube fetches the video still;
   set_thumbnail_from_link takes the share image (og:image) of the post's projectUrl page.
 - YouTube: youtube_overview compares the channel's videos with the site; import_youtube_video
@@ -444,7 +447,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
 
   server.registerTool('upload_image', {
     title: 'Upload image',
-    description: 'Stores an image (jpeg, png, gif or webp, max 10 MB) from a public URL or from base64 data. Returns the filename (for a post thumbnail), resized URLs and a markdown snippet for post content. Optionally sets it straight away as the thumbnail of a post.',
+    description: 'Stores an image (jpeg, png, gif or webp, max 10 MB) from a public URL or from base64 data. Returns the filename (for a post thumbnail), resized URLs and a markdown snippet for post content. Optionally sets it straight away as the thumbnail of a post. For files on the local disk prefer create_image_upload.',
     inputSchema: {
       url: z.string().optional().describe('Public http(s) URL of the image'),
       base64: z.string().optional().describe('Image bytes as base64 (a data: URL is accepted too)'),
@@ -458,6 +461,26 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
       : await saveImageBuffer(Buffer.from((args.base64 ?? '').replace(/^data:[^;,]*;base64,/, '').replace(/\s+/g, ''), 'base64'), prefix);
     if (args.setAsThumbnailOfPostId) await savePostChanges(db, args.setAsThumbnailOfPostId, { thumbnailPath: filename }, actor.userId);
     return json({ ...imageInfo(filename), thumbnailOfPostId: args.setAsThumbnailOfPostId ?? null });
+  }));
+
+  server.registerTool('create_image_upload', {
+    title: 'Create image upload link',
+    description: 'Use this for an image you have as a local file: the bytes go straight from the machine running curl to the server, not through the model. Returns a one-time upload URL and a curl command; run it with the real file path in place of <path> (curl.exe in Windows PowerShell). The curl response is the same JSON as upload_image. The link is valid for 1 hour, accepts one successful upload, max 10 MB, jpeg/png/gif/webp. On claude.ai, carnaby.sk must be added in Settings -> Capabilities -> Additional allowed domains. Optionally sets the uploaded image as the thumbnail of a post.',
+    inputSchema: {
+      setAsThumbnailOfPostId: z.number().int().optional().describe('Post whose thumbnail the uploaded image becomes'),
+    },
+  }, (args) => run(async () => {
+    const postId = args.setAsThumbnailOfPostId ?? null;
+    if (postId !== null) await getPostById(db, postId);
+    const { token, expiresAt } = await createUploadLink(db, { createdBy: actor.userId, thumbnailPostId: postId });
+    const uploadUrl = `${appUrl()}/api/uploads/link/${token}`;
+    return json({
+      uploadUrl,
+      curl: `curl --fail-with-body -T <path> ${uploadUrl}`,
+      expiresAt: expiresAt.toISOString(),
+      maxBytes: MAX_IMAGE_BYTES,
+      thumbnailOfPostId: postId,
+    });
   }));
 
   server.registerTool('set_thumbnail_from_youtube', {

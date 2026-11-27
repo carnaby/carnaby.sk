@@ -11,7 +11,8 @@ import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { categories, createDb, oauthAccessToken, oauthApplication, posts, user } from '@carnaby/db';
-import { createAuth } from '../auth/auth';
+import { appUrl, createAuth } from '../auth/auth';
+import { receiveLinkUpload } from '../uploads/link-upload';
 import { authenticateMcpRequest } from './mcp-auth';
 import { createCarnabyMcpServer } from './server';
 
@@ -75,7 +76,7 @@ d('carnaby MCP server', () => {
   it('advertises every admin capability as a tool, with instructions', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
-      'create_post', 'delete_post', 'get_post', 'import_youtube_video', 'list_categories', 'list_posts', 'list_users',
+      'create_image_upload', 'create_post', 'delete_post', 'get_post', 'import_youtube_video', 'list_categories', 'list_posts', 'list_users',
       'set_post_status', 'set_thumbnail_from_link', 'set_thumbnail_from_youtube', 'site_overview', 'sync_post_from_youtube', 'update_post',
       'upload_image', 'youtube_overview',
     ]);
@@ -266,6 +267,32 @@ d('carnaby MCP server', () => {
     const notAnImage = await call('upload_image', { base64: Buffer.from('<html>nope</html>').toString('base64') });
     expect(notAnImage.isError).toBe(true);
     expect(notAnImage.content[0]!.text).toMatch(/not a valid image/);
+  });
+
+  it('create_image_upload returns a one-time link that stores the image as thumbnail', async () => {
+    const png = await sharp({ create: { width: 40, height: 30, channels: 3, background: '#0ea5e9' } }).png().toBuffer();
+    const { post } = await ok<{ post: { id: number } }>('create_post', { translations: { sk: { title: `Link ${runId}`, content: 'x' } } });
+
+    const before = Date.now();
+    const link = await ok<{ uploadUrl: string; curl: string; expiresAt: string; maxBytes: number; thumbnailOfPostId: number | null }>(
+      'create_image_upload', { setAsThumbnailOfPostId: post.id });
+    expect(link.uploadUrl.startsWith(`${appUrl()}/api/uploads/link/`)).toBe(true);
+    expect(link.curl).toBe(`curl --fail-with-body -T <path> ${link.uploadUrl}`);
+    expect(link.maxBytes).toBe(10_485_760);
+    expect(link.thumbnailOfPostId).toBe(post.id);
+    expect(new Date(link.expiresAt).getTime() - before).toBeGreaterThan(3_590_000);
+    expect(new Date(link.expiresAt).getTime() - before).toBeLessThan(3_610_000);
+
+    const token = link.uploadUrl.split('/').pop()!;
+    const received = await receiveLinkUpload(db, token, async () => png);
+    const detail = await ok<{ thumbnail: { filename: string } }>('get_post', { id: post.id });
+    expect(detail.thumbnail.filename).toBe(received.filename);
+  });
+
+  it('create_image_upload for an unknown post → isError "Post not found."', async () => {
+    const res = await call('create_image_upload', { setAsThumbnailOfPostId: 999_999_999 });
+    expect(res.isError).toBe(true);
+    expect(res.content[0]!.text).toBe('Post not found.');
   });
 
   it('summarises the site', async () => {
