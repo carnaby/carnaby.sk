@@ -211,6 +211,14 @@ d('carnaby MCP server', () => {
       expect(res.content[0]!.text).toBe('The en translation does not exist yet -- pass both title and content to add it.');
     });
 
+    it('update_post rejects edits that leave the content empty', async () => {
+      const id = await twoLanguagePost('Empty');
+      const res = await call('update_post', { id, translations: { en: { edits: [{ old: 'First. Second.', new: '  ' }] } } });
+      expect(res.isError).toBe(true);
+      expect(res.content[0]!.text).toBe('en edits would leave the content empty.');
+      expect((await stored(id)).translations.en!.content).toBe('First. Second.');
+    });
+
     it('create_post and update_post return a summary unless verbose', async () => {
       const content = 'Prvá veta. Druhá veta.';
       const created = await ok<{ post: { id: number; translations: { sk: Record<string, unknown> } } }>('create_post', {

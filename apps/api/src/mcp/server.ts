@@ -374,6 +374,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
         if (!existing) throw new ToolError(`The ${lang} translation does not exist yet -- pass both title and content to add it.`);
         const result = applyEdits(existing.content, patch.edits);
         if (!result.ok) throw new ToolError(describeEditFailure(lang, patch.edits, result));
+        if (!result.content.trim()) throw new ToolError(`${lang} edits would leave the content empty.`);
         patchedContent = result.content;
       }
       const title = patch.title ?? existing?.title;
