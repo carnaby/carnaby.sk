@@ -96,6 +96,7 @@ d('carnaby MCP server', () => {
     // Partial update: add EN, change only the SK excerpt, keep everything else.
     const updated = await ok<{ post: Record<string, any> }>('update_post', {
       id,
+      verbose: true,
       translations: { sk: { excerpt: 'Nový teaser' }, en: { title: 'New song', content: 'lyrics' } },
     });
     expect(updated.post.translations.sk).toMatchObject({ title: `Nový song ${runId}`, content: '## Sloha\n\ntext', excerpt: 'Nový teaser' });
@@ -156,6 +157,72 @@ d('carnaby MCP server', () => {
     const blocked = await call('set_thumbnail_from_link', { postId: id, url: 'http://10.0.0.1/' });
     expect(blocked.isError).toBe(true);
     expect(blocked.content[0]!.text).toMatch(/not a public address/);
+  });
+
+  describe('update_post edits and summary responses', () => {
+    async function twoLanguagePost(label: string) {
+      const created = await ok<{ post: { id: number } }>('create_post', {
+        translations: {
+          sk: { title: `${label} ${runId}`, content: 'Prvá veta. Druhá veta.' },
+          en: { title: `${label} en ${runId}`, content: 'First. Second.' },
+        },
+      });
+      return created.post.id;
+    }
+    async function stored(id: number) {
+      return ok<{ isFeatured: boolean; translations: { sk: { content: string } | null; en: { content: string } | null } }>('get_post', { id });
+    }
+
+    it('update_post applies edits to one language and keeps the other', async () => {
+      const id = await twoLanguagePost('Edits');
+      const res = await call('update_post', { id, translations: { sk: { edits: [{ old: 'Druhá veta.', new: 'Nová veta.' }] } } });
+      expect(res.isError).toBeFalsy();
+      const detail = await stored(id);
+      expect(detail.translations.sk!.content).toBe('Prvá veta. Nová veta.');
+      expect(detail.translations.en!.content).toBe('First. Second.');
+    });
+
+    it('update_post edits are all-or-nothing', async () => {
+      const id = await twoLanguagePost('Atomic');
+      const res = await call('update_post', {
+        id,
+        isFeatured: true,
+        translations: { sk: { edits: [{ old: 'Prvá', new: 'X' }, { old: 'neexistuje', new: 'Y' }] } },
+      });
+      expect(res.isError).toBe(true);
+      expect(res.content[0]!.text).toBe('sk edit 2 of 2: text not found in the current content: "neexistuje"');
+      const detail = await stored(id);
+      expect(detail.translations.sk!.content).toBe('Prvá veta. Druhá veta.');
+      expect(detail.isFeatured).toBe(false);
+    });
+
+    it('update_post rejects content and edits together', async () => {
+      const id = await twoLanguagePost('Both');
+      const res = await call('update_post', { id, translations: { sk: { content: 'a', edits: [{ old: 'Prvá', new: 'X' }] } } });
+      expect(res.isError).toBe(true);
+      expect(res.content[0]!.text).toBe('Pass either content or edits for sk, not both.');
+    });
+
+    it('update_post rejects edits for a missing language', async () => {
+      const created = await ok<{ post: { id: number } }>('create_post', { translations: { sk: { title: `Only sk ${runId}`, content: 'x' } } });
+      const res = await call('update_post', { id: created.post.id, translations: { en: { edits: [{ old: 'a', new: 'b' }] } } });
+      expect(res.isError).toBe(true);
+      expect(res.content[0]!.text).toBe('The en translation does not exist yet -- pass both title and content to add it.');
+    });
+
+    it('create_post and update_post return a summary unless verbose', async () => {
+      const content = 'Prvá veta. Druhá veta.';
+      const created = await ok<{ post: { id: number; translations: { sk: Record<string, unknown> } } }>('create_post', {
+        translations: { sk: { title: `Summary ${runId}`, content } },
+      });
+      expect(created.post.translations.sk['contentLength']).toBe(content.length);
+      expect(created.post.translations.sk).not.toHaveProperty('content');
+      const updated = await ok<{ post: { translations: { sk: Record<string, unknown> } } }>('update_post', { id: created.post.id, isFeatured: true });
+      expect(updated.post.translations.sk['contentLength']).toBe(content.length);
+      expect(updated.post.translations.sk).not.toHaveProperty('content');
+      const verbose = await ok<{ post: { translations: { sk: Record<string, unknown> } } }>('update_post', { id: created.post.id, verbose: true, isFeatured: false });
+      expect(verbose.post.translations.sk['content']).toBe(content);
+    });
   });
 
   it('reports validation problems as readable tool errors instead of throwing', async () => {

@@ -25,6 +25,7 @@ import type { UrlPolicy } from '../uploads/safe-fetch';
 import { YoutubeApiError, YoutubeNotConfiguredError, YoutubeVideoNotFoundError } from '../youtube/youtube.client';
 import { importYoutubeVideo, syncPostFromYoutube, youtubeOverview } from '../youtube/youtube.service';
 import type { McpActor } from './mcp-auth';
+import { applyEdits, describeEditFailure } from './apply-edits';
 
 const STATUSES = ['draft', 'published', 'archived'] as const;
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{6,20}$/;
@@ -49,6 +50,8 @@ Content:
 - youtubeId (e.g. dQw4w9WgXcQ, not a full URL) embeds the video above the content and is the
   thumbnail fallback; soundcloudUrl renders a "listen on SoundCloud" button; projectUrl (devlog posts
   about a project with its own site) makes the post preview clickable and adds an "Open project" button.
+- To change part of a text use update_post with translations.<lang>.edits (exact old/new pairs) instead
+  of resending the whole content.
 - Images: upload with upload_image (from a URL or base64), then put the returned markdown into the
   content, or pass the filename as "thumbnail". set_thumbnail_from_youtube fetches the video still;
   set_thumbnail_from_link takes the share image (og:image) of the post's projectUrl page.
@@ -74,6 +77,10 @@ const translationPatchSchema = z.object({
   content: z.string().min(1).optional(),
   excerpt: z.string().nullable().optional().describe('null clears it'),
   metaDescription: z.string().nullable().optional().describe('null clears it'),
+  edits: z.array(z.object({
+    old: z.string().min(1).describe('Exact text to replace; must occur exactly once in the current content'),
+    new: z.string().describe('Replacement; empty string deletes'),
+  })).min(1).optional().describe('Partial change of the stored content: replacements applied in order, all or none. Use instead of content.'),
 });
 
 class ToolError extends Error {}
@@ -177,6 +184,14 @@ async function postDetail(db: Db, id: number) {
     publicUrls: data.post.status === 'published' ? publicUrls(data.post.slug) : null,
     adminUrl: `${appUrl()}/admin/posts/${data.post.id}/edit`,
   };
+}
+
+/** Same as postDetail, but translations carry only their length instead of the full content. */
+function postSummary(detail: Awaited<ReturnType<typeof postDetail>>) {
+  const brief = (t: (typeof detail.translations)[Language]) => (t
+    ? { title: t.title, excerpt: t.excerpt, metaDescription: t.metaDescription, contentLength: t.content.length }
+    : null);
+  return { ...detail, translations: { sk: brief(detail.translations.sk), en: brief(detail.translations.en) } };
 }
 
 /** Final validation through the same contract the admin UI uses, with readable messages. */
@@ -319,7 +334,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
 
   server.registerTool('create_post', {
     title: 'Create post',
-    description: 'Creates a post. Defaults to a draft. Provide at least one translation (sk and/or en).',
+    description: 'Creates a post. Defaults to a draft. Provide at least one translation (sk and/or en). The response is a summary (content length instead of the text); pass verbose: true or call get_post for the full content.',
     inputSchema: {
       translations: z.object({ sk: translationInputSchema.optional(), en: translationInputSchema.optional() }),
       slug: z.string().optional().describe('Defaults to a slug of the SK (or EN) title'),
@@ -330,6 +345,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
       soundcloudUrl: z.string().optional(),
       projectUrl: z.string().optional().describe('http(s) link to the project\'s own site (devlog posts)'),
       thumbnail: z.string().optional().describe('Filename returned by upload_image'),
+      verbose: z.boolean().default(false).describe('Return the full post including content'),
     },
   }, (args) => run(async () => {
     const { idBySlug } = await categoryMaps(db);
@@ -352,12 +368,13 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     });
     await assertThumbnailExists(input.thumbnailPath);
     const { id } = await upsertPost(db, input, actor.userId);
-    return json({ created: true, post: await postDetail(db, id) });
+    const detail = await postDetail(db, id);
+    return json({ created: true, post: args.verbose ? detail : postSummary(detail) });
   }));
 
   server.registerTool('update_post', {
     title: 'Update post',
-    description: 'Partially updates a post: only the fields you pass change. For a translation, pass only the fields to change (it is merged with the stored one); pass null to remove a whole language version. Pass null for youtubeId/soundcloudUrl/projectUrl/thumbnail to clear them.',
+    description: 'Partially updates a post: only the fields you pass change. For a translation, pass only the fields to change (it is merged with the stored one); pass null to remove a whole language version. Pass null for youtubeId/soundcloudUrl/projectUrl/thumbnail to clear them. To change part of a text, pass translations.<lang>.edits (old/new pairs, each old must occur exactly once; call get_post first when you do not know the current text); pass full content only for rewrites. The response is a summary (content length instead of the text); pass verbose: true or call get_post for the full content.',
     inputSchema: {
       id: z.number().int(),
       slug: z.string().optional(),
@@ -369,6 +386,7 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
       projectUrl: z.string().nullable().optional(),
       thumbnail: z.string().nullable().optional(),
       publishedAt: z.string().datetime({ offset: true }).optional().describe('ISO date-time, e.g. 2026-03-01T18:00:00Z'),
+      verbose: z.boolean().default(false).describe('Return the full post including content'),
       translations: z.object({
         sk: translationPatchSchema.nullable().optional(),
         en: translationPatchSchema.nullable().optional(),
@@ -388,8 +406,18 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
         if (existing) translations[lang] = existing;
         continue;
       }
+      if (patch.content !== undefined && patch.edits) {
+        throw new ToolError(`Pass either content or edits for ${lang}, not both.`);
+      }
+      let patchedContent = patch.content;
+      if (patch.edits) {
+        if (!existing) throw new ToolError(`The ${lang} translation does not exist yet -- pass both title and content to add it.`);
+        const result = applyEdits(existing.content, patch.edits);
+        if (!result.ok) throw new ToolError(describeEditFailure(lang, patch.edits, result));
+        patchedContent = result.content;
+      }
       const title = patch.title ?? existing?.title;
-      const content = patch.content ?? existing?.content;
+      const content = patchedContent ?? existing?.content;
       if (!title || !content) {
         throw new ToolError(`The ${lang} translation does not exist yet -- pass both title and content to add it.`);
       }
@@ -416,7 +444,8 @@ export function createCarnabyMcpServer(db: Db, actor: McpActor, options: Carnaby
     });
     await assertThumbnailExists(input.thumbnailPath, base.thumbnailPath);
     await upsertPost(db, { ...input, id: args.id }, actor.userId);
-    return json({ updated: true, post: await postDetail(db, args.id) });
+    const detail = await postDetail(db, args.id);
+    return json({ updated: true, post: args.verbose ? detail : postSummary(detail) });
   }));
 
   server.registerTool('set_post_status', {
