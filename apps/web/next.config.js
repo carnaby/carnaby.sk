@@ -17,6 +17,9 @@ const nextConfig = {
   // `.next/standalone/apps/web/server.js` layout with or without this set), but pinning it
   // explicitly avoids depending on that inference inside the Docker build context.
   outputFileTracingRoot: join(__dirname, '../..'),
+  // Next buffers proxied request bodies and silently truncates them above this (default 10mb):
+  // covers the 10 MB upload-link PUT and the 15 MB /api/mcp limit.
+  experimental: { proxyClientMaxBodySize: '16mb' },
   async rewrites() {
     return [
       { source: '/trpc/:path*', destination: `${API_INTERNAL_URL}/trpc/:path*` },
