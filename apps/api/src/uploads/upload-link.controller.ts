@@ -1,7 +1,8 @@
 import type { Db } from '@carnaby/db';
-import { BadRequestException, Controller, Inject, NotFoundException, Param, PayloadTooLargeException, Put, Req } from '@nestjs/common';
+import { BadRequestException, Controller, Inject, NotFoundException, Param, PayloadTooLargeException, Put, Req, UnprocessableEntityException } from '@nestjs/common';
 import type { Request } from 'express';
 import { DB } from '../db/db.module';
+import { InvalidPostError } from '../posts/post-changes';
 import { ImageTooLargeError, readBodyCapped, receiveLinkUpload, UploadLinkInvalidError, type LinkUploadResult } from './link-upload';
 import { InvalidImageError, MAX_IMAGE_BYTES } from './uploads.service';
 
@@ -22,6 +23,8 @@ export class UploadLinkController {
       if (error instanceof UploadLinkInvalidError) throw new NotFoundException(error.message);
       if (error instanceof ImageTooLargeError) throw new PayloadTooLargeException(error.message);
       if (error instanceof InvalidImageError) throw new BadRequestException(error.message);
+      // The linked post's stored state fails validation: say why instead of an opaque 500.
+      if (error instanceof InvalidPostError) throw new UnprocessableEntityException(error.message);
       throw error;
     }
   }

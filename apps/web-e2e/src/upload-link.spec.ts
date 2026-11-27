@@ -51,4 +51,20 @@ test.describe('image upload link through the web proxy', () => {
     const body = (await res.json()) as { message?: string };
     expect(body.message).toBe('Image too large (max 10 MB).');
   });
+
+  test('answers 413 quickly for a body over the proxy limit (16 MB)', async ({ request }) => {
+    // Next cuts this body short at 16 MB but forwards the full Content-Length: the API must not
+    // wait for bytes that never come (it used to hang until the proxy gave up with a 500).
+    const started = Date.now();
+    const res = await request.put(`/api/uploads/link/${token}`, {
+      data: Buffer.alloc(17.5 * 1024 * 1024, 1),
+      headers: { 'content-type': 'application/octet-stream' },
+      timeout: 55_000,
+    });
+    const elapsed = Date.now() - started;
+    expect(res.status()).toBe(413);
+    const body = (await res.json()) as { message?: string };
+    expect(body.message).toBe('Image too large (max 10 MB).');
+    expect(elapsed).toBeLessThan(10_000);
+  });
 });

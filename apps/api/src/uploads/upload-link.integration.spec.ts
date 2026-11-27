@@ -4,6 +4,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { eq } from 'drizzle-orm';
 import * as express from 'express';
 import { promises as fs } from 'node:fs';
+import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -43,6 +44,27 @@ d('PUT /api/uploads/link/:token', () => {
     }, null);
     return id;
   };
+
+  /** A client that sends `sent` bytes (declaring `declared` as Content-Length, or chunked when
+   * null) and then goes idle without finishing -- like Next's proxy after it truncates a body. */
+  const putThenIdle = (token: string, declared: number | null, sent: number) =>
+    new Promise<{ status: number; body: unknown; ms: number }>((resolve, reject) => {
+      const started = Date.now();
+      const req = http.request(`${base}/api/uploads/link/${token}`, {
+        method: 'PUT',
+        headers: declared === null ? {} : { 'content-length': String(declared) },
+      }, (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', (c: string) => { text += c; });
+        res.on('end', () => {
+          req.destroy();
+          resolve({ status: res.statusCode ?? 0, body: JSON.parse(text), ms: Date.now() - started });
+        });
+      });
+      req.on('error', reject);
+      req.write(Buffer.alloc(sent));
+    });
 
   beforeAll(async () => {
     png = await sharp({ create: { width: 64, height: 64, channels: 3, background: '#f00' } }).png().toBuffer();
@@ -160,6 +182,39 @@ d('PUT /api/uploads/link/:token', () => {
     expect(res.status).toBe(413);
     expect(await res.json()).toMatchObject({ statusCode: 413, message: TOO_LARGE });
     expect((await put(token, png)).status).toBe(200);
+  });
+
+  it('declared Content-Length over 10 MB, less sent, then idle → 413 within seconds, link usable', async () => {
+    const token = await newLink();
+    const res = await putThenIdle(token, 20 * 1024 * 1024, 2 * 1024 * 1024);
+    expect(res.status).toBe(413);
+    expect(res.body).toMatchObject({ statusCode: 413, message: TOO_LARGE });
+    expect(res.ms).toBeLessThan(5_000);
+    expect((await put(token, png)).status).toBe(200);
+  }, 15_000);
+
+  it('chunked body streamed past 10 MB, then idle → 413 within seconds', async () => {
+    const token = await newLink();
+    const res = await putThenIdle(token, null, MAX_IMAGE_BYTES + 1024 * 1024);
+    expect(res.status).toBe(413);
+    expect(res.body).toMatchObject({ statusCode: 413, message: TOO_LARGE });
+    expect(res.ms).toBeLessThan(5_000);
+  }, 15_000);
+
+  it('target post fails validation → 422 with the reason, file removed, link usable again', async () => {
+    // A post row without any translation: savePostChanges rejects it with InvalidPostError.
+    const [row] = await db.insert(posts).values({ slug: `ulc-${runId}-broken-${n++}` }).returning({ id: posts.id });
+    const token = await newLink(row!.id);
+    const before = await originals();
+    const res = await put(token, png);
+    expect(res.status).toBe(422);
+    const body = await res.json() as { statusCode: number; message: string };
+    expect(body.statusCode).toBe(422);
+    expect(body.message).toMatch(/^Invalid post: /);
+    expect(await originals()).toEqual(before);
+    const [link] = await db.select().from(imageUploadLinks).where(eq(imageUploadLinks.tokenHash, hashUploadToken(token)));
+    expect(link!.usedAt).toBeNull();
+    await db.delete(posts).where(eq(posts.id, row!.id));
   });
 
   it('post deleted after link creation → 404, nothing written to originals/', async () => {

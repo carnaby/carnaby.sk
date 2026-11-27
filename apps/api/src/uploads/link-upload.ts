@@ -19,14 +19,38 @@ export class ImageTooLargeError extends Error {
   }
 }
 
+/** How long a too-large request may stay silent before we answer anyway. Next's proxy cuts a body
+ * above its limit short but forwards the original Content-Length, so the rest never arrives. */
+export const DRAIN_IDLE_MS = 2_000;
+/** Upper bound for draining at all, so a client trickling bytes cannot keep the request open. */
+export const DRAIN_MAX_MS = 30_000;
+
 /** Reads and discards the rest of the request, so the client gets our response instead of a
- * connection reset while it is still sending. */
+ * connection reset while it is still sending. Settles on end/close/error, after DRAIN_IDLE_MS
+ * without data, or after DRAIN_MAX_MS -- whichever comes first. */
 function drain(req: IncomingMessage): Promise<void> {
   if (req.readableEnded || req.destroyed) return Promise.resolve();
   return new Promise((resolve) => {
-    req.once('end', resolve);
-    req.once('close', resolve);
-    req.once('error', () => resolve());
+    let idle: NodeJS.Timeout | undefined;
+    const done = () => {
+      clearTimeout(idle);
+      clearTimeout(max);
+      req.off('data', onData);
+      req.off('end', done);
+      req.off('close', done);
+      req.off('error', done);
+      resolve(); // the stream keeps flowing (resumed), so whatever still comes is discarded
+    };
+    const onData = () => {
+      clearTimeout(idle);
+      idle = setTimeout(done, DRAIN_IDLE_MS);
+    };
+    const max = setTimeout(done, DRAIN_MAX_MS);
+    onData();
+    req.on('data', onData);
+    req.on('end', done);
+    req.on('close', done);
+    req.on('error', done);
     req.resume();
   });
 }
@@ -45,7 +69,6 @@ export async function readBodyCapped(req: IncomingMessage, maxBytes: number): Pr
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let total = 0;
-    let tooLarge = false;
     const cleanup = () => {
       req.off('data', onData);
       req.off('end', onEnd);
@@ -53,19 +76,18 @@ export async function readBodyCapped(req: IncomingMessage, maxBytes: number): Pr
       req.off('close', onClose);
     };
     const onData = (chunk: Buffer) => {
-      if (tooLarge) return; // keep reading (draining) until the client is done
       total += chunk.length;
       if (total > maxBytes) {
-        tooLarge = true;
+        cleanup();
         chunks.length = 0;
+        void drain(req).then(() => reject(new ImageTooLargeError()));
       } else {
         chunks.push(chunk);
       }
     };
     const onEnd = () => {
       cleanup();
-      if (tooLarge) reject(new ImageTooLargeError());
-      else resolve(Buffer.concat(chunks, total));
+      resolve(Buffer.concat(chunks, total));
     };
     const onError = (error: Error) => {
       cleanup();
@@ -102,9 +124,18 @@ export async function receiveLinkUpload(db: Db, token: string, readBody: () => P
     }
     await completeUploadLink(db, link.id, filename);
   } catch (error) {
-    // Drop a file nothing points to; a thumbnail already set on the post stays.
-    if (filename && !postUpdated) await deleteOriginal(filename);
-    await releaseUploadLink(db, link.id);
+    // Drop a file nothing points to; a thumbnail already set on the post stays. A failing cleanup
+    // is only logged: the caller must see the original error.
+    try {
+      if (filename && !postUpdated) await deleteOriginal(filename);
+    } catch (cleanupError) {
+      console.error('upload link: could not delete the unused upload', cleanupError);
+    }
+    try {
+      await releaseUploadLink(db, link.id);
+    } catch (releaseError) {
+      console.error(`upload link ${link.id}: could not release the link after a failed upload`, releaseError);
+    }
     // The post was deleted after the claim; its link row went with it (cascade).
     if (error instanceof TRPCError && error.code === 'NOT_FOUND') throw new UploadLinkInvalidError();
     throw error;
